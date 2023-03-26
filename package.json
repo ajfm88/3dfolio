@@ -9,7 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.0.15",
+    "@chakra-ui/react": "^2.4.6",
     "@emailjs/browser": "^3.10.0",
+    "@emotion/react": "^11.10.5",
+    "@emotion/styled": "^11.10.5",
     "@react-three/drei": "^9.56.24",
     "@react-three/fiber": "^8.11.1",
     "framer-motion": "^9.0.7",
@@ -19,6 +23,7 @@
     "react-router-dom": "^6.8.1",
     "react-tilt": "^0.1.4",
     "react-vertical-timeline-component": "^3.6.0",
+    "react-icons": "^4.7.1",
     "three": "^0.149.0"
   },
   "devDependencies": {

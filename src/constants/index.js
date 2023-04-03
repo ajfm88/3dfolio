@@ -1,18 +1,18 @@
 import {
-  mobile,
-  backend,
-  creator,
-  web,
+  resume,
+  linkedin,
+  github,
   html,
   css,
   javascript,
   typescript,
   redux,
   tailwind,
-  firebase,
   mongodb,
   express,
   reactjs,
+  linktree,
+  python,
   nodejs,
   git,
   nextjs,
@@ -40,20 +40,24 @@ export const navLinks = [
 
 const services = [
   {
-    title: 'Web Developer',
-    icon: web,
+    title: 'LinkedIn',
+    icon: linkedin,
+    url: 'https://www.linkedin.com/in/ajfm88',
   },
   {
-    title: 'React Native Developer',
-    icon: mobile,
+    title: 'Resume',
+    icon: resume,
+    url: 'https://drive.google.com/file/d/1PaMnfocfEEbOowfjpGdQ9gjMky9i1o6A',
   },
   {
-    title: 'Backend Developer',
-    icon: backend,
+    title: 'GitHub',
+    icon: github,
+    url: 'https://github.com/ajfm88',
   },
   {
-    title: 'Content Creator',
-    icon: creator,
+    title: 'Linktree',
+    icon: linktree,
+    url: 'https://linktr.ee/ajfm88',
   },
 ];
 
@@ -75,16 +79,16 @@ const technologies = [
     icon: typescript,
   },
   {
+    name: 'Python',
+    icon: python,
+  },
+  {
     name: 'Redux Toolkit',
     icon: redux,
   },
   {
     name: 'Tailwind CSS',
     icon: tailwind,
-  },
-  {
-    name: 'Firebase',
-    icon: firebase,
   },
   {
     name: 'MongoDB',

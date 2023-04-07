@@ -1,26 +1,26 @@
 import {
   resume,
+  linktree,
   linkedin,
   github,
   html,
   css,
   javascript,
   typescript,
+  python,
   redux,
   tailwind,
   mongodb,
   express,
   reactjs,
-  linktree,
-  python,
   nodejs,
   git,
   nextjs,
-  carrent,
-  jobit,
-  tripguide,
-  issgroup,
   thecoderschool,
+  issgroup,
+  evogym,
+  jobify,
+  realtorclone,
 } from '../assets';
 
 export const navLinks = [
@@ -107,12 +107,12 @@ const technologies = [
     icon: nodejs,
   },
   {
-    name: 'git',
-    icon: git,
-  },
-  {
     name: 'Next JS',
     icon: nextjs,
+  },
+  {
+    name: 'git',
+    icon: git,
   },
 ];
 
@@ -174,67 +174,79 @@ const testimonials = [
 
 const projects = [
   {
-    name: 'Car Rent',
+    name: 'EvoGym',
     description:
-      'Web-based platform that allows users to search, book, and manage car rentals from various providers, providing a convenient and efficient solution for transportation needs.',
+      'A fitness React 18 single-page application website with responsive design and contact us page email capabilities.',
     tags: [
       {
         name: 'react',
         color: 'blue-text-gradient',
-      },
-      {
-        name: 'mongodb',
-        color: 'green-text-gradient',
       },
       {
         name: 'tailwind',
         color: 'pink-text-gradient',
       },
+      {
+        name: 'typescript',
+        color: 'blue-text-gradient',
+      },
+      {
+        name: 'vite',
+        color: 'green-text-gradient',
+      },
     ],
-    image: carrent,
-    source_code_link: 'https://github.com/',
+    image: evogym,
+    source_code_link: 'https://github.com/ajfm88/evogym',
   },
   {
-    name: 'Job IT',
+    name: 'Jobify',
     description:
-      'Web application that enables users to search for job openings, view estimated salary ranges for positions, and locate available jobs based on their current location.',
+      'A Full Stack MERN job tracking app with sign-up and login features, and detailed statistics on job applications month by month.',
+    tags: [
+      {
+        name: 'mongodb',
+        color: 'green-text-gradient',
+      },
+      {
+        name: 'express',
+        color: 'black-gradient',
+      },
+      {
+        name: 'react',
+        color: 'blue-text-gradient',
+      },
+      {
+        name: 'nodejs',
+        color: 'green-text-gradient',
+      },
+    ],
+    image: jobify,
+    source_code_link: 'https://github.com/ajfm88/jobify',
+  },
+  {
+    name: 'Realtor.com',
+    description:
+      'A comprehensive online real estate platform that provides users with up-to-date and accurate information on properties for sale, rent, and other real estate-related services.',
     tags: [
       {
         name: 'react',
         color: 'blue-text-gradient',
       },
       {
-        name: 'restapi',
-        color: 'green-text-gradient',
+        name: 'firebase',
+        color: 'orange-text-gradient',
       },
       {
-        name: 'scss',
-        color: 'pink-text-gradient',
-      },
-    ],
-    image: jobit,
-    source_code_link: 'https://github.com/',
-  },
-  {
-    name: 'Trip Guide',
-    description:
-      'A comprehensive travel booking platform that allows users to book flights, hotels, and rental cars, and offers curated recommendations for popular destinations.',
-    tags: [
-      {
-        name: 'nextjs',
+        name: 'tailwind',
         color: 'blue-text-gradient',
       },
       {
-        name: 'supabase',
+        name: 'leaflet',
         color: 'green-text-gradient',
       },
-      {
-        name: 'css',
-        color: 'pink-text-gradient',
-      },
     ],
-    image: tripguide,
-    source_code_link: 'https://github.com/',
+    image: realtorclone,
+    source_code_link: 'https://github.com/ajfm88/realtor-clone',
   },
 ];
 

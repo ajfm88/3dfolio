@@ -50,15 +50,14 @@ const About = () => {
         className='mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]'
       >
         I'm a very ambitious Junior Software Developer working full time for a
-        company based in Los Angeles, where I work on improving and enhancing a
-        Full Stack Web App. I have a a passion for creating innovative and
-        efficient solutions to complex problems and building excellent software
-        that improves the lives of those around me, and I specialize in building
-        (and occasionally designing) exceptional digital experiences. I am also
-        a fitness enthusiast, an avid reader (both fiction and non-fiction), a
-        language learner (currently at an intermediate level in Japanese), and a
-        Yelp Elite Squad member who loves ramen, especially Tonkotsu ramen and
-        Tsukemen.
+        company in the Hollywood film industry, where I work on debugging,
+        testing and adding new features to a Full Stack Web App. I have a
+        passion for creating innovative and efficient solutions to complex
+        problems and building excellent software that improves the lives of
+        people. I am also a fitness enthusiast, an avid reader (both fiction and
+        non-fiction), a language learner (currently at an intermediate level in
+        Japanese), and a Yelp Elite Squad member who loves ramen, especially
+        Tonkotsu and Tsukemen. いただきます！ 🍜
       </motion.p>
 
       <div className='mt-20 flex flex-wrap gap-10'>

@@ -2,7 +2,7 @@
 
 ## Live Demo:
 
-[3D Portfolio](https://react-portfolio-v3.netlify.app)
+[3D Portfolio](https://react-portfolio-v3-ajfm88.vercel.app)
 
 ## Features:
 

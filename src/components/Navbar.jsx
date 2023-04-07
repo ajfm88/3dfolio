@@ -35,7 +35,8 @@ const Navbar = () => {
     >
       <div className='w-full flex justify-between items-center max-w-7xl mx-auto'>
         <Link
-          to='https://linktr.ee/ajfm88'
+          // to='/'
+          to='https://www.ajfm88.com'
           target='_blank'
           className='flex items-center gap-2'
           onClick={() => {
@@ -53,7 +54,7 @@ const Navbar = () => {
             <span className='sm:block hidden'>
               {' '}
               | &nbsp;
-              <a href='' target='_blank'>
+              <a href='https://linktr.ee/ajfm88' target='_blank'>
                 ajfm88
               </a>
             </span>

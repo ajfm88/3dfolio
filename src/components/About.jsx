@@ -49,15 +49,15 @@ const About = () => {
         variants={fadeIn('', '', 0.1, 1)}
         className='mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]'
       >
-        I'm a very ambitious Junior Software Developer working full time for a
+        I’m a very ambitious Junior Software Developer working full time for a
         company in the Hollywood film industry, where I debug, test, enhance,
         and add new features to a Full Stack Web App. I have a passion for
-        creating innovative and efficient solutions to complex problems and
-        building excellent software that improves the lives of people. I am also
-        a fitness enthusiast, an avid reader (both fiction and non-fiction), a
-        language learner (currently at an intermediate level in Japanese), and a
-        Yelp Elite Squad member who loves ramen, especially Tonkotsu and
-        Tsukemen. いただきます！ 🍜
+        creating innovative and efficient solutions to complex problems and I
+        always aim to play a crucial role in developing software that improves
+        people’s lives. I am also a fitness enthusiast, an avid reader (both
+        fiction and non-fiction), a language learner (currently at an
+        intermediate level in Japanese), and a Yelp Elite Squad member who loves
+        ramen, especially Tonkotsu and Tsukemen, いただきます！ 🍜
       </motion.p>
 
       <div className='mt-20 flex flex-wrap gap-10'>

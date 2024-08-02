@@ -55,7 +55,7 @@ const About = () => {
         creating innovative and efficient solutions to complex problems and I
         always aim to play a crucial role in developing software that improves
         people’s lives. I am also a fitness enthusiast, an avid reader (both
-        fiction and non-fiction), a language learner (currently at an
+        fiction and non-fiction), a language learner (currently at an N3
         intermediate level in Japanese), and a Yelp Elite Squad member who loves
         ramen, especially Tonkotsu and Tsukemen, いただきます！ 🍜
       </motion.p>

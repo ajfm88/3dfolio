@@ -1,30 +1,31 @@
-import React from 'react';
-import Tilt from 'react-tilt';
-import { motion } from 'framer-motion';
+import React from "react";
+import { Tilt } from "react-tilt";
+import { motion } from "framer-motion";
 
-import { styles } from '../styles';
-import { github } from '../assets';
-import { SectionWrapper } from '../hoc';
-import { projects } from '../constants';
-import { fadeIn, textVariant } from '../utils/motion';
+import { styles } from "../styles";
+import { github } from "../assets";
+import { SectionWrapper } from "../hoc";
+import { projects } from "../constants";
+import { fadeIn, textVariant } from "../utils/motion";
 
 const ProjectCard = ({
   index,
   name,
   description,
   tags,
+  url,
   image,
   source_code_link,
 }) => {
   return (
-    <motion.div variants={fadeIn('up', 'spring', index * 0.5, 0.75)}>
+    <motion.div variants={fadeIn("up", "spring", index * 0.5, 0.75)}>
       <Tilt
         options={{
           max: 45,
           scale: 1,
           speed: 450,
         }}
-        className='bg-tertiary p-5 rounded-2xl sm:w-[360px] w-full'
+        className='bg-tertiary p-5 rounded-2xl sm:w-[360px] w-full transition-all'
       >
         <div className='relative w-full h-[230px]'>
           <img
@@ -35,7 +36,7 @@ const ProjectCard = ({
 
           <div className='absolute inset-0 flex justify-end m-3 card-img_hover'>
             <div
-              onClick={() => window.open(source_code_link, '_blank')}
+              onClick={() => window.open(source_code_link, "_blank")}
               className='black-gradient w-10 h-10 rounded-full flex justify-center items-center cursor-pointer'
             >
               <img
@@ -48,7 +49,9 @@ const ProjectCard = ({
         </div>
 
         <div className='mt-5'>
-          <h3 className='text-white font-bold text-[24px]'>{name}</h3>
+          <a href={url} target='_blank'>
+            <h3 className='text-white font-bold text-[24px]'>{name}</h3>
+          </a>
           <p className='mt-2 text-secondary text-[14px]'>{description}</p>
         </div>
 
@@ -77,15 +80,19 @@ const Works = () => {
 
       <div className='w-full flex'>
         <motion.p
-          variants={fadeIn('', '', 0.1, 1)}
+          variants={fadeIn("", "", 0.1, 1)}
           className='mt-3 text-secondary text-[17px] max-w-3xl leading-[30px]'
         >
-          The following projects showcase my skills and experience across
-          different tech stacks. Each project is briefly described with links to
-          code repositories and live demos in it. It reflects my ability to
-          solve complex problems, work with different technologies, and manage
-          projects effectively. To see more projects, please feel free to visit 
-          my <a href="https://github.com/ajfm88" target="_blank"><b>GitHub</b></a>.
+          The following projects showcase my skills and experience across different
+          tech stacks. Each project is briefly described in its respective card and
+          there are links to code repositories (in the upper right corner of the card,
+          on the GitHub logo), and to live demos (in the title of each project). These
+          projects reflect my ability to solve complex problems, work with different
+          technologies, and manage projects effectively. To see more projects, please
+          feel free to visit my&nbsp;
+          <a href="https://github.com/ajfm88" target="_blank">
+            <b>GitHub</b>
+          </a>.
         </motion.p>
       </div>
 
@@ -98,4 +105,4 @@ const Works = () => {
   );
 };
 
-export default SectionWrapper(Works, 'projects');
+export default SectionWrapper(Works, "projects");

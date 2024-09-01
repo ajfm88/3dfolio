@@ -31,17 +31,17 @@
 
 ## <a name="introduction">🤖 Introduction</a>
 
-3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88-i0jt-git-main-ajfm88s-projects.vercel.app) or on the banner above.
+3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88-i0jt-ajfm88s-projects.vercel.app) or on the banner above.
 
 ## <a name="tech-stack">⚙️ Tech Stack</a>
 
-- React.js
-- Three.js
-- React Three Fiber
-- React Three Drei
-- EmailJS
-- Vite
-- Tailwind CSS
+- ⚛️ [React.js](https://react.dev)
+- 🔺 [Three.js](https://threejs.org)
+- 🧵 [React Three Fiber](https://r3f.docs.pmnd.rs)
+- 🔧 [React Three Drei](https://drei.pmnd.rs)
+- 📧 [EmailJS](https://www.emailjs.com)
+- ⚡ [Vite](https://vitejs.dev)
+- 🌬️ [Tailwind CSS](https://tailwindcss.com)
 
 ## <a name="features">🔋 Features</a>
 
@@ -71,9 +71,9 @@ Follow these steps to set up the project locally on your machine.
 
 Make sure you have the following installed on your machine:
 
-- [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/en)
-- [npm](https://www.npmjs.com/) (Node Package Manager)
+- 🌳 [Git](https://git-scm.com)
+- 🟢 [Node.js](https://nodejs.org/en)
+- 📦 [npm](https://www.npmjs.com) (Node Package Manager)
 
 **Cloning the Repository**
 
@@ -87,7 +87,7 @@ cd react-portfolio-v3
 Install the project dependencies using npm:
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
 
 **Set Up Environment Variables**
@@ -116,6 +116,7 @@ Models and Assets used in the project can be found [here](https://drive.google.c
 
 ### <a name="tutorial">🚀 Tutorial</a>
 
-This projects is a heavily modified version of the following YouTube tutorial
+This projects is a heavily modified version of the following YouTube tutorial:
+<br />
 <br />
 <a href="https://youtu.be/watch?v=0fYi8SGA20k"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/151519281/289277158-1736fca5-a031-4854-8c09-bc110e3bc16d.svg"/></a>

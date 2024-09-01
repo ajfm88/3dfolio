@@ -19,7 +19,7 @@ import {
   thecoderschool,
   issgroup,
   evogym,
-  jobify,
+  crwnclothing,
   realtorclone,
 } from "../assets";
 
@@ -43,7 +43,7 @@ export const navLinks = [
   {
     id: "contact",
     title: "Contact",
-  },
+  }
 ];
 
 const services = [
@@ -55,7 +55,7 @@ const services = [
   {
     title: "Resume",
     icon: resume,
-    url: "https://drive.google.com/file/d/1ADuG4nBy9eAlQSHc4s1kBZoS-B0djBqT",
+    url: "https://drive.google.com/file/d/1ajr79AgRGGsdJmpMflakwvCeGIMdHOp5/view",
   },
   {
     title: "GitHub",
@@ -66,7 +66,7 @@ const services = [
     title: "Linktree",
     icon: linktree,
     url: "https://linktr.ee/ajfm88",
-  },
+  }
 ];
 
 const technologies = [
@@ -91,8 +91,8 @@ const technologies = [
     icon: python,
   },
   {
-    name: "Redux Toolkit",
-    icon: redux,
+    name: "Next JS",
+    icon: nextjs,
   },
   {
     name: "Tailwind CSS",
@@ -115,13 +115,13 @@ const technologies = [
     icon: nodejs,
   },
   {
-    name: "Next JS",
-    icon: nextjs,
-  },
-  {
     name: "git",
     icon: git,
   },
+  {
+    name: "Redux Toolkit",
+    icon: redux,
+  }
 ];
 
 const experiences = [
@@ -136,7 +136,7 @@ const experiences = [
       "Collaborating with cross-functional teams including the sales team, the finance team, inventory and returns managers, and the Senior developer to create a high-quality application to be used internally across our different branches.",
       "Implementing responsive design and ensuring cross-browser compatibility.",
       "Acting as a technical consultant for any new functionality prior to implementation.",
-    ],
+    ]
   },
   {
     title: "Code Coach",
@@ -149,7 +149,7 @@ const experiences = [
       "Created small projects or apps that I decided on with them, and generally followed the curriculum of the school.",
       "Polished my coding skills. Gained a strong grasp of basic procedural programming, object-oriented programming and a general knowledge of a few scripting languages such as JavaScript and Python.",
       "Gained teaching experience by teaching kids and teenagers. Communicated well with the students and their parents. Found answers about how to program certain features alongside with them since not everything was known upfront.",
-    ],
+    ]
   },
 ];
 
@@ -176,33 +176,35 @@ const projects = [
         color: "green-text-gradient",
       },
     ],
+    url: "https://evogym-ajfm88.netlify.app",
     image: evogym,
-    source_code_link: "https://github.com/ajfm88/evogym",
+    source_code_link: "https://github.com/ajfm88/evogym"
   },
   {
-    name: "Jobify",
+    name: "CrwnClothing",
     description:
-      "A Full Stack MERN job tracking app with sign-up and login features, and detailed statistics on job applications month by month.",
+      "A Full Stack eCommerce React app with sign-up, login, cart and payment functionalities. Uses the Stripe API for payments.",
     tags: [
-      {
-        name: "mongodb",
-        color: "green-text-gradient",
-      },
-      {
-        name: "express",
-        color: "black-gradient",
-      },
       {
         name: "react",
         color: "blue-text-gradient",
       },
       {
-        name: "nodejs",
-        color: "green-text-gradient",
+        name: "stripe",
+        color: "pink-text-gradient",
+      },
+      {
+        name: "firebase",
+        color: "orange-text-gradient",
+      },
+      {
+        name: "typescript",
+        color: "blue-text-gradient",
       },
     ],
-    image: jobify,
-    source_code_link: "https://github.com/ajfm88/jobify",
+    url: "https://crwn-clothing-ajfm88.netlify.app",
+    image: crwnclothing,
+    source_code_link: "https://github.com/ajfm88/crwn-clothing-v2"
   },
   {
     name: "Realtor.com",
@@ -226,8 +228,9 @@ const projects = [
         color: "green-text-gradient",
       },
     ],
+    url: "https://realtor-clone-ajfm88.vercel.app",
     image: realtorclone,
-    source_code_link: "https://github.com/ajfm88/realtor-clone",
+    source_code_link: "https://github.com/ajfm88/realtor-clone"
   },
 ];
 

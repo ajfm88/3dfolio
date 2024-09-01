@@ -24,7 +24,7 @@ import thecoderschool from './company/thecoderschool.png';
 import issgroup from './company/issgroup.png';
 
 import evogym from './evogym.jpg';
-import jobify from './jobify.png';
+import crwnclothing from './crwn-clothing.png';
 import realtorclone from './realtor-clone.jpg';
 
 export {
@@ -51,6 +51,6 @@ export {
   thecoderschool,
   issgroup,
   evogym,
-  jobify,
+  crwnclothing,
   realtorclone,
 };

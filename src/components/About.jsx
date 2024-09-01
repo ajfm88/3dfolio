@@ -1,16 +1,16 @@
-import React from 'react';
-import Tilt from 'react-tilt';
-import { motion } from 'framer-motion';
+import React from "react";
+import { Tilt } from "react-tilt";
+import { motion } from "framer-motion";
 
-import { styles } from '../styles';
-import { services } from '../constants';
-import { SectionWrapper } from '../hoc';
-import { fadeIn, textVariant } from '../utils/motion';
+import { styles } from "../styles";
+import { services } from "../constants";
+import { SectionWrapper } from "../hoc";
+import { fadeIn, textVariant } from "../utils/motion";
 
 const ServiceCard = ({ index, title, icon, url }) => (
-  <Tilt className='xs:w-[250px] w-full'>
+  <Tilt className='xs:w-[250px] w-full transition-all'>
     <motion.div
-      variants={fadeIn('right', 'spring', index * 0.5, 0.75)}
+      variants={fadeIn("right", "spring", index * 0.5, 0.75)}
       className='w-full green-pink-gradient p-[1px] rounded-[20px] shadow-card'
     >
       <div
@@ -28,9 +28,7 @@ const ServiceCard = ({ index, title, icon, url }) => (
         />
 
         <a href={url} target='_blank'>
-          <h3 className='text-white text-[20px] font-bold text-center'>
-            {title}
-          </h3>
+          <h3 className='text-white text-[20px] font-bold text-center'>{title}</h3>
         </a>
       </div>
     </motion.div>
@@ -46,18 +44,27 @@ const About = () => {
       </motion.div>
 
       <motion.p
-        variants={fadeIn('', '', 0.1, 1)}
+        variants={fadeIn("", "", 0.1, 1)}
         className='mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]'
       >
         I’m a very ambitious Junior Software Developer working full time for a
         company in the Hollywood film industry, where I debug, test, enhance,
         and add new features to a Full Stack Web App. I have a passion for
         creating innovative and efficient solutions to complex problems and I
-        always aim to play a crucial role in developing software that improves
+        always aim to play a crucial role in developing Software that improves
         people’s lives. I am also a fitness enthusiast, an avid reader (both
-        fiction and non-fiction), a language learner (currently at an N3
-        intermediate level in Japanese), and a Yelp Elite Squad member who loves
-        ramen, especially Tonkotsu and Tsukemen, いただきます！ 🍜
+        fiction and non-fiction), a language learner (currently at an N3 -
+        intermediate level in Japanese. ), and a Yelp Elite Squad member who
+        loves ramen, especially Tonkotsu and Tsukemen. いただきます！ 🍜 <br />
+        P.S.: The Anki decks that I’ve created during my Japanese language
+        studies can be found&nbsp;
+        <a
+          href="https://ankiweb.net/shared/by-author/215281557"
+          target="_blank"
+        >
+          <b>here</b>
+        </a>
+        .
       </motion.p>
 
       <div className='mt-20 flex flex-wrap gap-10'>
@@ -69,4 +76,4 @@ const About = () => {
   );
 };
 
-export default SectionWrapper(About, 'about');
+export default SectionWrapper(About, "about");

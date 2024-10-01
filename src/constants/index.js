@@ -20,7 +20,7 @@ import {
   issgroup,
   evogym,
   crwnclothing,
-  realtorclone,
+  twitterclone,
 } from "../assets";
 
 export const navLinks = [
@@ -55,7 +55,7 @@ const services = [
   {
     title: "Resume",
     icon: resume,
-    url: "https://drive.google.com/file/d/1ajr79AgRGGsdJmpMflakwvCeGIMdHOp5/view",
+    url: "https://drive.google.com/file/d/1rQJVJGk3Yovzh0yRrRO7cjZyObr22Uqk/view?usp=sharing",
   },
   {
     title: "GitHub",
@@ -194,12 +194,12 @@ const projects = [
         color: "pink-text-gradient",
       },
       {
-        name: "firebase",
-        color: "orange-text-gradient",
-      },
-      {
         name: "typescript",
         color: "blue-text-gradient",
+      },
+      {
+        name: "firebase",
+        color: "orange-text-gradient",
       },
     ],
     url: "https://crwn-clothing-ajfm88.netlify.app",
@@ -207,9 +207,9 @@ const projects = [
     source_code_link: "https://github.com/ajfm88/crwn-clothing-v2"
   },
   {
-    name: "Realtor.com",
+    name: "Twitter Clone",
     description:
-      "An online real estate platform that provides users with up-to-date information on properties for sale, rent, and other services.",
+      "A short-form social media app with picture uploads, likes & comments where users share quick posts called 'tweets' with followers.",
     tags: [
       {
         name: "react",
@@ -224,13 +224,13 @@ const projects = [
         color: "blue-text-gradient",
       },
       {
-        name: "leaflet",
+        name: "nextjs",
         color: "green-text-gradient",
       },
     ],
-    url: "https://realtor-clone-ajfm88.vercel.app",
-    image: realtorclone,
-    source_code_link: "https://github.com/ajfm88/realtor-clone"
+    url: "https://twitter-clone-ajfm88.vercel.app",
+    image: twitterclone,
+    source_code_link: "https://https://github.com/ajfm88/twitter-clone"
   },
 ];
 

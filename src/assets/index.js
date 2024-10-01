@@ -25,7 +25,7 @@ import issgroup from './company/issgroup.png';
 
 import evogym from './evogym.jpg';
 import crwnclothing from './crwn-clothing.png';
-import realtorclone from './realtor-clone.jpg';
+import twitterclone from './twitter-clone.png';
 
 export {
   alejandro,
@@ -52,5 +52,5 @@ export {
   issgroup,
   evogym,
   crwnclothing,
-  realtorclone,
+  twitterclone,
 };

@@ -31,7 +31,7 @@
 
 ## <a name="introduction">🤖 Introduction</a>
 
-3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88-i0jt-ajfm88s-projects.vercel.app) or on the banner above.
+3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88.vercel.app) or on the banner above.
 
 ## <a name="tech-stack">⚙️ Tech Stack</a>
 
@@ -73,7 +73,7 @@ Make sure you have the following installed on your machine:
 
 - 🌳 [Git](https://git-scm.com)
 - 🟢 [Node.js](https://nodejs.org/en)
-- 📦 [npm](https://www.npmjs.com) (Node Package Manager)
+- 📦 [npm](https://www.npmjs.com)
 
 **Cloning the Repository**
 

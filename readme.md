@@ -22,12 +22,12 @@
 
 ## 📋 <a name="table">Table of Contents</a>
 
-01. 🤖 [Introduction](#introduction)
-02. ⚙️ [Tech Stack](#tech-stack)
-03. 🔋 [Features](#features)
-04. 🤸 [Quick Start](#quick-start)
-05. 🔗 [Links](#links)
-06. 🚀 [Tutorial](#tutorial)
+1.  🤖 [Introduction](#introduction)
+2.  ⚙️ [Tech Stack](#tech-stack)
+3.  🔋 [Features](#features)
+4.  🤸 [Quick Start](#quick-start)
+5.  🔗 [Links](#links)
+6.  🚀 [Tutorial](#tutorial)
 
 ## <a name="introduction">🤖 Introduction</a>
 
@@ -39,7 +39,6 @@
 - 🔺 [Three.js](https://threejs.org)
 - 🧵 [React Three Fiber](https://r3f.docs.pmnd.rs)
 - 🔧 [React Three Drei](https://drei.pmnd.rs)
-- 📧 [EmailJS](https://www.emailjs.com)
 - ⚡ [Vite](https://vitejs.dev)
 - 🌬️ [Tailwind CSS](https://tailwindcss.com)
 
@@ -90,18 +89,6 @@ Install the project dependencies using npm:
 npm install --legacy-peer-deps
 ```
 
-**Set Up Environment Variables**
-
-Create a new file named `.env` in the root of your project and add the following content:
-
-```env
-REACT_APP_EMAILJS_USERID=your_emailjs_user_id
-REACT_APP_EMAILJS_TEMPLATEID=your_emailjs_template_id
-REACT_APP_EMAILJS_RECEIVERID=your_emailjs_receiver_id
-```
-
-Replace the placeholder values with your actual EmailJS credentials. You can obtain these credentials by signing up on the [EmailJS website](https://www.emailjs.com/).
-
 **Running the Project**
 
 ```bash
@@ -117,6 +104,5 @@ Models and Assets used in the project can be found [here](https://drive.google.c
 ### <a name="tutorial">🚀 Tutorial</a>
 
 This projects is a heavily modified version of the following YouTube tutorial:
-<br />
 <br />
 <a href="https://youtu.be/watch?v=0fYi8SGA20k"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/151519281/289277158-1736fca5-a031-4854-8c09-bc110e3bc16d.svg"/></a>

@@ -29,11 +29,11 @@
 5.  🔗 [Links](#links)
 6.  🚀 [Tutorial](#tutorial)
 
-## <a name="introduction">🤖 Introduction</a>
+## 🤖 <a name="introduction">Introduction</a>
 
 3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88.vercel.app) or on the banner above.
 
-## <a name="tech-stack">⚙️ Tech Stack</a>
+## ⚙️ <a name="tech-stack">Tech Stack</a>
 
 - ⚛️ [React.js](https://react.dev)
 - 🔺 [Three.js](https://threejs.org)
@@ -42,7 +42,7 @@
 - ⚡ [Vite](https://vitejs.dev)
 - 🌬️ [Tailwind CSS](https://tailwindcss.com)
 
-## <a name="features">🔋 Features</a>
+## 🔋 <a name="features">Features</a>
 
 🖥️ **Customizable 3D Hero Section:** Includes a rotable 3D desktop computer model.
 
@@ -62,7 +62,7 @@
 
 🖌️ **Tailwind CSS Styling:** Styled with Tailwind CSS for a modern and responsive design.
 
-## <a name="quick-start">🤸 Quick Start</a>
+## 🤸 <a name="quick-start">Quick Start</a>
 
 Follow these steps to set up the project locally on your machine.
 
@@ -97,12 +97,13 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
 
-## <a name="links">🔗 Links</a>
+## 🔗 <a name="links">Links</a>
 
 Models and Assets used in the project can be found [here](https://drive.google.com/drive/folders/1KVU8iaH0E_JFtShNiR3BgCSA3pawXY4Z)
 
-### <a name="tutorial">🚀 Tutorial</a>
+### 🚀 <a name="tutorial">Tutorial</a>
 
 This projects is a heavily modified version of the following YouTube tutorial:
+<br />
 <br />
 <a href="https://youtu.be/watch?v=0fYi8SGA20k"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/151519281/289277158-1736fca5-a031-4854-8c09-bc110e3bc16d.svg"/></a>

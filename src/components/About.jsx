@@ -8,10 +8,10 @@ import { SectionWrapper } from "../hoc";
 import { fadeIn, textVariant } from "../utils/motion";
 
 const ServiceCard = ({ index, title, icon, url }) => (
-  <Tilt className='xs:w-[250px] w-full transition-all'>
+  <Tilt className="xs:w-[250px] w-full transition-all">
     <motion.div
       variants={fadeIn("right", "spring", index * 0.5, 0.75)}
-      className='w-full green-pink-gradient p-[1px] rounded-[20px] shadow-card'
+      className="w-full green-pink-gradient p-[1px] rounded-[20px] shadow-card"
     >
       <div
         options={{
@@ -19,17 +19,24 @@ const ServiceCard = ({ index, title, icon, url }) => (
           scale: 1,
           speed: 450,
         }}
-        className='bg-tertiary rounded-[20px] py-5 px-12 min-h-[280px] flex justify-evenly items-center flex-col'
+        className="bg-tertiary rounded-[20px] py-5 px-12 min-h-[280px] flex justify-evenly items-center flex-col"
       >
         <img
           src={icon}
-          alt='web-development'
-          className='w-16 h-16 object-contain'
+          alt="web-development"
+          className="w-16 h-16 object-contain"
         />
-
-        <a href={url} target='_blank'>
-          <h3 className='text-white text-[20px] font-bold text-center'>{title}</h3>
-        </a>
+        <a
+          href={url || "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-10 cursor-pointer"
+        />
+        <div className="relative z-0">
+          <h3 className="text-white text-[20px] font-bold text-center">
+            {title}
+          </h3>
+        </div>
       </div>
     </motion.div>
   </Tilt>
@@ -40,12 +47,12 @@ const About = () => {
     <>
       <motion.div variants={textVariant()}>
         <p className={styles.sectionSubText}>Introduction</p>
-        <h2 className={styles.sectionHeadText}>Overview.</h2>
+        <h2 className={styles.sectionHeadText}>Overview</h2>
       </motion.div>
 
       <motion.p
         variants={fadeIn("", "", 0.1, 1)}
-        className='mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]'
+        className="mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]"
       >
         I’m a very ambitious Junior Software Developer working full time for a
         company in the Hollywood film industry, where I debug, test, enhance,
@@ -67,7 +74,7 @@ const About = () => {
         .
       </motion.p>
 
-      <div className='mt-20 flex flex-wrap gap-10'>
+      <div className="mt-20 flex flex-wrap gap-10">
         {services.map((service, index) => (
           <ServiceCard key={service.title} index={index} {...service} />
         ))}

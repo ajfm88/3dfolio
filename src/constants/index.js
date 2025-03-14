@@ -176,9 +176,9 @@ const projects = [
         color: "orange-text-gradient",
       },
     ],
-    url: "https://suburbia-ajfm88.netlify.app",
+    url: "https://suburbia-skate-ajfm88.netlify.app",
     image: suburbia,
-    source_code_link: "https://github.com/ajfm88/suburbia",
+    source_code_link: "https://github.com/ajfm88/suburbia-skate",
   },
   {
     name: "Twitter Clone",
@@ -204,7 +204,7 @@ const projects = [
     ],
     url: "https://twitter-clone-ajfm88.vercel.app",
     image: twitterclone,
-    source_code_link: "https://https://github.com/ajfm88/twitter-clone",
+    source_code_link: "https://github.com/ajfm88/twitter-clone",
   },
   {
     name: "EvoGym",

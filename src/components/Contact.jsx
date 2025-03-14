@@ -29,10 +29,39 @@ const Contact = () => {
       ...form,
       [name]: value,
     });
+
+    if (notification.show && notification.type === "error") {
+      setNotification({ show: false, type: "", message: "" });
+    }
+  };
+
+  const checkValidation = () => {
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
+      return false;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(form.email)) {
+      setNotification({
+        show: true,
+        type: "error",
+        message: "Please enter a valid email address.",
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = (e) => {
+    if (!checkValidation()) {
+      if (!/\S+@\S+\.\S+/.test(form.email) && form.email.trim()) {
+        e.preventDefault();
+      }
+      return;
+    }
+
     e.preventDefault();
+
     setLoading(true);
     setNotification({ show: false, type: "", message: "" });
 
@@ -85,7 +114,7 @@ const Contact = () => {
         className="flex-[0.75] bg-black-100 p-8 rounded-2xl relative"
       >
         <p className={styles.sectionSubText}>Get in touch</p>
-        <h3 className={styles.sectionHeadText}>Contact.</h3>
+        <h3 className={styles.sectionHeadText}>Contact Me</h3>
 
         <div className="h-12 relative">
           {notification.show && (
@@ -113,8 +142,9 @@ const Contact = () => {
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="What's a good name for you?"
+              placeholder="What’s a good name for you?"
               className="bg-tertiary py-4 px-6 placeholder:text-secondary text-white rounded-lg outline-none border-none font-medium"
+              required
             />
           </label>
           <label className="flex flex-col">
@@ -124,8 +154,9 @@ const Contact = () => {
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder="What's your email address?"
+              placeholder="What’s your email address?"
               className="bg-tertiary py-4 px-6 placeholder:text-secondary text-white rounded-lg outline-none border-none font-medium"
+              required
             />
           </label>
           <label className="flex flex-col">
@@ -137,6 +168,7 @@ const Contact = () => {
               onChange={handleChange}
               placeholder="What would you like to say?"
               className="bg-tertiary py-4 px-6 placeholder:text-secondary text-white rounded-lg outline-none border-none font-medium"
+              required
             />
           </label>
 

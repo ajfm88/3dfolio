@@ -54,15 +54,22 @@ const About = () => {
         variants={fadeIn("", "", 0.1, 1)}
         className="mt-4 text-secondary text-[17px] max-w-3xl leading-[30px]"
       >
-        I’m a very ambitious Junior Software Developer working full time for a
-        company in the Hollywood film industry, where I debug, test, enhance,
-        and add new features to a Full Stack Web App. I have a passion for
-        creating innovative and efficient solutions to complex problems and I
-        always aim to play a crucial role in developing Software that improves
-        people’s lives. I am also a fitness enthusiast, an avid reader (both
-        fiction and non-fiction), a language learner (currently at an N3 -
-        intermediate level in Japanese. ), and a Yelp Elite Squad member who
-        loves ramen, especially Tonkotsu and Tsukemen. いただきます！ 🍜 <br />
+        I’m a very ambitious Software Engineer based in Los Angeles, CA with
+        previous experience in the Hollywood film industry, and in education. I
+        have a passion for creating innovative and efficient solutions to
+        complex problems and I always aim to play a crucial role in developing
+        Software that improves people’s lives. I am also a fitness enthusiast,
+        an avid reader (both fiction and non-fiction), a language learner
+        (passed both the JLPT N5 and N4 and I’m currently studying for the N3
+        (intermediate level) in Japanese), and a{" "}
+        <a
+          href="https://yelp.com/user_details?userid=JBqCl4WE7g9SPR-0y0tJzQ"
+          target="_blank"
+        >
+          <b>Yelp Elite Squad</b>
+        </a>{" "}
+        member who loves ramen, especially Tonkotsu and Tsukemen. いただきます！
+        🍜 <br />
         P.S.: The Anki decks that I’ve created during my Japanese language
         studies can be found&nbsp;
         <a

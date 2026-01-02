@@ -24,8 +24,8 @@ import thecoderschool from "./company/thecoderschool.png";
 import issgroup from "./company/issgroup.png";
 
 import suburbia from "./suburbia.png";
-import twitterclone from "./twitter-clone.png";
-import evogym from "./evogym.jpg";
+import jobify from "./jobify.png";
+import twitter from "./twitter.png";
 
 export {
   alejandro,
@@ -51,6 +51,6 @@ export {
   thecoderschool,
   issgroup,
   suburbia,
-  twitterclone,
-  evogym,
+  jobify,
+  twitter,
 };

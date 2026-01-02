@@ -93,12 +93,12 @@ const Works = () => {
         >
           The following projects showcase my skills and experience across
           different tech stacks. Each project is briefly described in its
-          respective card and there are links to code repositories (in the upper
-          right corner of the card, on the GitHub logo), and to live demos (in
-          the title of each project). These projects reflect my ability to solve
-          complex problems, work with different technologies, and manage
-          projects effectively. To see more projects, please feel free to visit
-          my&nbsp;
+          respective card and there are links to code repositories (by clicking
+          in the upper right corner of the card, on the GitHub logo), and to
+          live demos (by clicking on the image). These projects reflect my
+          ability to solve complex problems, work with different technologies,
+          and manage projects effectively. To see more projects, please feel
+          free to visit my&nbsp;
           <a href="https://github.com/ajfm88" target="_blank">
             <b>GitHub</b>
           </a>

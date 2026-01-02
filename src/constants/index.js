@@ -19,8 +19,11 @@ import {
   thecoderschool,
   issgroup,
   suburbia,
-  twitterclone,
+  jobify,
+  twitter,
+  airesume,
   evogym,
+  imdb,
 } from "../assets";
 
 export const navLinks = [
@@ -50,7 +53,7 @@ const services = [
   {
     title: "LinkedIn",
     icon: linkedin,
-    url: "https://www.linkedin.com/in/ajfm88",
+    url: "https://linkedin.com/in/ajfm88",
   },
   {
     title: "Résumé",
@@ -130,12 +133,13 @@ const experiences = [
     company_name: "The MBS Group / ISSProps",
     icon: issgroup,
     iconBg: "#383E56",
-    date: "June 2022 - Present",
+    date: "June 2022 - August 2025",
     points: [
-      "Developing and maintaining Full Stack, in-house application by performing routine updates.",
-      "Collaborating with cross-functional teams including the sales team, the finance team, inventory and returns managers, and the Senior developer to create a high-quality application to be used internally across our different branches.",
-      "Implementing responsive design and ensuring cross-browser compatibility.",
-      "Acting as a technical consultant for any new functionality prior to implementation.",
+      "Worked on a complete internal Full Stack rental and inventory management application using JavaScript, Node.js, MeteorJS with MVC architecture, and MongoDB.",
+      "Architected and developed a public-facing customer prop search application using Astro with React components, implementing reusable UI components and templated controls.",
+      "Designed and implemented a RESTful API backend using Express and Node.js to power the public-facing customer prop search application.",
+      "Utilized Git and GitHub for version control implementing feature branching workflows.",
+      "Managed WordPress CMS to update and maintain our primary company website, ensuring consistent branding and user experience.",
     ],
   },
   {
@@ -145,10 +149,9 @@ const experiences = [
     iconBg: "#E6DEDD",
     date: "May 2021 - June 2022",
     points: [
-      "Conducted one-on-one or one-on-two coding lessons for kids. Taught younger kids programming by using Scratch, while older kids gravitated towards learning with Python/JavaScript.",
-      "Created small projects or apps that I decided on with them, and generally followed the curriculum of the school.",
-      "Polished my coding skills. Gained a strong grasp of basic procedural programming, object-oriented programming and a general knowledge of a few scripting languages such as JavaScript and Python.",
-      "Gained teaching experience by teaching kids and teenagers. Communicated well with the students and their parents. Found answers about how to program certain features alongside with them since not everything was known upfront.",
+      "Organized and led week-long coding bootcamps teaching Python programming fundamentals to middle and high schoolers.",
+      "Planned and executed small but fun projects in Scratch for one-on-one coding lessons with elementary school children.",
+      "Gained teaching experience by teaching kids and teenagers. Communicated well with the students and their parents.",
     ],
   },
 ];
@@ -161,19 +164,19 @@ const projects = [
     tags: [
       {
         name: "nextjs",
-        color: "gray-text-gradient",
-      },
-      {
-        name: "threejs",
-        color: "pink-text-gradient",
+        color: "black-gradient",
       },
       {
         name: "typescript",
-        color: "blue-text-gradient",
+        color: "pink-text-gradient",
+      },
+      {
+        name: "threejs",
+        color: "orange-text-gradient",
       },
       {
         name: "tailwind",
-        color: "orange-text-gradient",
+        color: "green-text-gradient",
       },
     ],
     url: "https://suburbia-skate-ajfm88.netlify.app",
@@ -181,10 +184,40 @@ const projects = [
     source_code_link: "https://github.com/ajfm88/suburbia-skate",
   },
   {
+    name: "Jobify",
+    description:
+      "A Full Stack MERN job tracking app that allows users to manage their job search and view detailed monthly statistics.",
+    tags: [
+      {
+        name: "mongodb",
+        color: "green-text-gradient",
+      },
+      {
+        name: "express",
+        color: "black-gradient",
+      },
+      {
+        name: "react",
+        color: "blue-text-gradient",
+      },
+      {
+        name: "nodejs",
+        color: "green-text-gradient",
+      },
+    ],
+    url: "https://jobify-ajfm88.onrender.com",
+    image: jobify,
+    source_code_link: "https://github.com/ajfm88/jobify",
+  },
+  {
     name: "Twitter Clone",
     description:
       "A short-form social media app with picture uploads, likes & comments where users share quick posts called 'tweets' with followers.",
     tags: [
+      {
+        name: "nextjs",
+        color: "black-gradient",
+      },
       {
         name: "react",
         color: "blue-text-gradient",
@@ -195,21 +228,17 @@ const projects = [
       },
       {
         name: "tailwind",
-        color: "blue-text-gradient",
-      },
-      {
-        name: "nextjs",
         color: "green-text-gradient",
       },
     ],
     url: "https://twitter-clone-ajfm88.vercel.app",
-    image: twitterclone,
+    image: twitter,
     source_code_link: "https://github.com/ajfm88/twitter-clone",
   },
   {
     name: "EvoGym",
     description:
-      "A fitness React 18 single-page application website with responsive design and contact us page email capabilities.",
+      "A stunning and responsive SPA fitness brand website created with React, TypeScript and TailwindCSS.",
     tags: [
       {
         name: "react",
@@ -217,20 +246,72 @@ const projects = [
       },
       {
         name: "tailwind",
-        color: "pink-text-gradient",
+        color: "green-text-gradient",
       },
       {
         name: "typescript",
-        color: "blue-text-gradient",
+        color: "pink-text-gradient",
       },
       {
         name: "vite",
-        color: "green-text-gradient",
+        color: "orange-text-gradient",
       },
     ],
     url: "https://evogym-ajfm88.netlify.app",
     image: evogym,
     source_code_link: "https://github.com/ajfm88/evogym",
+  },
+  {
+    name: "AI Resume Builder",
+    description:
+      "A Full Stack, ChatGPT-powered SaaS application for creating stunning resumes with the help of AI.",
+    tags: [
+      {
+        name: "nextjs",
+        color: "black-gradient",
+      },
+      {
+        name: "react",
+        color: "blue-text-gradient",
+      },
+      {
+        name: "openai",
+        color: "green-text-gradient",
+      },
+      {
+        name: "typescript",
+        color: "pink-text-gradient",
+      },
+    ],
+    url: "https://ai-resume-builder-ajfm88.vercel.app",
+    image: airesume,
+    source_code_link: "https://github.com/ajfm88/ai-resume-builder",
+  },
+  {
+    name: "IMDB Clone",
+    description:
+      "An IMDb clone built with Next.js and The Movie Database (TMDB) API, featuring movie and TV show browsing with information and ratings.",
+    tags: [
+      {
+        name: "nextjs",
+        color: "black-gradient",
+      },
+      {
+        name: "react",
+        color: "blue-text-gradient",
+      },
+      {
+        name: "tmdb",
+        color: "orange-text-gradient",
+      },
+      {
+        name: "tailwind",
+        color: "green-text-gradient",
+      },
+    ],
+    url: "https://imdb-clone-ajfm88.vercel.app",
+    image: imdb,
+    source_code_link: "https://github.com/ajfm88/imdb-clone",
   },
 ];
 

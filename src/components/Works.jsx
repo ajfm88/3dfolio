@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Tilt } from "react-tilt";
 import { motion } from "framer-motion";
 
@@ -79,10 +79,32 @@ const ProjectCard = ({
 };
 
 const Works = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if screen is mobile size
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mediaQuery.matches);
+
+    // Add listener for screen size changes
+    const handleMediaQueryChange = (event) => {
+      setIsMobile(event.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleMediaQueryChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleMediaQueryChange);
+    };
+  }, []);
+
+  // Show only first 3 projects on mobile
+  const displayedProjects = isMobile ? projects.slice(0, 3) : projects;
+
   return (
     <>
       <motion.div variants={textVariant()}>
-        <p className={`${styles.sectionSubText} `}>My work</p>
+        <p className={`${styles.sectionSubText} `}>Portfolio highlights</p>
         <h2 className={`${styles.sectionHeadText}`}>Projects</h2>
       </motion.div>
 
@@ -93,12 +115,12 @@ const Works = () => {
         >
           The following projects showcase my skills and experience across
           different tech stacks. Each project is briefly described in its
-          respective card and there are links to code repositories (in the upper
-          right corner of the card, on the GitHub logo), and to live demos (in
-          the title of each project). These projects reflect my ability to solve
-          complex problems, work with different technologies, and manage
-          projects effectively. To see more projects, please feel free to visit
-          my&nbsp;
+          respective card and there are links to code repositories (by clicking
+          in the upper right corner of the card, on the GitHub logo. Or clicking
+          on the name of the project itself), and to live demos (by clicking on
+          the image of the project). These projects reflect my ability to solve
+          complex problems, work with different technologies, and manage tasks
+          effectively. To see more projects, please feel free to visit my&nbsp;
           <a href="https://github.com/ajfm88" target="_blank">
             <b>GitHub</b>
           </a>
@@ -107,7 +129,7 @@ const Works = () => {
       </div>
 
       <div className="mt-20 flex flex-wrap gap-7">
-        {projects.map((project, index) => (
+        {displayedProjects.map((project, index) => (
           <ProjectCard key={`project-${index}`} index={index} {...project} />
         ))}
       </div>

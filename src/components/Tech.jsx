@@ -31,7 +31,7 @@ const Tech = () => {
   return (
     <>
       <p className={`${styles.sectionSubText} text-center`}>
-        Some of the technologies and programming languages I have experience in
+        Skills and expertise
       </p>
       <h2 className={`${styles.sectionHeadText} text-center`}>My Tech Stack</h2>
       <div className="flex flex-row flex-wrap justify-center gap-10">

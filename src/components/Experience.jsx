@@ -11,6 +11,7 @@ import { styles } from "../styles";
 import { experiences } from "../constants";
 import { SectionWrapper } from "../hoc";
 import { textVariant } from "../utils/motion";
+import BackgroundAnimation from "./BackgroundAnimation";
 
 const ExperienceCard = ({ experience }) => {
   return (
@@ -58,27 +59,31 @@ const ExperienceCard = ({ experience }) => {
 
 const Experience = () => {
   return (
-    <>
-      <motion.div variants={textVariant()}>
-        <p className={`${styles.sectionSubText} text-center`}>
-          What I’ve done so far for other companies
-        </p>
-        <h2 className={`${styles.sectionHeadText} text-center`}>
-          Work Experience
-        </h2>
-      </motion.div>
+    <div className="relative">
+      <BackgroundAnimation />
 
-      <div className="mt-20 flex flex-col">
-        <VerticalTimeline>
-          {experiences.map((experience, index) => (
-            <ExperienceCard
-              key={`experience-${index}`}
-              experience={experience}
-            />
-          ))}
-        </VerticalTimeline>
+      <div className="relative z-10">
+        <motion.div variants={textVariant()}>
+          <p className={`${styles.sectionSubText} text-center`}>
+            Career highlights
+          </p>
+          <h2 className={`${styles.sectionHeadText} text-center`}>
+            Work Experience
+          </h2>
+        </motion.div>
+
+        <div className="mt-20 flex flex-col">
+          <VerticalTimeline>
+            {experiences.map((experience, index) => (
+              <ExperienceCard
+                key={`experience-${index}`}
+                experience={experience}
+              />
+            ))}
+          </VerticalTimeline>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 

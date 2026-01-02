@@ -24,8 +24,11 @@ import thecoderschool from "./company/thecoderschool.png";
 import issgroup from "./company/issgroup.png";
 
 import suburbia from "./suburbia.png";
-import twitterclone from "./twitter-clone.png";
+import jobify from "./jobify.png";
+import twitter from "./twitter.png";
 import evogym from "./evogym.jpg";
+import airesume from "./ai-resume-builder.png";
+import imdb from "./imdb-clone.png";
 
 export {
   alejandro,
@@ -51,6 +54,9 @@ export {
   thecoderschool,
   issgroup,
   suburbia,
-  twitterclone,
+  jobify,
+  twitter,
   evogym,
+  airesume,
+  imdb,
 };

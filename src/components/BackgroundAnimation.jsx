@@ -1,9 +1,13 @@
 import React from 'react';
 
 const BackgroundAnimation = () => (
-  <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none overflow-hidden">
+  <div
+    className="absolute inset-0 hidden lg:flex items-center justify-center opacity-50 pointer-events-none overflow-hidden"
+    style={{ contain: 'layout paint' }}
+  >
     <svg
-      className='w-full h-full min-w-[800px] min-h-[800px]'
+      className='w-full h-full'
+      style={{ willChange: 'transform' }}
       viewBox='0 0 602 602'
       fill='none'
       xmlns='http://www.w3.org/2000/svg'

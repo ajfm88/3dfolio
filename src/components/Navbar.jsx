@@ -34,31 +34,32 @@ const Navbar = () => {
       }`}
     >
       <div className="w-full flex justify-between items-center max-w-7xl mx-auto">
-        <Link
-          to="https://pixel-portfolio.netlify.app"
-          target="_blank"
-          className="flex items-center gap-2"
-          onClick={() => {
-            setActive("");
-            window.scrollTo(0, 0);
-          }}
-        >
-          <img
-            src={alejandro}
-            alt="logo"
-            className="w-15 h-10 object-contain"
-          />
-          <p className="text-white text-[18px] font-bold cursor-pointer flex ">
-            &nbsp;
-            <span className="sm:block hidden">
-              {" "}
-              | &nbsp;
-              <span>ajfm88</span>
-            </span>
-          </p>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="https://2dfolio.netlify.app"
+            target="_blank"
+            onClick={() => {
+              setActive("");
+              window.scrollTo(0, 0);
+            }}
+          >
+            <img
+              src={alejandro}
+              alt="logo"
+              className="w-15 h-10 object-contain"
+            />
+          </Link>
+          <a
+            href="https://linktr.ee/ajfm88"
+            target="_blank"
+            rel="noreferrer"
+            className="text-white text-[18px] font-bold cursor-pointer flex items-center whitespace-nowrap"
+          >
+            &nbsp;| &nbsp;ajfm88
+          </a>
+        </div>
 
-        <ul className="list-none hidden sm:flex flex-row gap-10">
+        <ul className="list-none hidden min-[810px]:flex flex-row gap-10">
           {navLinks.map((nav) => (
             <li
               key={nav.id}
@@ -72,7 +73,7 @@ const Navbar = () => {
           ))}
         </ul>
 
-        <div className="sm:hidden flex flex-1 justify-end items-center">
+        <div className="min-[810px]:hidden flex flex-1 justify-end items-center">
           <img
             src={toggle ? close : menu}
             alt="menu"

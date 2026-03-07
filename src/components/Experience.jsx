@@ -11,7 +11,6 @@ import { styles } from "../styles";
 import { experiences } from "../constants";
 import { SectionWrapper } from "../hoc";
 import { textVariant } from "../utils/motion";
-import BackgroundAnimation from "./BackgroundAnimation";
 
 const ExperienceCard = ({ experience }) => {
   return (
@@ -59,31 +58,27 @@ const ExperienceCard = ({ experience }) => {
 
 const Experience = () => {
   return (
-    <div className="relative">
-      <BackgroundAnimation />
+    <>
+      <motion.div variants={textVariant()}>
+        <p className={`${styles.sectionSubText} text-center`}>
+          Career highlights
+        </p>
+        <h2 className={`${styles.sectionHeadText} text-center`}>
+          Work Experience
+        </h2>
+      </motion.div>
 
-      <div className="relative z-10">
-        <motion.div variants={textVariant()}>
-          <p className={`${styles.sectionSubText} text-center`}>
-            Career highlights
-          </p>
-          <h2 className={`${styles.sectionHeadText} text-center`}>
-            Work Experience
-          </h2>
-        </motion.div>
-
-        <div className="mt-20 flex flex-col">
-          <VerticalTimeline>
-            {experiences.map((experience, index) => (
-              <ExperienceCard
-                key={`experience-${index}`}
-                experience={experience}
-              />
-            ))}
-          </VerticalTimeline>
-        </div>
+      <div className="mt-20 flex flex-col">
+        <VerticalTimeline>
+          {experiences.map((experience, index) => (
+            <ExperienceCard
+              key={`experience-${index}`}
+              experience={experience}
+            />
+          ))}
+        </VerticalTimeline>
       </div>
-    </div>
+    </>
   );
 };
 

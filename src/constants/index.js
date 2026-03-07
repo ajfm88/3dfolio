@@ -8,13 +8,13 @@ import {
   javascript,
   typescript,
   python,
-  redux,
   tailwind,
   mongodb,
   express,
   reactjs,
   nodejs,
   git,
+  csharp,
   nextjs,
   thecoderschool,
   issgroup,
@@ -122,8 +122,8 @@ const technologies = [
     icon: git,
   },
   {
-    name: "Redux Toolkit",
-    icon: redux,
+    name: "C#",
+    icon: csharp,
   },
 ];
 

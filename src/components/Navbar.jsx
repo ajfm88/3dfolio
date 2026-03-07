@@ -53,9 +53,7 @@ const Navbar = () => {
             <span className="sm:block hidden">
               {" "}
               | &nbsp;
-              <a href="https://linktr.ee/ajfm88" target="_blank">
-                ajfm88
-              </a>
+              <span>ajfm88</span>
             </span>
           </p>
         </Link>

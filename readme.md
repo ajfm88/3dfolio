@@ -1,6 +1,6 @@
 <div align="center">
   <br />
-    <a href="https://react-portfolio-v3-ajfm88.vercel.app">
+    <a href="https://3dfolio-ajfm88.vercel.app">
       <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/151519281/292722498-4722160a-8e61-403f-a905-728feae1f7e6.png" alt="Project Banner">
     </a>
   <br />
@@ -12,12 +12,27 @@
     <a href="https://threejs.org">
       <img src="https://img.shields.io/badge/-Three_JS-black?style=for-the-badge&logoColor=white&logo=threedotjs&color=000000" alt="three.js" />
     </a>
+    <a href="https://framer.com/motion">
+      <img src="https://img.shields.io/badge/-Framer_Motion-black?style=for-the-badge&logoColor=white&logo=framer&color=0055FF" alt="framer motion" />
+    </a>
+    <a href="https://r3f.docs.pmnd.rs">
+      <img src="https://img.shields.io/badge/-React_Three_Fiber-black?style=for-the-badge&logoColor=white&logo=threedotjs&color=000000" alt="react three fiber" />
+    </a>
+    <a href="https://reactrouter.com">
+      <img src="https://img.shields.io/badge/-React_Router-black?style=for-the-badge&logoColor=white&logo=reactrouter&color=CA4245" alt="react router" />
+    </a>
+    <a href="https://drei.pmnd.rs">
+      <img src="https://img.shields.io/badge/-React_Three_Drei-black?style=for-the-badge&logoColor=white&logo=threedotjs&color=000000" alt="react three drei" />
+    </a>
+    <a href="https://vitejs.dev">
+      <img src="https://img.shields.io/badge/-Vite-black?style=for-the-badge&logoColor=white&logo=vite&color=646CFF" alt="vite" />
+    </a>
     <a href="https://tailwindcss.com">
       <img src="https://img.shields.io/badge/-Tailwind_CSS-black?style=for-the-badge&logoColor=white&logo=tailwindcss&color=06B6D4" alt="tailwindcss" />
     </a>
   </div>
 
-  <h3 align="center">Personal Portfolio Website ver. 3.0</h3>
+  <h3 align="center">3D Personal Portfolio Website</h3>
 </div>
 
 ## 📋 <a name="table">Table of Contents</a>
@@ -31,13 +46,15 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-3rd iteration of my personal porfolio website. Now with 3D effects. To see a live demo of this project, please [click here](https://react-portfolio-v3-ajfm88.vercel.app) or on the banner above.
+Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portfolio work. To see a live demo of this project, please [click here](https://3dfolio-ajfm88.vercel.app) or on the banner above.
 
 ## ⚙️ <a name="tech-stack">Tech Stack</a>
 
 - ⚛️ [React.js](https://react.dev)
 - 🔺 [Three.js](https://threejs.org)
+- 🎞️ [Framer Motion](https://framer.com/motion)
 - 🧵 [React Three Fiber](https://r3f.docs.pmnd.rs)
+- 🧭 [React Router](https://reactrouter.com)
 - 🔧 [React Three Drei](https://drei.pmnd.rs)
 - ⚡ [Vite](https://vitejs.dev)
 - 🌬️ [Tailwind CSS](https://tailwindcss.com)
@@ -71,14 +88,14 @@ Follow these steps to set up the project locally on your machine.
 Make sure you have the following installed on your machine:
 
 - 🌳 [Git](https://git-scm.com)
-- 🟢 [Node.js](https://nodejs.org/en)
-- 📦 [npm](https://www.npmjs.com)
+- 🟢 [Node.js](https://nodejs.org)
+- 📦 [npm](https://npmjs.com)
 
 **Cloning the Repository**
 
 ```bash
-git clone https://github.com/ajfm88/react-portfolio-v3.git
-cd react-portfolio-v3
+git clone https://github.com/ajfm88/3dfolio.git
+cd 3dfolio
 ```
 
 **Installation**
@@ -86,7 +103,7 @@ cd react-portfolio-v3
 Install the project dependencies using npm:
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 ```
 
 **Running the Project**
@@ -100,10 +117,3 @@ Open [http://localhost:5173](http://localhost:5173) in your browser to view the 
 ## 🔗 <a name="links">Links</a>
 
 Models and Assets used in the project can be found [here](https://drive.google.com/drive/folders/1KVU8iaH0E_JFtShNiR3BgCSA3pawXY4Z)
-
-### 🚀 <a name="tutorial">Tutorial</a>
-
-This projects is a heavily modified version of the following YouTube tutorial:
-<br />
-<br />
-<a href="https://youtu.be/watch?v=0fYi8SGA20k"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/151519281/289277158-1736fca5-a031-4854-8c09-bc110e3bc16d.svg"/></a>

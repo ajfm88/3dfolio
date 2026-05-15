@@ -41,8 +41,6 @@
 2.  ⚙️ [Tech Stack](#tech-stack)
 3.  🔋 [Features](#features)
 4.  🤸 [Quick Start](#quick-start)
-5.  🔗 [Links](#links)
-6.  🚀 [Tutorial](#tutorial)
 
 ## 🤖 <a name="introduction">Introduction</a>
 
@@ -113,7 +111,3 @@ npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
-
-## 🔗 <a name="links">Links</a>
-
-Models and Assets used in the project can be found [here](https://drive.google.com/drive/folders/1KVU8iaH0E_JFtShNiR3BgCSA3pawXY4Z)

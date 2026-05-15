@@ -1,39 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { styles } from "../styles";
 import { navLinks } from "../constants";
 import { alejandro, menu, close } from "../assets";
 
 const Navbar = () => {
   const [active, setActive] = useState("");
   const [toggle, setToggle] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      if (scrollTop > 100) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   return (
-    <nav
-      className={`${
-        styles.paddingX
-      } w-full flex items-center py-5 fixed top-0 z-20 ${
-        scrolled ? "bg-primary" : "bg-transparent"
-      }`}
-    >
-      <div className="w-full flex justify-between items-center max-w-7xl mx-auto">
+    <nav className="w-full h-[65px] fixed top-0 z-50 shadow-lg shadow-[#2A0E61]/50 bg-[#03001427] backdrop-blur-md px-6 sm:px-10">
+      <div className="w-full h-full flex items-center justify-between max-w-7xl mx-auto">
+
+        {/* Logo + Name */}
         <div className="flex items-center gap-2">
           <Link
             to="https://2dfolio.netlify.app"
@@ -59,51 +38,52 @@ const Navbar = () => {
           </a>
         </div>
 
-        <ul className="list-none hidden min-[810px]:flex flex-row gap-10">
+        {/* Desktop Nav — pill glass container */}
+        <div className="hidden min-[810px]:flex items-center border border-[rgba(112,66,248,0.38)] bg-[rgba(3,0,20,0.37)] px-6 py-2.5 rounded-full gap-8 text-gray-200">
           {navLinks.map((nav) => (
-            <li
+            <a
               key={nav.id}
-              className={`${
-                active === nav.title ? "text-white" : "text-secondary"
-              } hover:text-white text-[18px] font-medium cursor-pointer`}
+              href={`#${nav.id}`}
               onClick={() => setActive(nav.title)}
+              className={`${
+                active === nav.title ? "text-white" : "text-gray-300"
+              } hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[15px] font-medium cursor-pointer`}
             >
-              <a href={`#${nav.id}`}>{nav.title}</a>
-            </li>
+              {nav.title}
+            </a>
           ))}
-        </ul>
+        </div>
 
-        <div className="min-[810px]:hidden flex flex-1 justify-end items-center">
+        {/* Mobile hamburger */}
+        <div className="min-[810px]:hidden flex items-center">
           <img
             src={toggle ? close : menu}
             alt="menu"
-            className="w-[28px] h-[28px] object-contain"
+            className="w-[28px] h-[28px] object-contain cursor-pointer"
             onClick={() => setToggle(!toggle)}
           />
 
-          <div
-            className={`${
-              !toggle ? "hidden" : "flex"
-            } p-6 black-gradient absolute top-20 right-0 mx-4 my-2 min-w-[140px] z-10 rounded-xl`}
-          >
-            <ul className="list-none flex justify-end items-start flex-1 flex-col gap-4">
+          {toggle && (
+            <div className="absolute top-[65px] right-0 w-full bg-[#030014] border-t border-[rgba(112,66,248,0.38)] p-6 flex flex-col items-center gap-5">
               {navLinks.map((nav) => (
-                <li
+                <a
                   key={nav.id}
-                  className={`font-poppins font-medium cursor-pointer text-[16px] ${
-                    active === nav.title ? "text-white" : "text-secondary"
-                  }`}
+                  href={`#${nav.id}`}
                   onClick={() => {
-                    setToggle(!toggle);
+                    setToggle(false);
                     setActive(nav.title);
                   }}
+                  className={`${
+                    active === nav.title ? "text-white" : "text-gray-300"
+                  } hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[16px] font-medium cursor-pointer`}
                 >
-                  <a href={`#${nav.id}`}>{nav.title}</a>
-                </li>
+                  {nav.title}
+                </a>
               ))}
-            </ul>
-          </div>
+            </div>
+          )}
         </div>
+
       </div>
     </nav>
   );

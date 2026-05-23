@@ -1,8 +1,8 @@
-import { motion } from "framer-motion";
-import { TypeAnimation } from "react-type-animation";
+import { motion } from 'framer-motion';
+import { TypeAnimation } from 'react-type-animation';
 
-import { styles } from "../styles";
-import ParticlesBackground from "./canvas/Particles";
+import { styles } from '../styles';
+import ParticlesBackground from './canvas/Particles';
 
 const Hero = () => {
   return (
@@ -13,7 +13,7 @@ const Hero = () => {
           className="absolute inset-0 opacity-30"
           style={{
             background:
-              "radial-gradient(circle at 50% 50%, rgba(145, 94, 255, 0.4) 0%, transparent 50%)",
+              'radial-gradient(circle at 50% 50%, rgba(145, 94, 255, 0.4) 0%, transparent 50%)',
           }}
           animate={{
             scale: [1, 1.2, 1],
@@ -21,7 +21,7 @@ const Hero = () => {
           transition={{
             duration: 8,
             repeat: Infinity,
-            repeatType: "reverse",
+            repeatType: 'reverse',
           }}
         />
       </div>
@@ -49,7 +49,7 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Hi, I’m{" "}
+            Hi, I’m{' '}
             <span className="relative inline-block">
               <span className="text-[#915EFF] hover:text-white hover:bg-[#915EFF] px-2 transition-all duration-300 rounded">
                 Alejandro
@@ -57,7 +57,7 @@ const Hero = () => {
               <motion.span
                 className="absolute -bottom-1 sm:-bottom-2 left-0 w-full h-1 bg-[#915EFF]"
                 initial={{ width: 0 }}
-                animate={{ width: "100%" }}
+                animate={{ width: '100%' }}
                 transition={{ delay: 0.8, duration: 0.8 }}
               />
             </span>
@@ -72,18 +72,18 @@ const Hero = () => {
             <motion.p
               className={`${styles.heroSubText} text-white-100 text-[1rem] sm:text-[1.25rem] md:text-[1.5rem] leading-relaxed`}
             >
-              I build{" "}
+              I build{' '}
               <TypeAnimation
                 sequence={[
-                  "full stack web apps",
+                  'full stack web apps',
                   1500,
-                  "interactive 3D experiences",
+                  'interactive 3D experiences',
                   1500,
-                  "scalable MERN solutions",
+                  'scalable MERN solutions',
                   1500,
-                  "performant Next.js apps",
+                  'performant Next.js apps',
                   1500,
-                  "innovative software",
+                  'innovative software',
                   1500,
                 ]}
                 wrapper="span"
@@ -97,12 +97,12 @@ const Hero = () => {
             <motion.div
               className="absolute -bottom-2 sm:-bottom-4 left-0 h-0.5 bg-gradient-to-r from-transparent via-[#915EFF] to-transparent w-full"
               initial={{ width: 0 }}
-              animate={{ width: "100%" }}
+              animate={{ width: '100%' }}
               transition={{
                 delay: 0.6,
                 duration: 1.5,
                 repeat: Infinity,
-                repeatType: "reverse",
+                repeatType: 'reverse',
               }}
             />
           </motion.div>
@@ -113,9 +113,8 @@ const Hero = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            Full Stack Software Engineer based in Los Angeles, CA — passionate
-            about creating innovative and efficient solutions to complex
-            problems.
+            Full Stack Software Engineer based in Los Angeles, CA — passionate about creating
+            innovative and efficient solutions to complex problems.
           </motion.p>
 
           <motion.div
@@ -131,7 +130,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#e0434d] transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
+                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
               }}
             >
               <svg
@@ -151,7 +150,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#0077b5] transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
+                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
               }}
             >
               <svg
@@ -171,7 +170,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#43E55E] hover:text-black transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
+                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
               }}
             >
               <svg
@@ -189,64 +188,49 @@ const Hero = () => {
 
         {/* Right side decorative element */}
         <motion.div
-          className="w-full md:w-auto md:flex-1 flex justify-center items-center mt-8 md:mt-0"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 1 }}
+          className="w-full md:flex-1 flex justify-center items-center mt-8 md:mt-0"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-72 md:h-72">
+          <div className="relative w-full max-w-[1000px]">
+            <img
+              src="/hero-bg.svg"
+              alt="hero background"
+              className="w-full select-none"
+              draggable={false}
+            />
+
             {/* Animated code brackets */}
             <motion.div
-              className="absolute top-0 left-0 text-[80px] sm:text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono"
-              animate={{
-                y: [0, 10, 0],
-                rotateZ: [0, 5, 0],
-              }}
-              transition={{
-                duration: 8,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
+              className="absolute top-0 left-0 text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono pointer-events-none"
+              animate={{ y: [0, 10, 0], rotateZ: [0, 5, 0] }}
+              transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
             >
-              {"<"}
+              {'<'}
             </motion.div>
             <motion.div
-              className="absolute bottom-0 right-0 text-[80px] sm:text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono"
-              animate={{
-                y: [0, -10, 0],
-                rotateZ: [0, -5, 0],
-              }}
-              transition={{
-                duration: 8,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
+              className="absolute bottom-0 right-0 text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono pointer-events-none"
+              animate={{ y: [0, -10, 0], rotateZ: [0, -5, 0] }}
+              transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
             >
-              {"/>"}
+              {'/>'}
             </motion.div>
 
             {/* Animated floating circles */}
-            {[...Array(5)].map((_, i) => (
+            {[
+              { w: 24, h: 24, l: 60, t: 80, o: 0.3, dy: 12, dx: -8, dur: 6 },
+              { w: 16, h: 16, l: 200, t: 40, o: 0.2, dy: -10, dx: 10, dur: 4 },
+              { w: 30, h: 30, l: 350, t: 120, o: 0.15, dy: 8, dx: -12, dur: 7 },
+              { w: 12, h: 12, l: 100, t: 200, o: 0.25, dy: -15, dx: 6, dur: 5 },
+              { w: 20, h: 20, l: 280, t: 60, o: 0.2, dy: 10, dx: -5, dur: 8 },
+            ].map((c, i) => (
               <motion.div
                 key={i}
-                className="absolute rounded-full bg-[#915EFF]"
-                style={{
-                  width: `${Math.random() * 30 + 10}px`,
-                  height: `${Math.random() * 30 + 10}px`,
-                  left: `${Math.random() * 150}px`,
-                  top: `${Math.random() * 150}px`,
-                  opacity: Math.random() * 0.5 + 0.1,
-                }}
-                animate={{
-                  y: [0, Math.random() * 30 - 15, 0],
-                  x: [0, Math.random() * 30 - 15, 0],
-                  scale: [1, Math.random() * 0.3 + 0.8, 1],
-                }}
-                transition={{
-                  duration: Math.random() * 5 + 3,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
+                className="absolute rounded-full bg-[#915EFF] pointer-events-none"
+                style={{ width: c.w, height: c.h, left: c.l, top: c.t, opacity: c.o }}
+                animate={{ y: [0, c.dy, 0], x: [0, c.dx, 0], scale: [1, 0.9, 1] }}
+                transition={{ duration: c.dur, repeat: Infinity, repeatType: 'reverse' }}
               />
             ))}
           </div>
@@ -269,7 +253,7 @@ const Hero = () => {
               transition={{
                 duration: 1.5,
                 repeat: Infinity,
-                repeatType: "loop",
+                repeatType: 'loop',
               }}
               className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-secondary mb-1 group-hover:bg-[#915EFF] transition-colors duration-300"
             />

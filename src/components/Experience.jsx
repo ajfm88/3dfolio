@@ -22,22 +22,48 @@ const ExperienceCard = ({ experience }) => {
       date={experience.date}
       iconStyle={{ background: experience.iconBg }}
       icon={
-        <div className="flex justify-center items-center w-full h-full rounded-full overflow-hidden">
-          <img
-            src={experience.icon}
-            alt={experience.company_name}
-            className="w-[95%] h-[95%] object-contain"
-          />
-        </div>
+        experience.company_url ? (
+          <a
+            href={experience.company_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex justify-center items-center w-full h-full rounded-full overflow-hidden"
+          >
+            <img
+              src={experience.icon}
+              alt={experience.company_name}
+              className="w-[95%] h-[95%] object-contain"
+            />
+          </a>
+        ) : (
+          <div className="flex justify-center items-center w-full h-full rounded-full overflow-hidden">
+            <img
+              src={experience.icon}
+              alt={experience.company_name}
+              className="w-[95%] h-[95%] object-contain"
+            />
+          </div>
+        )
       }
     >
       <div>
         <h3 className="text-white text-[24px] font-bold">{experience.title}</h3>
         <p
-          className="text-secondary text-[16px] font-semibold"
+          className="text-secondary text-[16px] font-semibold group/company"
           style={{ margin: 0 }}
         >
-          {experience.company_name}
+          {experience.company_url ? (
+            <a
+              href={experience.company_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors duration-200 after:content-['_↗'] after:opacity-0 group-hover/company:after:opacity-100 after:transition-opacity after:duration-200"
+            >
+              {experience.company_name}
+            </a>
+          ) : (
+            experience.company_name
+          )}
         </p>
       </div>
 

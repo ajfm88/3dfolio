@@ -13,12 +13,17 @@ import typescript from "./tech/typescript.png";
 import python from "./tech/python.png";
 import tailwind from "./tech/tailwind.png";
 import mongodb from "./tech/mongodb.png";
-import express from "./tech/expressjs.svg";
+import express from "./tech/expressjs.png";
 import reactjs from "./tech/reactjs.png";
 import nodejs from "./tech/nodejs.png";
 import git from "./tech/git.png";
-import csharp from "./tech/csharp.png";
-import nextjs from "./tech/nextjs.png";
+import postgresql from "./tech/postgresql.png";
+import docker from "./tech/docker.png";
+import aws from "./tech/aws.png";
+import githubicon from "./tech/github.png";
+import redux from "./tech/redux.png";
+import prisma from "./tech/prisma.png";
+import nextjs from "./tech/nextjs.webp";
 
 import thecoderschool from "./company/thecoderschool.png";
 import issgroup from "./company/issgroup.png";
@@ -49,7 +54,12 @@ export {
   reactjs,
   nodejs,
   git,
-  csharp,
+  postgresql,
+  docker,
+  aws,
+  githubicon,
+  redux,
+  prisma,
   nextjs,
   thecoderschool,
   issgroup,

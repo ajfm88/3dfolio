@@ -27,6 +27,7 @@ import nextjs from "./tech/nextjs.webp";
 
 import thecoderschool from "./company/thecoderschool.png";
 import issgroup from "./company/issgroup.png";
+import digar from "./company/digar.png";
 
 import suburbia from "./suburbia.png";
 import jobify from "./jobify.png";
@@ -63,6 +64,7 @@ export {
   nextjs,
   thecoderschool,
   issgroup,
+  digar,
   suburbia,
   jobify,
   twitter,

@@ -1,6 +1,7 @@
 import { SectionWrapper } from "../hoc";
-import { technologies } from "../constants";
+// import { technologies } from "../constants";
 import { styles } from "../styles";
+import RotatingCube from "./RotatingCube";
 
 const Tech = () => {
   return (
@@ -14,10 +15,12 @@ const Tech = () => {
       >
         <source src="/skills-bg.webm" type="video/webm" />
       </video>
-      <p className={`${styles.sectionSubText} text-center`}>
-        Skills and expertise
-      </p>
+      <p className={`${styles.sectionSubText} text-center`}>Skills and expertise</p>
       <h2 className={`${styles.sectionHeadText} text-center`}>My Tech Stack</h2>
+
+      <RotatingCube />
+
+      {/* Technology grid — commented out for cube preview
       <div className="flex flex-row flex-wrap justify-center gap-10 mt-10">
         {technologies.map((technology) => (
           <a
@@ -40,6 +43,7 @@ const Tech = () => {
           </a>
         ))}
       </div>
+      */}
     </div>
   );
 };

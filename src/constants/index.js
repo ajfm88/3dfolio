@@ -23,6 +23,7 @@ import {
   nextjs,
   thecoderschool,
   issgroup,
+  digar,
   suburbia,
   jobify,
   twitter,
@@ -34,15 +35,15 @@ import {
 export const navLinks = [
   {
     id: "about",
-    title: "About",
+    title: "About Me",
   },
   {
     id: "experience",
-    title: "Experience",
+    title: "Work Experience",
   },
   {
     id: "tech",
-    title: "Tech",
+    title: "Tech Stack",
   },
   {
     id: "projects",
@@ -50,7 +51,7 @@ export const navLinks = [
   },
   {
     id: "contact",
-    title: "Contact",
+    title: "Contact Me",
   },
 ];
 
@@ -177,6 +178,21 @@ const technologies = [
 
 const experiences = [
   {
+    title: "Independent Software Developer / Open Source Contributor",
+    company_name: "Digar · Self-employed",
+    company_url: "https://digarllc.com",
+    icon: digar,
+    iconBg: "#383E56",
+    date: "Aug 2025 - Present",
+    points: [
+      "Shipped features for a TypeScript Chrome extension + Node.js backend that automates LinkedIn recruiter triage via a Telegram approval bot and Google Calendar.",
+      "Helped build a Node.js / TypeScript REST API with API-key auth, per-key rate limiting, and schema validation.",
+      "Delivered React + TypeScript features against a MySQL-backed REST API, including a new JWT-authenticated endpoint that retired a SQL-injectable legacy route.",
+      "Worked on an ongoing migration of server-rendered PHP pages to full React + TypeScript components with useEffect-based data fetching.",
+      "Maintainer and contributor of an open-source PHP routing library.",
+    ],
+  },
+  {
     title: "Junior Software Developer",
     company_name: "The MBS Group (ISS Props division)",
     company_url: "https://issprops.com",
@@ -210,22 +226,6 @@ const experiences = [
       "Guided students through building real projects from scratch, with noticeable skill progression and consistent positive feedback from students and families.",
     ],
   },
-  /*{
-    title: "Business Operations Assistant",
-    company_name: "Digar LLC",
-    company_url: "https://www.digarllc.com/",
-    // icon: digar,
-    iconBg: "#E6DEDD",
-    date: "July 2014 - August 2018",
-    points: [
-      "Maintained financial and client data in Sage Peachtree and Microsoft Access, performing data validation, cleanup, and reconciliation to ensure records were accurate and trustworthy.",
-      "Built Excel reports using data exported from Microsoft Access to track advertising performance across radio stations and newspapers, identifying which channels generated the most inbound customer leads.",
-      "Generated sales reports, order documentation, and monthly delivery statements from Excel and Access data to support business decision-making.",
-      "Took ownership of data integrity across financial and operational systems, verifying inputs before they were committed to company records.",
-      "Translated written and spoken content between English and Spanish, including correspondence and advertising scripts.",
-      "Provided general IT technical support across the office: workstation setup, troubleshooting, and equipment maintenance.",
-    ],
-  },*/
 ];
 
 const projects = [
@@ -307,7 +307,7 @@ const projects = [
     image: jobify,
     source_code_link: "https://github.com/ajfm88/jobify",
   },
-  {
+  /*{
     name: "Twitter Clone",
     description:
       "A short-form social media app with picture uploads, likes & comments where users share quick posts called tweets with followers.",
@@ -384,7 +384,7 @@ const projects = [
     url: "https://imdb-clone-ajfm88.vercel.app",
     image: imdb,
     source_code_link: "https://github.com/ajfm88/imdb-clone",
-  },
+  },*/
 ];
 
 export { services, technologies, experiences, projects };

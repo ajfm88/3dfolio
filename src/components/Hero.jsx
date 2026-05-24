@@ -237,29 +237,6 @@ const Hero = () => {
         </motion.div>
       </div>
 
-      <div className="absolute xs:bottom-5 bottom-2 w-full flex justify-center items-center z-10">
-        <motion.a
-          href="#about"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.2 }}
-          className="group"
-        >
-          <div className="w-[30px] h-[50px] sm:w-[35px] sm:h-[64px] rounded-3xl border-4 border-secondary flex justify-center items-start p-2 hover:border-[#915EFF] transition-colors duration-300 group-hover:shadow-[0_0_15px_rgba(145,94,255,0.6)]">
-            <motion.div
-              animate={{
-                y: [0, 20, 0],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                repeatType: 'loop',
-              }}
-              className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-secondary mb-1 group-hover:bg-[#915EFF] transition-colors duration-300"
-            />
-          </div>
-        </motion.a>
-      </div>
     </section>
   );
 };

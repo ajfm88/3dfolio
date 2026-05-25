@@ -3,6 +3,7 @@ import { TypeAnimation } from 'react-type-animation';
 
 import { styles } from '../styles';
 import ParticlesBackground from './canvas/Particles';
+import AnimatedLetters from './AnimatedLetters';
 
 const Hero = () => {
   return (
@@ -49,18 +50,17 @@ const Hero = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            Hi, I’m{' '}
-            <span className="relative inline-block">
-              <span className="text-[#915EFF] hover:text-white hover:bg-[#915EFF] px-2 transition-all duration-300 rounded">
-                Alejandro
-              </span>
-              <motion.span
-                className="absolute -bottom-1 sm:-bottom-2 left-0 w-full h-1 bg-[#915EFF]"
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ delay: 0.8, duration: 0.8 }}
-              />
-            </span>
+            <AnimatedLetters
+              letterClass="text-animate-hover"
+              text="Hi, I’m"
+              idx={1}
+            />
+            <br />
+            <AnimatedLetters
+              letterClass="text-animate-hover-gold"
+              text="Alejandro"
+              idx={8}
+            />
           </motion.h1>
 
           <motion.div

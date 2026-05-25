@@ -10,6 +10,7 @@ import { styles } from "../styles";
 import { experiences } from "../constants";
 import { SectionWrapper } from "../hoc";
 import { textVariant } from "../utils/motion";
+import AnimatedLetters from "./AnimatedLetters";
 
 const ExperienceCard = ({ experience }) => {
   return (
@@ -89,7 +90,7 @@ const Experience = () => {
           Career highlights
         </p>
         <h2 className={`${styles.sectionHeadText} text-center`}>
-          Work Experience
+          <AnimatedLetters letterClass="text-animate-hover" text="Work Experience" idx={1} />
         </h2>
       </motion.div>
 

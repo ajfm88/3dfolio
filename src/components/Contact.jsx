@@ -5,6 +5,7 @@ import { styles } from "../styles";
 import { EarthCanvas } from "./canvas";
 import { SectionWrapper } from "../hoc";
 import { slideIn } from "../utils/motion";
+import AnimatedLetters from "./AnimatedLetters";
 
 const Contact = () => {
   const formRef = useRef();
@@ -114,7 +115,9 @@ const Contact = () => {
         className="flex-[0.75] bg-black-100 p-8 rounded-2xl relative"
       >
         <p className={styles.sectionSubText}>Get in touch</p>
-        <h3 className={styles.sectionHeadText}>Contact Me</h3>
+        <h3 className={styles.sectionHeadText}>
+          <AnimatedLetters letterClass="text-animate-hover" text="Contact Me" idx={1} />
+        </h3>
 
         <div className="mt-4 flex gap-4">
           <a

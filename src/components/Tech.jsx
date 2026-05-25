@@ -2,6 +2,7 @@ import { SectionWrapper } from "../hoc";
 // import { technologies } from "../constants";
 import { styles } from "../styles";
 import RotatingCube from "./RotatingCube";
+import AnimatedLetters from "./AnimatedLetters";
 
 const Tech = () => {
   return (
@@ -16,7 +17,9 @@ const Tech = () => {
         <source src="/skills-bg.webm" type="video/webm" />
       </video>
       <p className={`${styles.sectionSubText} text-center`}>Skills and expertise</p>
-      <h2 className={`${styles.sectionHeadText} text-center`}>My Tech Stack</h2>
+      <h2 className={`${styles.sectionHeadText} text-center`}>
+        <AnimatedLetters letterClass="text-animate-hover" text="My Tech Stack" idx={1} />
+      </h2>
 
       <RotatingCube />
 

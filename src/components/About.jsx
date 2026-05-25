@@ -3,13 +3,16 @@ import { motion } from "framer-motion";
 import { styles } from "../styles";
 import { SectionWrapper } from "../hoc";
 import { fadeIn, textVariant } from "../utils/motion";
+import AnimatedLetters from "./AnimatedLetters";
 
 const About = () => {
   return (
     <>
       <motion.div variants={textVariant()}>
         <p className={styles.sectionSubText}>A bit about me</p>
-        <h2 className={styles.sectionHeadText}>Overview</h2>
+        <h2 className={styles.sectionHeadText}>
+          <AnimatedLetters letterClass="text-animate-hover" text="Overview" idx={1} />
+        </h2>
       </motion.div>
 
       <motion.p

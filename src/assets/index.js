@@ -1,4 +1,4 @@
-import alejandro from "./alejandro.png";
+import alejandro from "./alejandro_new.png";
 import resume from "./resume.png";
 import linktree from "./linktree.png";
 import linkedin from "./linkedin.png";
@@ -28,6 +28,7 @@ import nextjs from "./tech/nextjs.webp";
 import thecoderschool from "./company/thecoderschool.png";
 import issgroup from "./company/issgroup.png";
 import digar from "./company/digar.png";
+import ghdenterprises from "./company/ghd.png";
 
 import suburbia from "./suburbia.png";
 import jobify from "./jobify.png";
@@ -65,6 +66,7 @@ export {
   thecoderschool,
   issgroup,
   digar,
+  ghdenterprises,
   suburbia,
   jobify,
   twitter,

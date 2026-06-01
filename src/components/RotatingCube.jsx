@@ -3,8 +3,8 @@ import './RotatingCube.css';
 
 const faces = [
   { src: mongodb,    alt: 'MongoDB',    className: 'face1' },
-  { src: postgresql, alt: 'PostgreSQL',  className: 'face2' },
-  { src: reactjs,    alt: 'React',      className: 'face3' },
+  { src: reactjs,    alt: 'React',      className: 'face2' },
+  { src: postgresql, alt: 'PostgreSQL',  className: 'face3' },
   { src: nodejs,     alt: 'Node.js',    className: 'face4' },
   { src: python,     alt: 'Python',     className: 'face5' },
   { src: typescript, alt: 'TypeScript', className: 'face6' },

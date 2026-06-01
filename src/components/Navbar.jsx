@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { navLinks } from "../constants";
 import { alejandro, menu, close } from "../assets";
+import AnimatedLetters from "./AnimatedLetters";
 
 const Navbar = () => {
   const [active, setActive] = useState("");
@@ -25,7 +26,7 @@ const Navbar = () => {
             <img
               src={alejandro}
               alt="logo"
-              className="w-15 h-10 object-contain transition-all duration-300 hover:[filter:brightness(0)_saturate(100%)_invert(40%)_sepia(80%)_saturate(500%)_hue-rotate(230deg)]"
+              className="w-15 h-10 object-contain transition-all duration-300 hover:[filter:brightness(0)_saturate(100%)_invert(29%)_sepia(60%)_saturate(5000%)_hue-rotate(243deg)_brightness(0.9)]"
             />
           </Link>
           <a
@@ -34,7 +35,7 @@ const Navbar = () => {
             rel="noreferrer"
             className="text-white text-[18px] font-bold cursor-pointer flex items-center whitespace-nowrap"
           >
-            &nbsp;| &nbsp;<span className="hover:text-[#915EFF] transition-colors duration-300">ajfm88</span>
+            &nbsp;| &nbsp;<AnimatedLetters letterClass="text-animate-hover" text="ajfm88" idx={1} />
           </a>
         </div>
 

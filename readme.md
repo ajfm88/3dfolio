@@ -59,15 +59,13 @@ Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portf
 
 ## 🔋 <a name="features">Features</a>
 
-🖥️ **Customizable 3D Hero Section:** Includes a rotable 3D desktop computer model.
-
 🎨 **Interactive Experience and Work Sections:** Utilizes animations powered by framer motion for engaging user experience.
 
 💡 **3D Skills Section:** Showcases skills using 3D geometries through Three.js and React Three fiber.
 
-🎬 **Animated Projects and Testimonials:** Features animated sections using framer motion for projects and client testimonials.
+🎬 **Animated Projects:** Features animated sections using framer motion for projects.
 
-🌍 **Contact Section with 3D Earth Model:** Integrates a rotable 3D earth model with email functionality powered by EmailJS.
+🌍 **Contact Section with 3D Earth Model:** Integrates a rotable 3D earth model with email functionality.
 
 ✨ **3D Stars:** Generate stars progressively at random positions using Three.js for background display.
 

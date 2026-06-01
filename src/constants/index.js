@@ -24,6 +24,7 @@ import {
   thecoderschool,
   issgroup,
   digar,
+  ghdenterprises,
   suburbia,
   jobify,
   twitter,
@@ -185,15 +186,15 @@ const experiences = [
     iconBg: "#383E56",
     date: "Aug 2025 - Present",
     points: [
-      "Shipped features for a TypeScript Chrome extension + Node.js backend that automates LinkedIn recruiter triage via a Telegram approval bot and Google Calendar.",
-      "Helped build a Node.js / TypeScript REST API with API-key auth, per-key rate limiting, and schema validation.",
-      "Delivered React + TypeScript features against a MySQL-backed REST API, including a new JWT-authenticated endpoint that retired a SQL-injectable legacy route.",
-      "Worked on an ongoing migration of server-rendered PHP pages to full React + TypeScript components with useEffect-based data fetching.",
-      "Maintainer and contributor of an open-source PHP routing library.",
+      "Gained experience working with Large Language Models and integrating them into software applications.",
+      "Built a full-stack SaaS AI Resume Builder with Next.js 15, TypeScript, and PostgreSQL, featuring Stripe subscription billing, Clerk authentication, and drag-and-drop resume section reordering via dnd-kit.",
+      "Integrated the OpenAI API to power ChatGPT-driven content suggestions that auto-fill resume sections from user input, with output streamed directly into a live-updating form interface.",
+      "Contributed features to an open source TypeScript Chrome extension and Fastify backend that automates LinkedIn recruiter triage via a Telegram approval bot and Google Calendar integration.",
+      "Currently working on an ongoing migration of server-rendered PHP pages to full React + TypeScript components with useEffect-based data fetching.",
     ],
   },
   {
-    title: "Junior Software Developer",
+    title: "Full Stack Software Developer",
     company_name: "The MBS Group (ISS Props division)",
     company_url: "https://issprops.com",
     icon: issgroup,
@@ -201,16 +202,15 @@ const experiences = [
     date: "June 2022 - August 2025",
     points: [
       "Implemented new features end-to-end on a full-stack rental and inventory management platform using MeteorJS, Node.js, MongoDB, and JavaScript (ES6+) with MVC architecture, supporting a 1M+ item catalog across US and European offices.",
-      "Built components and new features on a public-facing prop search application built in Astro with React.",
-      "Designed new endpoints and enhanced existing ones on a backend REST API with Node.js and Express serving the prop search application.",
+      "Built new features on a public-facing catalog and prop search application built in Astro with React components.",
+      "Designed new endpoints and enhanced existing ones on a backend REST API with Node.js and Express serving the catalog and prop search application.",
       "Created new MongoDB schemas for some features and modified existing schemas and queries to support new functionality and performance improvements.",
       "Owned the full feature lifecycle: gathered requirements from stakeholders, built MongoDB aggregation pipelines (validated with Studio 3T), wrote backend logic, built the UI, manually tested in sandbox, and iterated based on stakeholder feedback.",
       "Built and shipped reporting features for propmasters and set decorators, a dedicated section for the weapons master/armorer role (new routes and UI pages), an image carousel for catalog browsing, a dark mode implementation across the app, and other new panels and sections.",
-      "Maintained the company's public-facing WordPress website (issprops.com), including content updates and plugin maintenance.",
+      "Maintained the company’s public-facing WordPress website (issprops.com) including content updates and tweaks.",
       "Used Git and GitHub for version control: feature branching, pull request code reviews with the senior engineer, and structured commit history.",
       "Operated as the primary helpdesk and sysadmin responder in a 2-person IT team supporting the Los Angeles office (~150 staff at peak); troubleshot hardware, software, and cross-platform issues across Windows, Linux, and macOS for network connectivity, software installations, and system performance.",
       "Documented IT procedures and resolutions in shared OneNote files on the office OneDrive, creating reference material for recurring issues.",
-      "Role ended August 2025 due to company-wide layoffs across multiple departments.",
     ],
   },
   {
@@ -223,7 +223,21 @@ const experiences = [
     points: [
       "Delivered personalized 1-on-1 and small-group coding lessons in Scratch, JavaScript, HTML, and CSS to students from elementary through high school, adapting curriculum and teaching style to each student's age, skill level, and learning pace.",
       "Organized and led week-long Python bootcamps for cohorts of 10-12 middle and high schoolers, with 3-4 students per cohort typically continuing into regular classes.",
-      "Guided students through building real projects from scratch, with noticeable skill progression and consistent positive feedback from students and families.",
+    ],
+  },
+  {
+    title: "Business Operations Assistant",
+    company_name: "GHD Enterprises",
+    company_url: "https://www.ghdnatural.com",
+    icon: ghdenterprises,
+    iconBg: "#383E56",
+    date: "July 2014 - August 2018",
+    points: [
+      "Queried and maintained relational data using SQL in Microsoft Access, designing reports, performing data validation and cleanup, and delivering structured data outputs to support business operations and management decisions.",
+      "Built Excel reports using data exported from Microsoft Access to track advertising performance across radio stations and newspapers, identifying which channels generated the most inbound customer leads.",
+      "Maintained financial and client data in Sage Peachtree and Microsoft Access, performing data validation, cleanup, and reconciliation to ensure records were accurate and trustworthy.",
+      "Generated sales reports, order documentation, and monthly delivery statements from Excel and Access data to support business decision-making.",
+      "Translated written and spoken content between English and Spanish, including correspondence and advertising scripts.",
     ],
   },
 ];
@@ -307,7 +321,7 @@ const projects = [
     image: jobify,
     source_code_link: "https://github.com/ajfm88/jobify",
   },
-  /*{
+  {
     name: "Twitter Clone",
     description:
       "A short-form social media app with picture uploads, likes & comments where users share quick posts called tweets with followers.",
@@ -384,7 +398,7 @@ const projects = [
     url: "https://imdb-clone-ajfm88.vercel.app",
     image: imdb,
     source_code_link: "https://github.com/ajfm88/imdb-clone",
-  },*/
+  },
 ];
 
 export { services, technologies, experiences, projects };

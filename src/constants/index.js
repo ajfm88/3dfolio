@@ -3,24 +3,6 @@ import {
   linktree,
   linkedin,
   github,
-  html,
-  css,
-  javascript,
-  typescript,
-  python,
-  tailwind,
-  mongodb,
-  express,
-  reactjs,
-  nodejs,
-  git,
-  postgresql,
-  docker,
-  aws,
-  githubicon,
-  redux,
-  prisma,
-  nextjs,
   thecoderschool,
   issgroup,
   digar,
@@ -79,104 +61,6 @@ const services = [
   },
 ];
 
-const technologies = [
-  // Fundamentals
-  {
-    name: "HTML 5",
-    icon: html,
-    url: "https://html.spec.whatwg.org",
-  },
-  {
-    name: "CSS 3",
-    icon: css,
-    url: "https://w3.org/style/css",
-  },
-  {
-    name: "JavaScript",
-    icon: javascript,
-    url: "https://javascript.info",
-  },
-  {
-    name: "TypeScript",
-    icon: typescript,
-    url: "https://typescriptlang.org",
-  },
-  {
-    name: "Python",
-    icon: python,
-    url: "https://python.org",
-  },
-  // JS ecosystem & styling
-  {
-    name: "Next JS",
-    icon: nextjs,
-    url: "https://nextjs.org",
-  },
-  {
-    name: "Tailwind CSS",
-    icon: tailwind,
-    url: "https://tailwindcss.com",
-  },
-  {
-    name: "Redux",
-    icon: redux,
-    url: "https://redux.js.org",
-  },
-  {
-    name: "Git",
-    icon: git,
-    url: "https://git-scm.com",
-  },
-  // MERN stack
-  {
-    name: "MongoDB",
-    icon: mongodb,
-    url: "https://mongodb.com",
-  },
-  {
-    name: "Express JS",
-    icon: express,
-    url: "https://expressjs.com",
-  },
-  {
-    name: "React",
-    icon: reactjs,
-    url: "https://react.dev",
-  },
-  {
-    name: "Node JS",
-    icon: nodejs,
-    url: "https://nodejs.org",
-  },
-  // Databases & ORM
-  {
-    name: "PostgreSQL",
-    icon: postgresql,
-    url: "https://postgresql.org",
-  },
-  {
-    name: "Prisma",
-    icon: prisma,
-    url: "https://prisma.io",
-  },
-  // DevOps & tools
-  {
-    name: "AWS",
-    icon: aws,
-    url: "https://aws.amazon.com",
-  },
-  {
-    name: "Docker",
-    icon: docker,
-    url: "https://docker.com",
-  },
-  {
-    name: "GitHub",
-    icon: githubicon,
-    url: "https://github.com",
-  },
-];
-
 const experiences = [
   {
     title: "Independent Software Developer / Open Source Contributor",
@@ -221,17 +105,17 @@ const experiences = [
     iconBg: "#E6DEDD",
     date: "May 2021 - June 2022",
     points: [
-      "Delivered personalized 1-on-1 and small-group coding lessons in Scratch, JavaScript, HTML, and CSS to students from elementary through high school, adapting curriculum and teaching style to each student's age, skill level, and learning pace.",
+      "Delivered personalized 1-on-1 and small-group coding lessons in Scratch, JavaScript, HTML, and CSS to students from elementary through high school, adapting curriculum and teaching style to each student’s age, skill level, and learning pace.",
       "Organized and led week-long Python bootcamps for cohorts of 10-12 middle and high schoolers, with 3-4 students per cohort typically continuing into regular classes.",
     ],
   },
   {
     title: "Business Operations Assistant",
     company_name: "GHD Enterprises",
-    company_url: "https://www.ghdnatural.com",
+    company_url: "",
     icon: ghdenterprises,
     iconBg: "#383E56",
-    date: "July 2014 - August 2018",
+    date: "July 2014 - March 2019",
     points: [
       "Queried and maintained relational data using SQL in Microsoft Access, designing reports, performing data validation and cleanup, and delivering structured data outputs to support business operations and management decisions.",
       "Built Excel reports using data exported from Microsoft Access to track advertising performance across radio stations and newspapers, identifying which channels generated the most inbound customer leads.",
@@ -401,4 +285,4 @@ const projects = [
   },
 ];
 
-export { services, technologies, experiences, projects };
+export { services, experiences, projects };

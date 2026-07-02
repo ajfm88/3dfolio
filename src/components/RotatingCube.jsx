@@ -1,13 +1,20 @@
-import { mongodb, postgresql, reactjs, nodejs, python, typescript } from '../assets';
-import './RotatingCube.css';
+import {
+  mongodb,
+  postgresql,
+  nextjs,
+  javascript,
+  python,
+  typescript,
+} from "../assets";
+import "./RotatingCube.css";
 
 const faces = [
-  { src: mongodb,    alt: 'MongoDB',    className: 'face1' },
-  { src: reactjs,    alt: 'React',      className: 'face2' },
-  { src: postgresql, alt: 'PostgreSQL',  className: 'face3' },
-  { src: nodejs,     alt: 'Node.js',    className: 'face4' },
-  { src: python,     alt: 'Python',     className: 'face5' },
-  { src: typescript, alt: 'TypeScript', className: 'face6' },
+  { src: mongodb, alt: "MongoDB", className: "face1" },
+  { src: nextjs, alt: "Next.js", className: "face2" },
+  { src: postgresql, alt: "PostgreSQL", className: "face3" },
+  { src: javascript, alt: "JavaScript", className: "face4" },
+  { src: python, alt: "Python", className: "face5" },
+  { src: typescript, alt: "TypeScript", className: "face6" },
 ];
 
 const RotatingCube = () => {

@@ -66,6 +66,9 @@ const ExperienceCard = ({ experience }) => {
             experience.company_name
           )}
         </p>
+        <p className="experience-date-mobile text-secondary text-[14px] font-semibold mt-1">
+          {experience.date}
+        </p>
       </div>
 
       <ul className="mt-5 list-disc ml-5 space-y-2">
@@ -90,7 +93,11 @@ const Experience = () => {
           Career highlights
         </p>
         <h2 className={`${styles.sectionHeadText} text-center`}>
-          <AnimatedLetters letterClass="text-animate-hover" text="Work Experience" idx={1} />
+          <AnimatedLetters
+            letterClass="text-animate-hover"
+            text="Work Experience"
+            idx={1}
+          />
         </h2>
       </motion.div>
 

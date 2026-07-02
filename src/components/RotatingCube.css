@@ -42,6 +42,10 @@
 .cubespinner .face2 {
   transform: rotateY(90deg) translateZ(100px);
 }
+
+.cubespinner .face2 img {
+  transform: rotate(-90deg);
+}
 .cubespinner .face3 {
   transform: rotateY(90deg) rotateX(90deg) translateZ(100px);
 }

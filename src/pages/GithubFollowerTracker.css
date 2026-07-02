@@ -1,0 +1,191 @@
+/* Scoped to .gft-page so nothing here can leak into the main portfolio page. */
+.gft-page {
+  font-family: "Poppins", sans-serif;
+  text-align: center;
+  background-color: #000814;
+  color: white;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.gft-page * {
+  box-sizing: border-box;
+}
+
+.gft-page h1 {
+  margin: 20px 0;
+}
+
+.gft-page .gft-back {
+  display: inline-block;
+  color: #c9e1fa;
+  text-decoration: none;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.gft-page .gft-back:hover {
+  color: white;
+}
+
+.gft-page #fold {
+  margin: 40px 0;
+}
+
+.gft-page .hidden {
+  font-size: 1.1em;
+  padding: 0.6em 1em;
+  margin: 0.5em;
+  border-radius: 10px;
+  border: 3px #000814 solid;
+  background-color: white;
+  color: #001d3d;
+}
+
+.gft-page .hidden:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gft-page .hidden:focus {
+  border: 3px #f6f316 solid;
+}
+
+.gft-page .hidden:hover:not(:disabled) {
+  cursor: pointer;
+  border: 3px #f6f316 solid;
+}
+
+.gft-page input[type="text"] {
+  font-size: 1.5em;
+  text-align: center;
+  color: #001d3d;
+  border-radius: 10px 0 0 10px;
+  border: none;
+  width: 300px;
+}
+
+.gft-page input:focus {
+  outline: none;
+}
+
+.gft-page #searchbtn {
+  padding: 1em;
+  font-size: 1.2em;
+  border-radius: 0 10px 10px 0;
+  border: none;
+  background-color: #c9e1fa;
+  color: #001d3d;
+}
+
+.gft-page #searchbtn:hover {
+  color: #c9e1fa;
+  background-color: #001d3d;
+  cursor: pointer;
+}
+
+.gft-page #inputs {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.gft-page .box {
+  background-color: #001d3d;
+  border-radius: 20px;
+  padding: 20px 30px;
+}
+
+.gft-page #msg {
+  font-size: 1.2em;
+}
+
+.gft-page .added::before {
+  content: "+";
+  font-size: 1.7em;
+  position: relative;
+  left: -15px;
+  color: green;
+}
+
+.gft-page .deleted::before {
+  content: "-";
+  font-size: 2.25em;
+  position: relative;
+  left: -13px;
+  color: red;
+  line-height: 1.18em;
+}
+
+.gft-page #grid {
+  margin-top: 50px;
+  display: flex;
+  justify-content: center;
+  gap: 100px;
+}
+
+.gft-page li {
+  list-style: none;
+  margin: 10px 0;
+}
+
+.gft-page img {
+  border-radius: 50%;
+}
+
+.gft-page .name {
+  font-size: 1.2em;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gft-page #grid a {
+  color: white;
+  text-decoration: none;
+}
+
+.gft-page .entry {
+  display: flex;
+}
+
+@media screen and (max-width: 800px) {
+  .gft-page #grid {
+    gap: 20px;
+    justify-content: center;
+    min-width: 50%;
+  }
+  .gft-page img {
+    width: 10% !important;
+    height: 10% !important;
+  }
+  .gft-page .name {
+    font-size: 1em;
+  }
+  .gft-page .box {
+    padding: 20px 0 20px 20px;
+    min-width: 200px;
+  }
+  .gft-page .added::before {
+    content: none;
+  }
+  .gft-page .deleted::before {
+    content: none;
+  }
+  .gft-page .added {
+    color: green;
+  }
+  .gft-page .deleted {
+    color: red;
+  }
+}
+
+@media screen and (max-width: 450px) {
+  .gft-page #grid {
+    gap: 5px;
+  }
+  .gft-page .name {
+    font-size: 0.7em;
+  }
+}

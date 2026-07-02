@@ -1,9 +1,8 @@
-import { motion } from 'framer-motion';
-import { TypeAnimation } from 'react-type-animation';
-
-import { styles } from '../styles';
-import ParticlesBackground from './canvas/Particles';
-import AnimatedLetters from './AnimatedLetters';
+import { motion } from "framer-motion";
+import { TypeAnimation } from "react-type-animation";
+import { styles } from "../styles";
+import ParticlesBackground from "./canvas/Particles";
+import AnimatedLetters from "./AnimatedLetters";
 
 const Hero = () => {
   return (
@@ -14,7 +13,7 @@ const Hero = () => {
           className="absolute inset-0 opacity-30"
           style={{
             background:
-              'radial-gradient(circle at 50% 50%, rgba(145, 94, 255, 0.4) 0%, transparent 50%)',
+              "radial-gradient(circle at 50% 50%, rgba(145, 94, 255, 0.4) 0%, transparent 50%)",
           }}
           animate={{
             scale: [1, 1.2, 1],
@@ -22,7 +21,7 @@ const Hero = () => {
           transition={{
             duration: 8,
             repeat: Infinity,
-            repeatType: 'reverse',
+            repeatType: "reverse",
           }}
         />
       </div>
@@ -72,18 +71,18 @@ const Hero = () => {
             <motion.p
               className={`${styles.heroSubText} text-white-100 text-[1rem] sm:text-[1.25rem] md:text-[1.5rem] leading-relaxed`}
             >
-              I build{' '}
+              I build{" "}
               <TypeAnimation
                 sequence={[
-                  'full stack web apps',
+                  "full stack web apps",
                   1500,
-                  'interactive 3D experiences',
+                  "interactive 3D experiences",
                   1500,
-                  'scalable MERN solutions',
+                  "scalable MERN solutions",
                   1500,
-                  'performant Next.js apps',
+                  "performant Next.js apps",
                   1500,
-                  'innovative software',
+                  "innovative software",
                   1500,
                 ]}
                 wrapper="span"
@@ -97,12 +96,12 @@ const Hero = () => {
             <motion.div
               className="absolute -bottom-2 sm:-bottom-4 left-0 h-0.5 bg-gradient-to-r from-transparent via-[#915EFF] to-transparent w-full"
               initial={{ width: 0 }}
-              animate={{ width: '100%' }}
+              animate={{ width: "100%" }}
               transition={{
                 delay: 0.6,
                 duration: 1.5,
                 repeat: Infinity,
-                repeatType: 'reverse',
+                repeatType: "reverse",
               }}
             />
           </motion.div>
@@ -113,8 +112,9 @@ const Hero = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            Full Stack Software Engineer based in Los Angeles, CA — passionate about creating
-            innovative and efficient solutions to complex problems.
+            Full Stack Software Engineer based in Los Angeles, CA — passionate
+            about creating innovative and efficient solutions to complex
+            problems.
           </motion.p>
 
           <motion.div
@@ -130,7 +130,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#e0434d] transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
+                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
               }}
             >
               <svg
@@ -150,7 +150,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#0077b5] transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
+                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
               }}
             >
               <svg
@@ -170,7 +170,7 @@ const Hero = () => {
               className="bg-tertiary px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white flex items-center hover:bg-[#43E55E] hover:text-black transition-all duration-300 shadow-lg text-sm sm:text-base"
               whileHover={{
                 scale: 1.05,
-                boxShadow: '0 0 20px rgba(145, 94, 255, 0.7)',
+                boxShadow: "0 0 20px rgba(145, 94, 255, 0.7)",
               }}
             >
               <svg
@@ -205,16 +205,24 @@ const Hero = () => {
             <motion.div
               className="absolute top-0 left-0 text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono pointer-events-none"
               animate={{ y: [0, 10, 0], rotateZ: [0, 5, 0] }}
-              transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
             >
-              {'<'}
+              {"<"}
             </motion.div>
             <motion.div
               className="absolute bottom-0 right-0 text-[120px] md:text-[150px] text-[#915EFF] opacity-20 font-mono pointer-events-none"
               animate={{ y: [0, -10, 0], rotateZ: [0, -5, 0] }}
-              transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
             >
-              {'/>'}
+              {"/>"}
             </motion.div>
 
             {/* Animated floating circles */}
@@ -228,15 +236,28 @@ const Hero = () => {
               <motion.div
                 key={i}
                 className="absolute rounded-full bg-[#915EFF] pointer-events-none"
-                style={{ width: c.w, height: c.h, left: c.l, top: c.t, opacity: c.o }}
-                animate={{ y: [0, c.dy, 0], x: [0, c.dx, 0], scale: [1, 0.9, 1] }}
-                transition={{ duration: c.dur, repeat: Infinity, repeatType: 'reverse' }}
+                style={{
+                  width: c.w,
+                  height: c.h,
+                  left: c.l,
+                  top: c.t,
+                  opacity: c.o,
+                }}
+                animate={{
+                  y: [0, c.dy, 0],
+                  x: [0, c.dx, 0],
+                  scale: [1, 0.9, 1],
+                }}
+                transition={{
+                  duration: c.dur,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
               />
             ))}
           </div>
         </motion.div>
       </div>
-
     </section>
   );
 };

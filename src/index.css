@@ -22,6 +22,39 @@
   color: #ffd700;
 }
 
+.ajfm88-letter._1:hover,
+.ajfm88-letter._4:hover {
+  color: #f5d020;
+}
+
+.ajfm88-letter._2:hover,
+.ajfm88-letter._5:hover {
+  color: #2196f3;
+}
+
+.ajfm88-letter._3:hover,
+.ajfm88-letter._6:hover {
+  color: #e0434d;
+}
+
+.alejandro-letter._8:hover,
+.alejandro-letter._11:hover,
+.alejandro-letter._14:hover {
+  color: #f5d020;
+}
+
+.alejandro-letter._9:hover,
+.alejandro-letter._12:hover,
+.alejandro-letter._15:hover {
+  color: #2196f3;
+}
+
+.alejandro-letter._10:hover,
+.alejandro-letter._13:hover,
+.alejandro-letter._16:hover {
+  color: #e0434d;
+}
+
 @keyframes rubberBand {
   from {
     transform: scale3d(1, 1, 1);

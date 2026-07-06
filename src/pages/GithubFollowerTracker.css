@@ -14,6 +14,7 @@
 
 .gft-page h1 {
   margin: 20px 0;
+  font-size: 2.5rem;
 }
 
 .gft-page .gft-back {
@@ -32,7 +33,7 @@
   margin: 40px 0;
 }
 
-.gft-page .hidden {
+.gft-page .gft-btn {
   font-size: 1.1em;
   padding: 0.6em 1em;
   margin: 0.5em;
@@ -42,16 +43,16 @@
   color: #001d3d;
 }
 
-.gft-page .hidden:disabled {
+.gft-page .gft-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.gft-page .hidden:focus {
+.gft-page .gft-btn:focus {
   border: 3px #f6f316 solid;
 }
 
-.gft-page .hidden:hover:not(:disabled) {
+.gft-page .gft-btn:hover:not(:disabled) {
   cursor: pointer;
   border: 3px #f6f316 solid;
 }
@@ -60,6 +61,7 @@
   font-size: 1.5em;
   text-align: center;
   color: #001d3d;
+  background-color: white;
   border-radius: 10px 0 0 10px;
   border: none;
   width: 300px;
@@ -94,6 +96,11 @@
   background-color: #001d3d;
   border-radius: 20px;
   padding: 20px 30px;
+}
+
+.gft-page .box h2 {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
 }
 
 .gft-page #msg {

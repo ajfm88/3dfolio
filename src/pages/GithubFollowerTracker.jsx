@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import "./GithubFollowerTracker.css";
 
 const STORAGE_PREFIX = "gft:";
+const RESOLVED_PREFIX = "gft:resolved:";
 
 async function fetchGitPage(url, page) {
   const response = await fetch(`${url}${page}`);
@@ -49,19 +50,34 @@ function diffLists(previous, current) {
   return { deleted, added };
 }
 
+function loadResolvedIdentity(id) {
+  const raw = localStorage.getItem(`${RESOLVED_PREFIX}${id}`);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveResolvedIdentity(id, data) {
+  localStorage.setItem(`${RESOLVED_PREFIX}${id}`, JSON.stringify(data));
+}
+
 // GitHub user ids are permanent even across username changes, so re-resolving
 // by id fixes stale/renamed profiles whose cached login/html_url would 404.
+// Once resolved, the result is cached in localStorage so the same id never
+// needs to hit the GitHub API again on a later search.
 async function resolveCurrentIdentity(entry) {
+  const cached = loadResolvedIdentity(entry.id);
+  if (cached) return { ...entry, ...cached };
+
   try {
     const response = await fetch(`https://api.github.com/user/${entry.id}`);
     if (!response.ok) return entry;
     const data = await response.json();
-    return {
-      ...entry,
+    const resolved = {
       login: data.login,
       avatar_url: data.avatar_url,
       html_url: data.html_url,
     };
+    saveResolvedIdentity(entry.id, resolved);
+    return { ...entry, ...resolved };
   } catch {
     return entry;
   }
@@ -178,21 +194,21 @@ const GithubFollowerTracker = () => {
         <div id="fold">
           <input
             type="button"
-            className="hidden"
+            className="gft-btn"
             value="All"
             disabled={!hasData}
             onClick={() => setView("all")}
           />
           <input
             type="button"
-            className="hidden"
+            className="gft-btn"
             value="Changes"
             disabled={!hasData || !changes}
             onClick={() => setView("changes")}
           />
           <input
             type="button"
-            className="hidden"
+            className="gft-btn"
             value="Save"
             disabled={!hasData}
             onClick={handleSave}

@@ -15,7 +15,7 @@ const Navbar = () => {
         {/* Logo + Name */}
         <div className="flex items-center gap-2">
           <Link
-            to="https://home.ajfm88.com"
+            to="https://linktr.ee/ajfm88"
             target="_blank"
             onClick={() => {
               setActive("");
@@ -25,18 +25,18 @@ const Navbar = () => {
             <img
               src={alejandro}
               alt="logo"
-              className="w-15 h-10 object-contain transition-all duration-300 hover:[filter:brightness(0)_saturate(100%)_invert(29%)_sepia(60%)_saturate(5000%)_hue-rotate(243deg)_brightness(0.9)]"
+              className="w-15 h-10 object-contain transition-all duration-300 hover:[filter:brightness(0)_saturate(100%)_invert(60%)_sepia(90%)_saturate(500%)_hue-rotate(58deg)_brightness(1.1)]"
             />
           </Link>
           <a
-            href="https://linktr.ee/ajfm88"
+            href="https://home.ajfm88.com"
             target="_blank"
             rel="noreferrer"
             className="text-white text-[18px] font-bold cursor-pointer flex items-center whitespace-nowrap"
           >
             &nbsp;| &nbsp;
             <AnimatedLetters
-              letterClass="text-animate-hover"
+              letterClass="text-animate-hover ajfm88-letter"
               text="ajfm88"
               idx={1}
             />

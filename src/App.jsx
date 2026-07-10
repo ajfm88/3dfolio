@@ -13,6 +13,7 @@ import {
 } from "./components";
 
 const GithubFollowerTracker = lazy(() => import("./pages/GithubFollowerTracker"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 const Portfolio = () => (
   <div className="relative z-0 bg-primary">
@@ -49,6 +50,14 @@ const App = () => {
           element={
             <Suspense fallback={null}>
               <GithubFollowerTracker />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/ajfoucault/*"
+          element={
+            <Suspense fallback={null}>
+              <Admin />
             </Suspense>
           }
         />

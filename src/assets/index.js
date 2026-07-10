@@ -13,17 +13,9 @@ import mongodb from "./tech/mongodb.png";
 import postgresql from "./tech/postgresql.png";
 import nextjs from "./tech/nextjs.webp";
 
-import thecoderschool from "./company/thecoderschool.png";
-import issgroup from "./company/issgroup.png";
-import digar from "./company/digar.png";
-import ghdenterprises from "./company/ghd.png";
-
 import suburbia from "./suburbia.png";
 import jobify from "./jobify.png";
-import twitter from "./twitter.png";
-import evogym from "./evogym.jpg";
 import airesume from "./ai-resume-builder.png";
-import imdb from "./imdb-clone.png";
 
 export {
   alejandro,
@@ -39,14 +31,7 @@ export {
   mongodb,
   postgresql,
   nextjs,
-  thecoderschool,
-  issgroup,
-  digar,
-  ghdenterprises,
   suburbia,
   jobify,
-  twitter,
-  evogym,
   airesume,
-  imdb,
 };

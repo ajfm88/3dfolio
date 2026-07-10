@@ -3,16 +3,9 @@ import {
   linktree,
   linkedin,
   github,
-  thecoderschool,
-  issgroup,
-  digar,
-  ghdenterprises,
   suburbia,
   jobify,
-  twitter,
   airesume,
-  evogym,
-  imdb,
 } from "../assets";
 
 export const navLinks = [
@@ -61,7 +54,7 @@ const services = [
   },
 ];
 
-const experiences = [
+/*const experiences = [
   {
     title: "Independent Software Developer / Open Source Contributor",
     company_name: "Digar · Self-employed",
@@ -124,7 +117,7 @@ const experiences = [
       "Translated written and spoken content between English and Spanish, including correspondence and advertising scripts.",
     ],
   },
-];
+];*/
 
 const projects = [
   {
@@ -205,7 +198,7 @@ const projects = [
     image: jobify,
     source_code_link: "https://github.com/ajfm88/jobify",
   },
-  {
+  /*{
     name: "Twitter Clone",
     description:
       "A short-form social media app with picture uploads, likes & comments where users share quick posts called tweets with followers.",
@@ -282,7 +275,7 @@ const projects = [
     url: "https://imdb-clone-ajfm88.vercel.app",
     image: imdb,
     source_code_link: "https://github.com/ajfm88/imdb-clone",
-  },
+  },*/
 ];
 
-export { services, experiences, projects };
+export { services, projects };

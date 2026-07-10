@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   VerticalTimeline,
   VerticalTimelineElement,
@@ -7,9 +8,9 @@ import { motion } from "framer-motion";
 import "react-vertical-timeline-component/style.min.css";
 
 import { styles } from "../styles";
-import { experiences } from "../constants";
 import { SectionWrapper } from "../hoc";
 import { textVariant } from "../utils/motion";
+import { fetchCollection } from "../utils/firestoreRest";
 import AnimatedLetters from "./AnimatedLetters";
 
 const ExperienceCard = ({ experience }) => {
@@ -31,7 +32,7 @@ const ExperienceCard = ({ experience }) => {
             className="flex justify-center items-center w-full h-full rounded-full overflow-hidden"
           >
             <img
-              src={experience.icon}
+              src={experience.iconUrl}
               alt={experience.company_name}
               className="w-[95%] h-[95%] object-contain"
             />
@@ -39,7 +40,7 @@ const ExperienceCard = ({ experience }) => {
         ) : (
           <div className="flex justify-center items-center w-full h-full rounded-full overflow-hidden">
             <img
-              src={experience.icon}
+              src={experience.iconUrl}
               alt={experience.company_name}
               className="w-[95%] h-[95%] object-contain"
             />
@@ -86,6 +87,15 @@ const ExperienceCard = ({ experience }) => {
 };
 
 const Experience = () => {
+  const [experiences, setExperiences] = useState([]);
+
+  useEffect(() => {
+    fetchCollection("experiences")
+      .then((docs) => docs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
+      .then(setExperiences)
+      .catch(() => setExperiences([]));
+  }, []);
+
   return (
     <>
       <motion.div variants={textVariant()}>

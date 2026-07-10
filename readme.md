@@ -30,6 +30,9 @@
     <a href="https://tailwindcss.com">
       <img src="https://img.shields.io/badge/-Tailwind_CSS-black?style=for-the-badge&logoColor=white&logo=tailwindcss&color=06B6D4" alt="tailwindcss" />
     </a>
+    <a href="https://firebase.google.com">
+      <img src="https://img.shields.io/badge/-Firebase-black?style=for-the-badge&logoColor=white&logo=firebase&color=DD2C00" alt="firebase" />
+    </a>
   </div>
 
   <h3 align="center">3D Personal Portfolio Website</h3>
@@ -56,6 +59,7 @@ Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portf
 - 🔧 [React Three Drei](https://drei.pmnd.rs)
 - ⚡ [Vite](https://vitejs.dev)
 - 🌬️ [Tailwind CSS](https://tailwindcss.com)
+- 🔥 [Firebase](https://firebase.google.com)
 
 ## 🔋 <a name="features">Features</a>
 
@@ -74,6 +78,8 @@ Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portf
 📱 **Responsive Design:** Ensures optimal display and functionality across all devices.
 
 🖌️ **Tailwind CSS Styling:** Styled with Tailwind CSS for a modern and responsive design.
+
+🔥 **Firebase-Powered Admin Panel:** A secure, Google-authenticated dashboard for editing site content, backed by Cloud Firestore and Firebase Storage.
 
 ## 🤸 <a name="quick-start">Quick Start</a>
 
@@ -101,6 +107,21 @@ Install the project dependencies using npm:
 ```bash
 npm install
 ```
+
+**Set Up Environment Variables**
+
+Create a `.env` file in the project root (copy `.env.example`) and add your Firebase web app config. These power the admin panel and the database-driven content sections:
+
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
+
+Grab these values from your Firebase project settings (**Project settings → Your apps → Web app**).
 
 **Running the Project**
 

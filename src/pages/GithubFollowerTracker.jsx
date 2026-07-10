@@ -1,7 +1,22 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  Search,
+  Loader2,
+  Users,
+  GitCompare,
+  Save,
+  UserPlus,
+  UserMinus,
+} from "lucide-react";
 
-import "./GithubFollowerTracker.css";
+// lucide dropped brand marks, so the GitHub logo is an inline SVG (octicon path).
+const GithubMark = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+  </svg>
+);
 
 const STORAGE_PREFIX = "gft:";
 const RESOLVED_PREFIX = "gft:resolved:";
@@ -87,13 +102,30 @@ function resolveCurrentIdentities(entries) {
   return Promise.all(entries.map(resolveCurrentIdentity));
 }
 
-function EntryList({ items, className }) {
+function EntryList({ items, variant }) {
+  const tint =
+    variant === "added"
+      ? "text-green-300"
+      : variant === "deleted"
+        ? "text-red-300"
+        : "text-gray-200";
+
   return items.map((item) => (
     <li key={item.id}>
       <a href={item.html_url} target="_blank" rel="noreferrer">
-        <div className={`entry${className ? ` ${className}` : ""}`}>
-          <img src={item.avatar_url} alt={item.login} style={{ height: 40, width: 40 }} />
-          <p className="name">{item.login}</p>
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-700/50 transition-colors">
+          <img
+            src={item.avatar_url}
+            alt={item.login}
+            className="w-10 h-10 rounded-full flex-shrink-0"
+          />
+          <span className={`text-sm ${tint}`}>{item.login}</span>
+          {variant === "added" && (
+            <UserPlus size={16} className="text-green-400 ml-auto flex-shrink-0" />
+          )}
+          {variant === "deleted" && (
+            <UserMinus size={16} className="text-red-400 ml-auto flex-shrink-0" />
+          )}
         </div>
       </a>
     </li>
@@ -176,76 +208,110 @@ const GithubFollowerTracker = () => {
       ? changes.deletedFollowing.length + changes.addedFollowing.length
       : followingList.length;
 
+  const foldBtn = (isActive) =>
+    `inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+      isActive ? "bg-indigo-600" : "bg-gray-700 hover:bg-gray-600"
+    }`;
+
   return (
-    <div className="gft-page">
-      <Link to="/" className="gft-back">
-        ← ajfm88.com
-      </Link>
-      <main>
-        <h1>GitHub username:</h1>
-        <form id="inputs" onSubmit={runSearch}>
+    <div className="relative min-h-screen bg-gray-900 text-gray-100 py-10 px-4">
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 opacity-80" />
+        <div className="absolute inset-0 backdrop-blur-sm" />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={16} /> ajfm88.com
+        </Link>
+
+        <header className="text-center mt-6 mb-8">
+          <h1 className="inline-flex items-center gap-3 text-2xl sm:text-3xl font-bold">
+            <GithubMark size={28} /> GitHub Follower Tracker
+          </h1>
+        </header>
+
+        <form onSubmit={runSearch} className="flex justify-center gap-2 max-w-md mx-auto">
           <input
             type="text"
             value={usernameInput}
             onChange={(e) => setUsernameInput(e.target.value)}
+            placeholder="GitHub username"
+            className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          <input type="submit" id="searchbtn" value={loading ? "Searching..." : "Search"} disabled={loading} />
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 transition-colors px-4 py-2 font-medium"
+          >
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+            {loading ? "Searching…" : "Search"}
+          </button>
         </form>
-        <div id="fold">
-          <input
+
+        <div className="flex justify-center flex-wrap gap-2 mt-6">
+          <button
             type="button"
-            className="gft-btn"
-            value="All"
+            className={foldBtn(hasData && view === "all")}
             disabled={!hasData}
             onClick={() => setView("all")}
-          />
-          <input
+          >
+            <Users size={16} /> All
+          </button>
+          <button
             type="button"
-            className="gft-btn"
-            value="Changes"
+            className={foldBtn(hasData && view === "changes")}
             disabled={!hasData || !changes}
             onClick={() => setView("changes")}
-          />
-          <input
+          >
+            <GitCompare size={16} /> Changes
+          </button>
+          <button
             type="button"
-            className="gft-btn"
-            value="Save"
+            className="inline-flex items-center gap-2 rounded-lg bg-gray-700 hover:bg-gray-600 px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!hasData}
             onClick={handleSave}
-          />
+          >
+            <Save size={16} /> Save
+          </button>
         </div>
-        <div id="msg">{message}</div>
-        <section id="grid">
-          <div id="followers" className="box">
-            <ul>
-              <li>
-                <h2>Followers: {hasData ? followersCount : ""}</h2>
-              </li>
+
+        {message && <p className="text-center text-gray-400 mt-4">{message}</p>}
+
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
+          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-100 mb-4">
+              Followers{hasData ? `: ${followersCount}` : ""}
+            </h2>
+            <ul className="space-y-1">
               {hasData && view === "all" && <EntryList items={followersList} />}
               {hasData && view === "changes" && changes && (
                 <>
-                  <EntryList items={changes.deletedFollowers} className="deleted" />
-                  <EntryList items={changes.addedFollowers} className="added" />
+                  <EntryList items={changes.deletedFollowers} variant="deleted" />
+                  <EntryList items={changes.addedFollowers} variant="added" />
                 </>
               )}
             </ul>
           </div>
-          <div id="following" className="box">
-            <ul>
-              <li>
-                <h2>Following: {hasData ? followingCount : ""}</h2>
-              </li>
+          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-100 mb-4">
+              Following{hasData ? `: ${followingCount}` : ""}
+            </h2>
+            <ul className="space-y-1">
               {hasData && view === "all" && <EntryList items={followingList} />}
               {hasData && view === "changes" && changes && (
                 <>
-                  <EntryList items={changes.deletedFollowing} className="deleted" />
-                  <EntryList items={changes.addedFollowing} className="added" />
+                  <EntryList items={changes.deletedFollowing} variant="deleted" />
+                  <EntryList items={changes.addedFollowing} variant="added" />
                 </>
               )}
             </ul>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 };

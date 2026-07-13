@@ -113,13 +113,13 @@ function EntryList({ items, variant }) {
   return items.map((item) => (
     <li key={item.id}>
       <a href={item.html_url} target="_blank" rel="noreferrer">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-700/50 transition-colors">
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-700/50 transition-colors min-w-0">
           <img
             src={item.avatar_url}
             alt={item.login}
             className="w-10 h-10 rounded-full flex-shrink-0"
           />
-          <span className={`text-sm ${tint}`}>{item.login}</span>
+          <span className={`text-sm truncate ${tint}`}>{item.login}</span>
           {variant === "added" && (
             <UserPlus size={16} className="text-green-400 ml-auto flex-shrink-0" />
           )}
@@ -214,7 +214,7 @@ const GithubFollowerTracker = () => {
     }`;
 
   return (
-    <div className="relative min-h-screen bg-gray-900 text-gray-100 py-10 px-4">
+    <div className="relative min-h-screen overflow-x-hidden bg-gray-900 text-gray-100 py-10 px-4">
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 opacity-80" />
         <div className="absolute inset-0 backdrop-blur-sm" />
@@ -229,12 +229,12 @@ const GithubFollowerTracker = () => {
         </Link>
 
         <header className="text-center mt-6 mb-8">
-          <h1 className="inline-flex items-center gap-3 text-2xl sm:text-3xl font-bold">
+          <h1 className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xl xs:text-2xl sm:text-3xl font-bold">
             <GithubMark size={28} /> GitHub Follower Tracker
           </h1>
         </header>
 
-        <form onSubmit={runSearch} className="flex justify-center gap-2 max-w-md mx-auto">
+        <form onSubmit={runSearch} className="flex flex-col xs:flex-row justify-center gap-2 max-w-md mx-auto">
           <input
             type="text"
             value={usernameInput}
@@ -245,7 +245,7 @@ const GithubFollowerTracker = () => {
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 transition-colors px-4 py-2 font-medium"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 transition-colors px-4 py-2 font-medium"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
             {loading ? "Searching…" : "Search"}
@@ -282,7 +282,7 @@ const GithubFollowerTracker = () => {
         {message && <p className="text-center text-gray-400 mt-4">{message}</p>}
 
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
-          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-6">
+          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-4 sm:p-6">
             <h2 className="text-xl font-semibold text-gray-100 mb-4">
               Followers{hasData ? `: ${followersCount}` : ""}
             </h2>
@@ -296,7 +296,7 @@ const GithubFollowerTracker = () => {
               )}
             </ul>
           </div>
-          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-6">
+          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-4 sm:p-6">
             <h2 className="text-xl font-semibold text-gray-100 mb-4">
               Following{hasData ? `: ${followingCount}` : ""}
             </h2>

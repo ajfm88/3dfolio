@@ -47,7 +47,7 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portfolio work. To see a live demo of this project, please [click here](https://3dfolio-ajfm88.vercel.app) or on the banner above.
+Serverless full-stack personal website and blog of Alejandro J. Foucault (ajfm88), featuring projects and portfolio work — a 3D React front end backed by Firebase (Firestore, Storage & Auth). To see a live demo of this project, please [click here](https://3dfolio-ajfm88.vercel.app) or on the banner above.
 
 ## ⚙️ <a name="tech-stack">Tech Stack</a>
 

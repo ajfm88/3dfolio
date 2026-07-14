@@ -14,6 +14,7 @@ import {
 
 const GithubFollowerTracker = lazy(() => import("./pages/GithubFollowerTracker"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Blog = lazy(() => import("./pages/Blog"));
 
 const Portfolio = () => (
   <div className="relative z-0 bg-primary">
@@ -58,6 +59,14 @@ const App = () => {
           element={
             <Suspense fallback={null}>
               <Admin />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/blog/*"
+          element={
+            <Suspense fallback={null}>
+              <Blog />
             </Suspense>
           }
         />

@@ -57,6 +57,13 @@ const Navbar = () => {
               {nav.title}
             </a>
           ))}
+          <Link
+            to="/blog"
+            onClick={() => setActive("")}
+            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[15px] font-medium cursor-pointer"
+          >
+            Blog
+          </Link>
         </div>
 
         {/* Mobile hamburger */}
@@ -85,6 +92,16 @@ const Navbar = () => {
                   {nav.title}
                 </a>
               ))}
+              <Link
+                to="/blog"
+                onClick={() => {
+                  setToggle(false);
+                  setActive("");
+                }}
+                className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[16px] font-medium cursor-pointer"
+              >
+                Blog
+              </Link>
             </div>
           )}
         </div>

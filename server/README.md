@@ -2,7 +2,7 @@
 
 The Node/Express service that powers the dynamic, authenticated parts of my portfolio: the **`/blog`** (posts + comments) and **`/chat`** (real-time messaging) features. Everything else on the site is a static 3D React front end; this server is where identity, persistence, and real-time live.
 
-> **Status:** Foundation (slices 1–2). This commit lands the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Blog posts/comments (slices 3–4) and chat messages (chat-plan Phase A) build on top of this base.
+> **Status:** Foundation + blog posts (slices 1–3). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 adds the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Blog comments (slice 4), ImageKit uploads (slice 5), and chat messages (chat-plan Phase A) build on top of this base.
 
 ---
 
@@ -113,6 +113,40 @@ Rather than carry both conventions forward, I picked one canonical field name pe
 
 ---
 
+## The blog posts API (`/api/posts`)
+
+This is the first real feature endpoint on top of the foundation, and it shows the whole stack working together: public reads, admin-gated writes, and a small piece of read-side analytics.
+
+**The routes** ([`src/routes/post.route.js`](src/routes/post.route.js)):
+
+| Method   | Path                | Auth              | What it does                                                       |
+| -------- | ------------------- | ----------------- | ----------------------------------------------------------------- |
+| `GET`    | `/api/posts`        | public            | List with filters (`cat`, `author`, `search`), `sort`, pagination |
+| `GET`    | `/api/posts/:slug`  | public            | One post by slug; bumps its visit counter first                   |
+| `POST`   | `/api/posts`        | **admin**         | Create a post (auto-slugged)                                      |
+| `PATCH`  | `/api/posts/feature`| **admin**         | Toggle a post's "featured" flag                                   |
+| `DELETE` | `/api/posts/:id`    | admin **or** owner| Delete a post                                                     |
+
+A few decisions here are worth walking through:
+
+- **Public read, gated write — enforced at the API, not the UI.** Anyone can read posts; only the owner account can create or feature one. The blog's "Write" button is hidden from non-admins on the front end, but hiding UI isn't security — so `protectRoute` + `requireAdmin` guard the write routes server-side. I verified this at runtime: anonymous `POST`/`PATCH`/`DELETE` all return `401` before touching the database.
+
+- **Two-tier authorization.** `protectRoute` answers "are you signed in?" (resolves the Clerk session to a Mongo user on `req.user`); `requireAdmin` answers "are you allowed?" ([`src/lib/roles.js`](src/lib/roles.js) reads the role from the Clerk session claim, falling back to the webhook-mirrored role on the user doc). `deletePost` is the interesting middle case — it's not purely admin: an admin can delete any post, but a regular author is scoped to their own, which the query expresses directly (`findOneAndDelete({ _id, user: req.user._id })`) so ownership is enforced in the database round-trip, not a separate read-then-check.
+
+- **Mass-assignment protection.** `createPost` whitelists `title`/`desc`/`category`/`content`/`img` and sets `user` from the authenticated session — it never spreads `req.body` into the model, so a crafted request can't set `isFeatured`, inflate `visit`, or forge authorship.
+
+- **Slug generation.** Titles become URL-safe slugs; on collision I suffix `-2`, `-3`, … derived from the *base* slug (not the previous candidate, which would compound into `foo-2-3`). The `unique` index on `slug` is the real guard against a race between the check and the insert.
+
+- **Visit counter as its own middleware.** `GET /:slug` runs [`increaseVisit`](src/middleware/increaseVisit.js) before the read — a single atomic `$inc` (no read-modify-write race) that keeps the read handler a clean lookup. That counter is what powers the **Popular** (all-time visits) and **Trending** (visits within the last 7 days) sorts. These were cut when the blog was briefly planned on Firebase (they'd have needed public writes); on Mongo they're free, so they're back.
+
+- **Correct pagination under filters.** The list counts documents against the *same* query it fetched (the reference counted all posts, so `hasMore` was wrong the moment you filtered by category) and caps the client-supplied `limit` so no request can ask for an unbounded page.
+
+- **No try/catch in the controllers.** Express 5 forwards a rejected async handler straight to the central error handler, so every controller stays a clean happy-path and errors get one consistent `{ message }` shape.
+
+> Cover-image uploads (the `img` field) are wired in slice 5 via ImageKit; until then a post can be created with an image URL but there's no upload endpoint yet.
+
+---
+
 ## Security & robustness choices worth calling out
 
 - **Webhook signature verification** — the webhook trusts the payload _only_ after `verifyWebhook` passes; a bad or tampered signature returns `400` and touches nothing.
@@ -132,15 +166,20 @@ server/
 │   ├── index.js                  # entry point: middleware order, routes, error handler, listen
 │   ├── lib/
 │   │   ├── db.js                 # MongoDB (Mongoose) connection, fail-fast
+│   │   ├── roles.js              # resolveRole: Clerk claim -> webhook-mirrored fallback
 │   │   └── socket.js             # http.Server + Socket.io, presence map, app/server export
 │   ├── middleware/
-│   │   └── auth.middleware.js    # protectRoute: Clerk session -> req.user (Mongo doc)
+│   │   ├── auth.middleware.js    # protectRoute (signed-in) + requireAdmin (role gate)
+│   │   └── increaseVisit.js      # atomic $inc of a post's visit counter
 │   ├── controllers/
-│   │   └── auth.controller.js    # checkAuth: return the synced user
+│   │   ├── auth.controller.js    # checkAuth: return the synced user
+│   │   └── post.controller.js    # posts: list / read / create / delete / feature
 │   ├── models/
-│   │   └── user.model.js         # unified User schema
+│   │   ├── user.model.js         # unified User schema
+│   │   └── post.model.js         # Post schema (author ref, slug, content, visit)
 │   ├── routes/
-│   │   └── auth.route.js         # /api/auth
+│   │   ├── auth.route.js         # /api/auth
+│   │   └── post.route.js         # /api/posts
 │   └── webhooks/
 │       └── clerk.webhook.js      # Clerk -> Mongo user sync (raw body + signature verify)
 ├── .env.example
@@ -153,13 +192,18 @@ Concerns are split the conventional way — routes declare endpoints, middleware
 
 ## API surface (so far)
 
-| Method | Path                  | Auth            | Purpose                                    |
-| ------ | --------------------- | --------------- | ------------------------------------------ |
-| `GET`  | `/health`             | —               | Liveness/readiness probe                   |
-| `GET`  | `/api/auth/check`     | Clerk session   | Return the current user's synced Mongo doc |
-| `POST` | `/api/webhooks/clerk` | Clerk signature | Sync user create/update/delete into Mongo  |
+| Method   | Path                  | Auth               | Purpose                                    |
+| -------- | --------------------- | ------------------ | ------------------------------------------ |
+| `GET`    | `/health`             | —                  | Liveness/readiness probe                   |
+| `GET`    | `/api/auth/check`     | Clerk session      | Return the current user's synced Mongo doc |
+| `POST`   | `/api/webhooks/clerk` | Clerk signature    | Sync user create/update/delete into Mongo  |
+| `GET`    | `/api/posts`          | —                  | List posts (filter · sort · paginate)      |
+| `GET`    | `/api/posts/:slug`    | —                  | Read one post (bumps visit counter)        |
+| `POST`   | `/api/posts`          | admin              | Create a post                              |
+| `PATCH`  | `/api/posts/feature`  | admin              | Toggle a post's featured flag              |
+| `DELETE` | `/api/posts/:id`      | admin or owner     | Delete a post                              |
 
-Blog (`/api/posts`, `/api/comments`) and chat (`/api/messages`) routes land in upcoming slices.
+Blog comments (`/api/comments`) and chat (`/api/messages`) routes land in upcoming slices.
 
 ---
 
@@ -193,7 +237,10 @@ npm run dev            # nodemon, restarts on save
 ## Roadmap
 
 - [x] **Slices 1–2 — Foundation:** server + DB + socket wiring, Clerk auth, user-sync webhook, unified User model.
-- [ ] **Slices 3–4 — Blog:** Post + Comment models, CRUD routes, ImageKit uploads, cascade-delete on `user.deleted`.
+- [x] **Slice 3 — Blog posts API:** Post model, `/api/posts` list/read/create/delete/feature, admin gating, visit-counter Popular/Trending sorts.
+- [ ] **Slice 4 — Blog comments API:** Comment model, list/add/delete, cascade-delete on `user.deleted`.
+- [ ] **Slice 5 — ImageKit uploads:** signed `GET /api/posts/upload-auth` for client-side cover-image upload.
+- [ ] **Slice 6 — Deploy:** Render + Atlas + Clerk webhook + external keep-alive ping.
 - [ ] **Chat Phase A:** Message model, message routes, Socket.io delivery via `getReceiverSocketId`.
 
 Built incrementally, one small slice per commit, on purpose — each step is reviewable on its own and the server is runnable at every commit.

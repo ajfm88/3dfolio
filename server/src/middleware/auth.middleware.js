@@ -1,5 +1,6 @@
 import { getAuth } from "@clerk/express";
 import User from "../models/user.model.js";
+import { resolveRole } from "../lib/roles.js";
 
 // Gate for signed-in-only routes. clerkMiddleware() (mounted in index.js) reads
 // the session from the Authorization: Bearer token (cross-origin SPA) or cookie;
@@ -26,4 +27,15 @@ export async function protectRoute(req, res, next) {
     console.error("Error in protectRoute middleware:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
+}
+
+// Admin-only gate. Mount AFTER protectRoute so req.user is available for the
+// role fallback (see resolveRole). Used on the write side of the blog — create,
+// feature — which only the owner account (ale@ajfm88.com) may hit. The API
+// enforces this itself so a hand-crafted request can't bypass the hidden UI.
+export function requireAdmin(req, res, next) {
+  if (resolveRole(req) !== "admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
 }

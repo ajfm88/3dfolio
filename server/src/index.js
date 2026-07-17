@@ -10,6 +10,7 @@ import { app, server } from "./lib/socket.js";
 import clerkWebhook from "./webhooks/clerk.webhook.js";
 import authRoutes from "./routes/auth.route.js";
 import postRoutes from "./routes/post.route.js";
+import commentRoutes from "./routes/comment.route.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -32,8 +33,9 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/comments", commentRoutes);
 
-// (blog comments -> slice 4; chat messages -> chat-plan Phase A)
+// (chat messages -> chat-plan Phase A)
 
 // central error handler
 app.use((err, req, res, next) => {

@@ -2,7 +2,7 @@
 
 The Node/Express service that powers the dynamic, authenticated parts of my portfolio: the **`/blog`** (posts + comments) and **`/chat`** (real-time messaging) features. Everything else on the site is a static 3D React front end; this server is where identity, persistence, and real-time live.
 
-> **Status:** Foundation + blog posts (slices 1–3). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 adds the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Blog comments (slice 4), ImageKit uploads (slice 5), and chat messages (chat-plan Phase A) build on top of this base.
+> **Status:** Foundation + blog posts + blog comments + ImageKit uploads (slices 1–5). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wires up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. As of this slice the server has run live against real MongoDB Atlas, Clerk, and ImageKit credentials — not just syntax/route checks. Chat messages (chat-plan Phase A) build on top of this base next.
 
 ---
 
@@ -147,6 +147,42 @@ A few decisions here are worth walking through:
 
 ---
 
+## The blog comments API (`/api/comments`)
+
+Comments reuse every pattern the posts API established — same `protectRoute`/`resolveRole` gating, same query-scoped ownership, same whitelist-not-spread hardening — which is really the point: once the auth and authorization primitives exist, a second feature endpoint is small.
+
+**The routes** ([`src/routes/comment.route.js`](src/routes/comment.route.js)):
+
+| Method   | Path                    | Auth              | What it does                          |
+| -------- | ------------------------ | ----------------- | -------------------------------------- |
+| `GET`    | `/api/comments/:postId`  | public            | List a post's comments, newest first   |
+| `POST`   | `/api/comments/:postId`  | **signed-in**      | Add a comment (any authenticated user) |
+| `DELETE` | `/api/comments/:id`      | admin **or** owner| Delete a comment                       |
+
+Two things carry over directly from the posts API, and one thing is new:
+
+- **Signed-in-to-write, not admin-to-write.** Unlike posts (admin-only create), *any* signed-in user can comment — `POST` sits behind `protectRoute` alone, no `requireAdmin`. Reading is still public. This is the same two-tier model (`protectRoute` = "who are you", a second gate = "are you allowed") applied with a different second gate for a different resource.
+
+- **Whitelist, not spread.** `addComment` pulls only `desc` out of `req.body` and sets `user`/`post` itself from `req.user._id` and `req.params.postId`. The reference controller spread `req.body` into the new comment, which meant a crafted request could set `user` or `post` directly and forge authorship or attach a comment to the wrong thread — the same class of bug `createPost`'s whitelist already closes on the posts side.
+
+- **Cascade deletes — the new piece this slice adds.** A comment references a post and a user; deleting either side without cleaning up its comments leaves orphaned rows the frontend would have to silently filter around forever. Two places now clean up after themselves:
+  - [`deletePost`](src/controllers/post.controller.js) runs `Comment.deleteMany({ post: id })` after removing the post (both the admin and owner-scoped branches).
+  - The Clerk webhook's `user.deleted` handler ([`src/webhooks/clerk.webhook.js`](src/webhooks/clerk.webhook.js)) — a `TODO` since slice 2, because `Post`/`Comment` didn't exist yet — now runs `Post.deleteMany` and `Comment.deleteMany` against the deleted user's Mongo `_id`, mirroring what the reference blog's webhook did in one step. Both cascades run *after* the parent record is confirmed deleted, and both are scoped by ID (`{ post: id }` / `{ user: id }`), so they can't touch unrelated documents.
+
+---
+
+## Media uploads (`GET /api/posts/upload-auth`)
+
+Cover images upload **client-side, straight from the browser to ImageKit** — the file itself never passes through this server. What the server provides is a short-lived, signed authorization the browser presents to ImageKit's upload API.
+
+- **The endpoint only signs; it never touches a file.** [`getUploadAuth`](src/controllers/post.controller.js) calls the ImageKit SDK's `helper.getAuthenticationParameters()`, which HMAC-signs a token + expiry (default 30 minutes) using the private key. It returns `{ token, expire, signature }` — enough for the browser to authenticate a direct upload, nothing more.
+- **Admin-gated**, same as `createPost`/`featurePost` (`protectRoute` + `requireAdmin`): only the owner account can mint an upload authorization, since only the owner can create posts in the first place.
+- **The private key never leaves the server** — it signs the params here and is never sent to the client; only the resulting `token`/`expire`/`signature` are.
+- **The ImageKit client is built lazily, not at import time** ([`src/lib/imagekit.js`](src/lib/imagekit.js)). The `@imagekit/nodejs` SDK's constructor throws *synchronously* if `IK_PRIVATE_KEY` is missing — and this module is imported by `post.route.js` on every server boot, so building the client eagerly at the top of the file would have crashed `npm run dev` the instant ImageKit wasn't configured yet, exactly like every other slice built ahead of its third-party keys. Instead `getImageKitClient()` checks the env var first and only constructs (and caches) the client once it's present; `getUploadAuth` returns a clean `503 "Image upload is not configured yet"` if it's still missing, the same pattern the Clerk webhook already uses for its own missing signing secret.
+- **`img` on `Post` stays a plain URL string** ([`src/models/post.model.js`](src/models/post.model.js)) — the create flow doesn't change; once the frontend (slice 9) has an ImageKit URL from the direct upload, it's just one more field in the existing `createPost` whitelist.
+
+---
+
 ## Security & robustness choices worth calling out
 
 - **Webhook signature verification** — the webhook trusts the payload _only_ after `verifyWebhook` passes; a bad or tampered signature returns `400` and touches nothing.
@@ -167,21 +203,25 @@ server/
 │   ├── lib/
 │   │   ├── db.js                 # MongoDB (Mongoose) connection, fail-fast
 │   │   ├── roles.js              # resolveRole: Clerk claim -> webhook-mirrored fallback
+│   │   ├── imagekit.js           # getImageKitClient: lazy-built signing client
 │   │   └── socket.js             # http.Server + Socket.io, presence map, app/server export
 │   ├── middleware/
 │   │   ├── auth.middleware.js    # protectRoute (signed-in) + requireAdmin (role gate)
 │   │   └── increaseVisit.js      # atomic $inc of a post's visit counter
 │   ├── controllers/
 │   │   ├── auth.controller.js    # checkAuth: return the synced user
-│   │   └── post.controller.js    # posts: list / read / create / delete / feature
+│   │   ├── post.controller.js    # posts: list / read / create / delete / feature
+│   │   └── comment.controller.js # comments: list / add / delete
 │   ├── models/
 │   │   ├── user.model.js         # unified User schema
-│   │   └── post.model.js         # Post schema (author ref, slug, content, visit)
+│   │   ├── post.model.js         # Post schema (author ref, slug, content, visit)
+│   │   └── comment.model.js      # Comment schema (user ref, post ref, desc)
 │   ├── routes/
 │   │   ├── auth.route.js         # /api/auth
-│   │   └── post.route.js         # /api/posts
+│   │   ├── post.route.js         # /api/posts
+│   │   └── comment.route.js      # /api/comments
 │   └── webhooks/
-│       └── clerk.webhook.js      # Clerk -> Mongo user sync (raw body + signature verify)
+│       └── clerk.webhook.js      # Clerk -> Mongo user sync (raw body + signature verify + cascade delete)
 ├── .env.example
 └── package.json
 ```
@@ -202,8 +242,12 @@ Concerns are split the conventional way — routes declare endpoints, middleware
 | `POST`   | `/api/posts`          | admin              | Create a post                              |
 | `PATCH`  | `/api/posts/feature`  | admin              | Toggle a post's featured flag              |
 | `DELETE` | `/api/posts/:id`      | admin or owner     | Delete a post                              |
+| `GET`    | `/api/comments/:postId` | —                | List a post's comments                     |
+| `POST`   | `/api/comments/:postId` | signed-in        | Add a comment                              |
+| `DELETE` | `/api/comments/:id`   | admin or owner     | Delete a comment                           |
+| `GET`    | `/api/posts/upload-auth` | admin           | Signed params for a direct client → ImageKit upload |
 
-Blog comments (`/api/comments`) and chat (`/api/messages`) routes land in upcoming slices.
+Chat (`/api/messages`) routes land in an upcoming slice (chat-plan Phase A).
 
 ---
 
@@ -230,7 +274,7 @@ npm run dev            # nodemon, restarts on save
 | `MONGO_URI`                                            | MongoDB Atlas connection string                           |
 | `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`           | Clerk API keys                                            |
 | `CLERK_WEBHOOK_SIGNING_SECRET`                         | Verifies inbound Clerk webhooks                           |
-| `IK_URL_ENDPOINT` / `IK_PUBLIC_KEY` / `IK_PRIVATE_KEY` | ImageKit media (used in a later slice)                    |
+| `IK_URL_ENDPOINT` / `IK_PUBLIC_KEY` / `IK_PRIVATE_KEY` | ImageKit media — `IK_PRIVATE_KEY` signs `/api/posts/upload-auth`; the public key/endpoint are consumed by the frontend directly in a later slice |
 
 ---
 
@@ -238,9 +282,9 @@ npm run dev            # nodemon, restarts on save
 
 - [x] **Slices 1–2 — Foundation:** server + DB + socket wiring, Clerk auth, user-sync webhook, unified User model.
 - [x] **Slice 3 — Blog posts API:** Post model, `/api/posts` list/read/create/delete/feature, admin gating, visit-counter Popular/Trending sorts.
-- [ ] **Slice 4 — Blog comments API:** Comment model, list/add/delete, cascade-delete on `user.deleted`.
-- [ ] **Slice 5 — ImageKit uploads:** signed `GET /api/posts/upload-auth` for client-side cover-image upload.
-- [ ] **Slice 6 — Deploy:** Render + Atlas + Clerk webhook + external keep-alive ping.
+- [x] **Slice 4 — Blog comments API:** Comment model, `/api/comments` list/add/delete, signed-in-to-write gating, cascade-delete on both post delete and `user.deleted`.
+- [x] **Slice 5 — ImageKit uploads:** admin-gated, lazily-built `GET /api/posts/upload-auth` returns signed client-upload params; private key never leaves the server.
+- [ ] **Slice 6 — Deploy:** Render + Atlas + Clerk webhook + external keep-alive ping. (Atlas connection + Clerk + ImageKit keys are already live locally as of slice 5 — this slice is mainly Render + pointing the Clerk webhook at the deployed URL.)
 - [ ] **Chat Phase A:** Message model, message routes, Socket.io delivery via `getReceiverSocketId`.
 
 Built incrementally, one small slice per commit, on purpose — each step is reviewable on its own and the server is runnable at every commit.

@@ -1,6 +1,8 @@
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import Comment from "../models/comment.model.js";
 import { resolveRole } from "../lib/roles.js";
+import { getImageKitClient } from "../lib/imagekit.js";
 
 // Controllers are written without try/catch on purpose: Express 5 forwards a
 // rejected async handler straight to the central error handler in index.js, so
@@ -105,13 +107,30 @@ export async function createPost(req, res) {
   res.status(201).json(post);
 }
 
+// GET /api/posts/upload-auth — admin only (protectRoute + requireAdmin, same as
+// createPost). Returns short-lived signed params (token/expire/signature) that
+// let the browser upload a cover image straight to ImageKit — the private key
+// never leaves this server, and the image itself never passes through it either.
+export function getUploadAuth(req, res) {
+  const imagekit = getImageKitClient();
+
+  if (!imagekit) {
+    return res.status(503).json({ message: "Image upload is not configured yet" });
+  }
+
+  res.status(200).json(imagekit.helper.getAuthenticationParameters());
+}
+
 // DELETE /api/posts/:id — admin deletes any post; a regular author could delete
 // only their own (owner scope enforced by matching user on the query). Gated by
 // protectRoute; the owner-vs-admin split lives here rather than in middleware.
+// Either branch also deletes the post's comments — a comment without its post
+// is dead weight the frontend would just filter around forever.
 export async function deletePost(req, res) {
   if (resolveRole(req) === "admin") {
     const deleted = await Post.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Post not found" });
+    await Comment.deleteMany({ post: req.params.id });
     return res.status(200).json({ message: "Post has been deleted" });
   }
 
@@ -124,6 +143,7 @@ export async function deletePost(req, res) {
     return res.status(403).json({ message: "You can delete only your own posts" });
   }
 
+  await Comment.deleteMany({ post: req.params.id });
   res.status(200).json({ message: "Post has been deleted" });
 }
 

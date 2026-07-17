@@ -1,5 +1,7 @@
 import express from "express";
 import User from "../models/user.model.js";
+import Post from "../models/post.model.js";
+import Comment from "../models/comment.model.js";
 import { verifyWebhook } from "@clerk/backend/webhooks";
 
 // Clerk -> Mongo user sync. Clerk POSTs here on user.created/updated/deleted so
@@ -52,9 +54,13 @@ router.post("/", async (req, res) => {
 
     if (evt.type === "user.deleted") {
       if (evt.data.id) {
-        await User.findOneAndDelete({ clerkId: evt.data.id });
-        // TODO(slices 3-4): once Post/Comment models exist, cascade-delete the
-        // user's posts + comments here (blog-main's webhook did this).
+        const deletedUser = await User.findOneAndDelete({ clerkId: evt.data.id });
+        // A deleted Clerk account shouldn't leave orphaned content behind — mirror
+        // the cascade blog-main's webhook did, now that Post/Comment both exist.
+        if (deletedUser) {
+          await Post.deleteMany({ user: deletedUser._id });
+          await Comment.deleteMany({ user: deletedUser._id });
+        }
       }
     }
 

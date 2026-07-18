@@ -27,6 +27,10 @@ app.use(express.json());
 app.use(cors({ origin: CLIENT_URLS, credentials: true }));
 app.use(clerkMiddleware());
 
+app.get("/", (req, res) => {
+  res.send("Hello from JS + Express");
+});
+
 app.get("/health", (req, res) => {
   res.status(200).json({ ok: true });
 });

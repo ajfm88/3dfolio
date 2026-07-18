@@ -2,7 +2,7 @@
 
 The Node/Express service that powers the dynamic, authenticated parts of my portfolio: the **`/blog`** (posts + comments) and **`/chat`** (real-time messaging) features. Everything else on the site is a static 3D React front end; this server is where identity, persistence, and real-time live.
 
-> **Status:** Foundation + blog posts + blog comments + ImageKit uploads (slices 1–5). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wires up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. As of this slice the server has run live against real MongoDB Atlas, Clerk, and ImageKit credentials — not just syntax/route checks. Chat messages (chat-plan Phase A) build on top of this base next.
+> **Status:** Backend complete and deployed (slices 1–6). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wired up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. Slice 6 deployed the service to Render, live at `https://3dfolio-ajfm88-server.onrender.com`, with the Clerk webhook registered against the deployed URL and an external keep-alive ping holding the free-tier instance warm. The `src/blog/` frontend (lazy `/blog` in the portfolio) is now being built against this live API. Chat messages (chat-plan Phase A) build on top of this base next.
 
 ---
 
@@ -37,7 +37,7 @@ The cost of that decision was reconciling two different data models and two diff
 | Database       | **MongoDB Atlas + Mongoose**                   | Document model fits blog posts and chat messages naturally; Mongoose gives me schema validation and a typed-ish model layer over a schemaless store.            |
 | Authentication | **Clerk** (`@clerk/express`)                   | Offloads the genuinely hard, high-risk parts of auth — password storage, sessions, OAuth, MFA — to a specialist. I own my app logic, not a credential database. |
 | Real-time      | **Socket.io**                                  | Presence (who's online) and instant message delivery for chat, with automatic reconnection and a room/broadcast model.                                          |
-| Media uploads  | **ImageKit** (`@imagekit/nodejs`) + **Multer** | Off-loads image storage, CDN delivery, and on-the-fly transforms; Multer handles the multipart upload boundary. Wired in a later slice.                         |
+| Media uploads  | **ImageKit** (`@imagekit/nodejs`) + **Multer** | Off-loads image storage, CDN delivery, and on-the-fly transforms. Blog uploads go client-side straight to ImageKit (wired, slice 5); Multer is reserved for chat's server-side upload path, not yet wired (chat-plan Phase A).                         |
 | Config         | **dotenv**                                     | Twelve-factor style — every secret and environment difference comes from the environment, nothing is hardcoded.                                                 |
 | Dev loop       | **nodemon**                                    | Auto-restart on save.                                                                                                                                           |
 
@@ -143,7 +143,7 @@ A few decisions here are worth walking through:
 
 - **No try/catch in the controllers.** Express 5 forwards a rejected async handler straight to the central error handler, so every controller stays a clean happy-path and errors get one consistent `{ message }` shape.
 
-> Cover-image uploads (the `img` field) are wired in slice 5 via ImageKit; until then a post can be created with an image URL but there's no upload endpoint yet.
+> Cover-image uploads (the `img` field) are wired via ImageKit (slice 5, `GET /api/posts/upload-auth`) — a post's `img` is just the URL that upload returns; the frontend upload widget itself lands in blog slice 9.
 
 ---
 
@@ -278,13 +278,29 @@ npm run dev            # nodemon, restarts on save
 
 ---
 
+## Deploying (Render)
+
+**Live at `https://3dfolio-ajfm88-server.onrender.com`.** Deployed via Render's manual **New → Web Service** flow (no Blueprint — Root Directory alone covers the monorepo split):
+
+1. **Render → New → Web Service**, connect the `3dfolio` GitHub repo.
+2. **Root Directory**: `server`. **Build Command**: `npm install`. **Start Command**: `npm start`. **Instance Type**: Free.
+3. **Environment variables** — copy straight from local `server/.env`: `NODE_ENV=production`, `CLIENT_URL` (comma-separated: the Vercel origin(s) + `http://localhost:5173` for local frontend dev against the live API), `MONGO_URI`, `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `IK_URL_ENDPOINT`, `IK_PUBLIC_KEY`, `IK_PRIVATE_KEY`. Don't set `PORT` — Render injects its own and expects the app to bind to it. Leave `CLERK_WEBHOOK_SIGNING_SECRET` out for now, added in step 5.
+4. **Health Check Path** (under Advanced): `/health`. Deploy, confirm `https://<service>.onrender.com/health` → `{ok:true}`.
+5. **Clerk dashboard → Webhooks → Add endpoint** → `https://<service>.onrender.com/api/webhooks/clerk`, subscribe to `user.created` / `user.updated` / `user.deleted`. Copy the signing secret into Render's `CLERK_WEBHOOK_SIGNING_SECRET` (triggers a redeploy). Verified via Clerk's Testing tab — a sample `user.created` event delivered with a `200`.
+6. **External keep-alive:** a FastCron job hits `/health` every 10 minutes so the free-tier instance doesn't spin down (Render free web services sleep after 15 min idle). Lives outside the repo by design (see [Context](#context) above — no in-app cron).
+7. **Still pending:** the [pre-deploy Clerk checklist](../blog-plan.md) admin-role step (`ale@ajfm88.com` → `{"role":"admin"}` in Clerk public metadata). The sign-in flow now exists in the frontend (blog slice 7), so this is unblocked — it just hasn't been done yet. Every admin-gated write route 403s until this is set, so it's a hard blocker for blog slice 10 (Write page) but not before.
+
+---
+
 ## Roadmap
 
 - [x] **Slices 1–2 — Foundation:** server + DB + socket wiring, Clerk auth, user-sync webhook, unified User model.
 - [x] **Slice 3 — Blog posts API:** Post model, `/api/posts` list/read/create/delete/feature, admin gating, visit-counter Popular/Trending sorts.
 - [x] **Slice 4 — Blog comments API:** Comment model, `/api/comments` list/add/delete, signed-in-to-write gating, cascade-delete on both post delete and `user.deleted`.
 - [x] **Slice 5 — ImageKit uploads:** admin-gated, lazily-built `GET /api/posts/upload-auth` returns signed client-upload params; private key never leaves the server.
-- [ ] **Slice 6 — Deploy:** Render + Atlas + Clerk webhook + external keep-alive ping. (Atlas connection + Clerk + ImageKit keys are already live locally as of slice 5 — this slice is mainly Render + pointing the Clerk webhook at the deployed URL.)
+- [x] **Slice 6 — Deploy:** live on Render, Clerk webhook registered and verified delivering, external FastCron keep-alive on `/health`. See [Deploying (Render)](#deploying-render) above.
 - [ ] **Chat Phase A:** Message model, message routes, Socket.io delivery via `getReceiverSocketId`.
+
+The backend is done for now — the blog **frontend** (`src/blog/`, lazy `/blog`) is being built against this API next; see `blog-plan.md` at the repo root for that tracker.
 
 Built incrementally, one small slice per commit, on purpose — each step is reviewable on its own and the server is runnable at every commit.

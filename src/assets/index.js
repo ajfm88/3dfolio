@@ -1,4 +1,5 @@
 import alejandro from "./alejandro_new.png";
+import alejandroBlog from "./alejandro_blog.png";
 import resume from "./resume.png";
 import linktree from "./linktree.png";
 import linkedin from "./linkedin.png";
@@ -19,6 +20,7 @@ import airesume from "./ai-resume-builder.png";
 
 export {
   alejandro,
+  alejandroBlog,
   resume,
   linktree,
   linkedin,

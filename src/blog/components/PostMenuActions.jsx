@@ -1,8 +1,8 @@
-import { useUser } from "@clerk/clerk-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { api } from "../lib/axios";
+import { useBlogUsername } from "../lib/useBlogUsername";
 import { useIsAdmin } from "../lib/useIsAdmin";
 
 // Admin/owner controls for a single post, shown in the sidebar:
@@ -16,8 +16,8 @@ import { useIsAdmin } from "../lib/useIsAdmin";
 // from v1 (there is no /users/save endpoint), so rendering it would only surface
 // a control that can't work.
 const PostMenuActions = ({ post }) => {
-  const { user } = useUser();
   const isAdmin = useIsAdmin();
+  const username = useBlogUsername();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -43,8 +43,10 @@ const PostMenuActions = ({ post }) => {
   });
 
   // UI-only ownership check; deletePost is owner-scoped in the backend query, so
-  // this never has to be trusted on its own.
-  const canDelete = isAdmin || (user && post.user.username === user.username);
+  // this never has to be trusted on its own. Compares against the derived handle
+  // rather than Clerk's own `user.username`, which is null under this app's
+  // sign-in methods — see useBlogUsername.
+  const canDelete = isAdmin || (!!username && post.user?.username === username);
 
   return (
     <div className="">

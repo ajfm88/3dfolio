@@ -2,7 +2,7 @@
 
 The Node/Express service that powers the dynamic, authenticated parts of my portfolio: the **`/blog`** (posts + comments) and **`/chat`** (real-time messaging) features. Everything else on the site is a static 3D React front end; this server is where identity, persistence, and real-time live.
 
-> **Status:** Backend complete and deployed (slices 1–6). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wired up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. Slice 6 deployed the service to Render, live at `https://3dfolio-ajfm88-server.onrender.com`, with the Clerk webhook registered against the deployed URL and an external keep-alive ping holding the free-tier instance warm. The `src/blog/` frontend (lazy `/blog` in the portfolio) is now being built against this live API. Chat messages (chat-plan Phase A) build on top of this base next.
+> **Status:** Backend complete and deployed (slices 1–6). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wired up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. Slice 6 deployed the service to Render, live at `https://3dfolio-ajfm88-server.onrender.com`, with the Clerk webhook registered against the deployed URL and an external keep-alive ping holding the free-tier instance warm. The `src/blog/` frontend (lazy `/blog` in the portfolio) is complete and runs against this live API — every endpoint below now has a consumer. Chat messages (chat-plan Phase A) build on top of this base next.
 
 ---
 
@@ -143,7 +143,7 @@ A few decisions here are worth walking through:
 
 - **No try/catch in the controllers.** Express 5 forwards a rejected async handler straight to the central error handler, so every controller stays a clean happy-path and errors get one consistent `{ message }` shape.
 
-> Cover-image uploads (the `img` field) are wired via ImageKit (slice 5, `GET /api/posts/upload-auth`) — a post's `img` is just the URL that upload returns; the frontend upload widget itself lands in blog slice 9.
+> Cover-image uploads (the `img` field) are wired via ImageKit (slice 5, `GET /api/posts/upload-auth`) — a post's `img` is just the path that upload returns, and the frontend upload widget consuming it now exists in the blog client.
 
 ---
 
@@ -179,7 +179,7 @@ Cover images upload **client-side, straight from the browser to ImageKit** — t
 - **Admin-gated**, same as `createPost`/`featurePost` (`protectRoute` + `requireAdmin`): only the owner account can mint an upload authorization, since only the owner can create posts in the first place.
 - **The private key never leaves the server** — it signs the params here and is never sent to the client; only the resulting `token`/`expire`/`signature` are.
 - **The ImageKit client is built lazily, not at import time** ([`src/lib/imagekit.js`](src/lib/imagekit.js)). The `@imagekit/nodejs` SDK's constructor throws *synchronously* if `IK_PRIVATE_KEY` is missing — and this module is imported by `post.route.js` on every server boot, so building the client eagerly at the top of the file would have crashed `npm run dev` the instant ImageKit wasn't configured yet, exactly like every other slice built ahead of its third-party keys. Instead `getImageKitClient()` checks the env var first and only constructs (and caches) the client once it's present; `getUploadAuth` returns a clean `503 "Image upload is not configured yet"` if it's still missing, the same pattern the Clerk webhook already uses for its own missing signing secret.
-- **`img` on `Post` stays a plain URL string** ([`src/models/post.model.js`](src/models/post.model.js)) — the create flow doesn't change; once the frontend (slice 9) has an ImageKit URL from the direct upload, it's just one more field in the existing `createPost` whitelist.
+- **`img` on `Post` stays a plain string** ([`src/models/post.model.js`](src/models/post.model.js)) — the create flow doesn't change; the frontend sends the path the direct upload hands back as one more field in the existing `createPost` whitelist.
 
 ---
 
@@ -274,7 +274,7 @@ npm run dev            # nodemon, restarts on save
 | `MONGO_URI`                                            | MongoDB Atlas connection string                           |
 | `CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`           | Clerk API keys                                            |
 | `CLERK_WEBHOOK_SIGNING_SECRET`                         | Verifies inbound Clerk webhooks                           |
-| `IK_URL_ENDPOINT` / `IK_PUBLIC_KEY` / `IK_PRIVATE_KEY` | ImageKit media — `IK_PRIVATE_KEY` signs `/api/posts/upload-auth`; the public key/endpoint are consumed by the frontend directly in a later slice |
+| `IK_URL_ENDPOINT` / `IK_PUBLIC_KEY` / `IK_PRIVATE_KEY` | ImageKit media — `IK_PRIVATE_KEY` signs `/api/posts/upload-auth` and never leaves this server; the frontend consumes the endpoint and public key directly via its own `VITE_IK_*` vars |
 
 ---
 
@@ -301,6 +301,6 @@ npm run dev            # nodemon, restarts on save
 - [x] **Slice 6 — Deploy:** live on Render, Clerk webhook registered and verified delivering, external FastCron keep-alive on `/health`. See [Deploying (Render)](#deploying-render) above.
 - [ ] **Chat Phase A:** Message model, message routes, Socket.io delivery via `getReceiverSocketId`.
 
-The backend is done for now — the blog **frontend** (`src/blog/`, lazy `/blog`) is being built against this API next; see `blog-plan.md` at the repo root for that tracker.
+The backend is done for now, and the blog **frontend** (`src/blog/`, lazy `/blog`) that consumes it is complete too — authoring, listing, filtering, reading, and comments all run against these endpoints; see `blog-plan.md` at the repo root for that tracker. Chat is what's left.
 
 Built incrementally, one small slice per commit, on purpose — each step is reviewable on its own and the server is runnable at every commit.

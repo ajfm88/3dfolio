@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "timeago.js";
 import { api } from "../lib/axios";
+import Comments from "../components/Comments";
 import Image from "../components/Image";
 import PostMenuActions from "../components/PostMenuActions";
 import Search from "../components/Search";
@@ -13,7 +14,7 @@ import Search from "../components/Search";
 // shared `api` instance and keys the query ["post", slug] so PostMenuActions'
 // feature toggle can invalidate it. All links are /blog-prefixed for the nested
 // route mount; author/category links point at the filtered post list so `to` is
-// always defined. Comments land in a later slice.
+// always defined. The comment thread hangs off the bottom, keyed by the post id.
 const fetchPost = async (slug) => {
   const res = await api.get(`/posts/${slug}`);
   return res.data;
@@ -77,9 +78,11 @@ const SinglePostPage = () => {
       <div className="flex flex-col md:flex-row gap-12 justify-between">
         {/* text — the body is admin-authored HTML from the editor, rendered
             directly. Only admins can create posts, so there is no untrusted
-            input path into this markup. */}
+            input path into this markup. `blog-content` is what gives that
+            markup its headings, lists, quotes and code blocks (see blog.css);
+            Tailwind's preflight strips all of them otherwise. */}
         <div
-          className="lg:text-lg flex flex-col gap-6 text-justify"
+          className="blog-content lg:text-lg flex flex-col gap-6 text-justify"
           dangerouslySetInnerHTML={{ __html: data.content }}
         />
         {/* menu */}
@@ -129,7 +132,7 @@ const SinglePostPage = () => {
           <Search />
         </div>
       </div>
-      {/* Comments (read + signed-in write + delete) land in a later slice. */}
+      <Comments postId={data._id} />
     </div>
   );
 };

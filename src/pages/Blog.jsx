@@ -1,11 +1,14 @@
-// Route root for the blog. Providers + the nested route shell live here;
-// BlogLayout (light theme, scoped so it doesn't inherit the portfolio's dark
-// color-scheme) + individual pages fill in over the next several slices.
+// Route root for the blog: providers, the blog's own stylesheet, and the nested
+// route shell. Everything imported from here — Clerk, react-query, Quill,
+// toastify, blog.css — is confined to the lazy /blog chunk and never reaches the
+// main portfolio bundle. BlogLayout supplies the light theme, scoped so it
+// doesn't inherit the portfolio's dark color-scheme.
 import { ClerkProvider } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "../blog/blog.css";
 import BlogLayout from "../blog/layouts/BlogLayout";
 import Homepage from "../blog/routes/Homepage";
 import PostListPage from "../blog/routes/PostListPage";

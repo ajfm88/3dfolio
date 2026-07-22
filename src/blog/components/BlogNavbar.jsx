@@ -24,9 +24,17 @@ const BlogNavbar = () => {
             <div className={`h-[3px] rounded-md w-6 bg-black origin-left transition-all ease-in-out ${open ? "-rotate-45" : ""}`} />
           </div>
         </div>
+        {/* Fixed rather than absolute, and parked off-screen with a transform
+            rather than `right: -100%`: an absolutely-positioned panel one
+            viewport to the right widens the scrollable area to twice the
+            screen, so every blog page picked up a horizontal scrollbar on
+            mobile. Fixed elements don't contribute to scrollable overflow, so
+            the slide-in works without it — and the menu now stays put while the
+            page scrolls underneath. z-20 keeps it above the post pages' sticky
+            sidebar, which comes later in the DOM. */}
         <div
-          className={`w-full h-screen bg-[#e6e6ff] flex flex-col items-center justify-center gap-8 font-medium text-lg absolute top-16 transition-all ease-in-out ${
-            open ? "-right-0" : "-right-[100%]"
+          className={`w-full h-screen bg-[#e6e6ff] flex flex-col items-center justify-center gap-8 font-medium text-lg fixed left-0 top-16 z-20 transition-transform ease-in-out ${
+            open ? "translate-x-0" : "translate-x-full"
           }`}
         >
           <Link to="/blog" onClick={() => setOpen(false)}>Home</Link>

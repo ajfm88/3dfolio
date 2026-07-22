@@ -10,7 +10,7 @@ const PostListPage = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="">
+    <div className="mt-4">
       <h1 className="mb-8 text-2xl">Development Blog</h1>
       <button
         onClick={() => setOpen((prev) => !prev)}

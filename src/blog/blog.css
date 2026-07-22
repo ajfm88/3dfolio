@@ -1,0 +1,130 @@
+/* Styles that can't be expressed as Tailwind classes on an element we own —
+   third-party editor chrome, and the author-written HTML we inject with
+   dangerouslySetInnerHTML.
+
+   Imported from src/pages/Blog.jsx, so it ships inside the lazy /blog chunk and
+   never reaches the portfolio's own CSS. Everything is scoped under .blog-root
+   (BlogLayout's wrapper) or .blog-content (the rendered post body) so no rule
+   here can leak out to /, /gft, or the admin panel. */
+
+/* The Quill editor already sits inside a rounded, shadowed container on the
+   Write page; its own default borders just draw a second box inside the first. */
+.blog-root .ql-toolbar,
+.blog-root .ql-container,
+.blog-root .ql-editor {
+  border: none !important;
+}
+
+/* Published post bodies.
+
+   The editor emits ordinary semantic HTML — headings, lists, blockquotes, code,
+   links, embedded media — and Tailwind's preflight resets every one of those to
+   plain unstyled text. Without these rules a post renders as a single flat wall:
+   headings the same size as body copy, bulleted lists with no bullets. Tailwind
+   utilities can't reach this markup because the app never renders the elements,
+   so the styling has to live in CSS. Kept deliberately close to the surrounding
+   blog palette (blue-800 accents, gray body text) rather than pulled in as a
+   typography plugin, which would be a dependency for one page's worth of rules.
+
+   Vertical rhythm comes from the container's own `gap-6`, so blocks don't set
+   their own top/bottom margins. */
+.blog-content h1,
+.blog-content h2,
+.blog-content h3,
+.blog-content h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  color: #1f2937; /* gray-800 */
+  text-align: left;
+}
+
+.blog-content h1 {
+  font-size: 2rem;
+}
+.blog-content h2 {
+  font-size: 1.5rem;
+}
+.blog-content h3 {
+  font-size: 1.25rem;
+}
+.blog-content h4 {
+  font-size: 1.125rem;
+}
+
+.blog-content ul,
+.blog-content ol {
+  padding-left: 1.5rem;
+  text-align: left;
+}
+.blog-content ul {
+  list-style-type: disc;
+}
+.blog-content ol {
+  list-style-type: decimal;
+}
+.blog-content li + li {
+  margin-top: 0.25rem;
+}
+
+.blog-content a {
+  color: #1e40af; /* blue-800 */
+  text-decoration: underline;
+}
+
+.blog-content strong,
+.blog-content b {
+  font-weight: 600;
+}
+.blog-content em,
+.blog-content i {
+  font-style: italic;
+}
+
+.blog-content blockquote {
+  border-left: 4px solid #1e40af;
+  padding-left: 1rem;
+  color: #4b5563; /* gray-600 */
+  font-style: italic;
+  text-align: left;
+}
+
+.blog-content code,
+.blog-content pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+.blog-content code {
+  background-color: #f1f5f9; /* slate-100 */
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+}
+.blog-content pre {
+  background-color: #f1f5f9;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  text-align: left;
+}
+/* A code block wraps its text in <code>; don't double up the chip styling. */
+.blog-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.blog-content img,
+.blog-content iframe {
+  max-width: 100%;
+  border-radius: 0.75rem;
+}
+
+/* Video embeds come out of the editor as <iframe class="ql-video"> with no
+   dimensions of their own. */
+.blog-content iframe.ql-video {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.blog-content hr {
+  border-top: 1px solid #d1d5db; /* gray-300 */
+}

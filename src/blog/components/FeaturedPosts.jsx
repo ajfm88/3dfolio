@@ -8,7 +8,11 @@ import Image from "./Image";
 // cards, fed by GET /api/posts?featured=true. Notes:
 //   - Fetches through the shared `api` instance (src/blog/lib/axios.js) for the
 //     same single bearer-token path as PostList.
-//   - Renders nothing until an admin has featured at least one post.
+//   - Renders nothing until an admin has featured at least one post — and
+//     nothing while loading or on failure either. It's a secondary section
+//     above the main list: a "Loading..." line that resolves to an empty
+//     section is a flash of nothing, and an error line here would just
+//     duplicate the one PostList shows for the same unreachable API.
 //   - Number badges run 01.–04.; each card's title links to /blog/${slug} and
 //     its category chip to /blog/posts?cat=… (so `to` is always defined).
 const fetchPost = async () => {
@@ -22,9 +26,7 @@ const FeaturedPosts = () => {
     queryFn: fetchPost,
   });
 
-  if (isPending) return <p className="text-gray-500">Loading...</p>;
-  if (error)
-    return <p className="text-red-500">Something went wrong! {error.message}</p>;
+  if (isPending || error) return null;
 
   const posts = data.posts;
   if (!posts || posts.length === 0) return null;

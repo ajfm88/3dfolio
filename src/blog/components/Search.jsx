@@ -10,13 +10,25 @@ const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      const query = e.target.value;
-      if (location.pathname === "/blog/posts") {
-        setSearchParams({ ...Object.fromEntries(searchParams), search: query });
-      } else {
-        navigate(`/blog/posts?search=${query}`);
-      }
+    if (e.key !== "Enter") return;
+
+    const query = e.target.value.trim();
+    const params = { ...Object.fromEntries(searchParams) };
+
+    // An emptied box clears the filter instead of searching for "".
+    if (query) {
+      params.search = query;
+    } else {
+      delete params.search;
+    }
+
+    if (location.pathname === "/blog/posts") {
+      setSearchParams(params);
+    } else {
+      // Built through URLSearchParams so a query containing &, +, # or a space
+      // survives the trip instead of being read as more parameters.
+      const qs = new URLSearchParams(params).toString();
+      navigate(qs ? `/blog/posts?${qs}` : "/blog/posts");
     }
   };
 

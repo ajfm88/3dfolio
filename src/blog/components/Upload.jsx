@@ -20,15 +20,16 @@ const Upload = ({ children, type, setProgress, setData }) => {
   const ref = useRef(null);
 
   const onError = (err) => {
-    console.log(err);
-    toast.error("Image upload failed!");
+    // ImageKit's error object carries the actual reason (quota, bad signature,
+    // rejected file type); the toast only says something went wrong, so keep
+    // the detail somewhere reachable.
+    console.error("ImageKit upload failed:", err);
+    toast.error(`${type === "video" ? "Video" : "Image"} upload failed!`);
   };
   const onSuccess = (res) => {
-    console.log(res);
     setData(res);
   };
   const onUploadProgress = (progress) => {
-    console.log(progress);
     setProgress(Math.round((progress.loaded / progress.total) * 100));
   };
 

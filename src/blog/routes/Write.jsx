@@ -82,8 +82,14 @@ const Write = () => {
           name="title"
         />
         <div className="flex items-center gap-4">
-          <label className="text-sm">Choose a category:</label>
-          <select name="category" className="p-2 rounded-xl bg-white shadow-md">
+          <label htmlFor="category" className="text-sm">
+            Choose a category:
+          </label>
+          <select
+            id="category"
+            name="category"
+            className="p-2 rounded-xl bg-white shadow-md"
+          >
             <option value="general">General</option>
             <option value="web-design">Web Design</option>
             <option value="development">Development</option>

@@ -36,6 +36,15 @@
     <a href="https://clerk.com">
       <img src="https://img.shields.io/badge/-Clerk-black?style=for-the-badge&logoColor=white&logo=clerk&color=6C47FF" alt="clerk" />
     </a>
+    <a href="https://expressjs.com">
+      <img src="https://img.shields.io/badge/-Express-black?style=for-the-badge&logoColor=white&logo=express&color=000000" alt="express" />
+    </a>
+    <a href="https://www.mongodb.com">
+      <img src="https://img.shields.io/badge/-MongoDB-black?style=for-the-badge&logoColor=white&logo=mongodb&color=47A248" alt="mongodb" />
+    </a>
+    <a href="https://imagekit.io">
+      <img src="https://img.shields.io/badge/-ImageKit-black?style=for-the-badge&logoColor=white&logo=imagekit&color=1E7CF5" alt="imagekit" />
+    </a>
   </div>
 
   <h3 align="center">3D Personal Portfolio Website</h3>
@@ -51,7 +60,7 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside two extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`) and an **in-development blog** (`/blog`). To see a live demo of this project, please [click here](https://3dfolio-ajfm88.vercel.app) or on the banner above.
+Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside two extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`) and a **blog** (`/blog`). To see a live demo of this project, please [click here](https://3dfolio-ajfm88.vercel.app) or on the banner above.
 
 ## 🏗️ <a name="architecture">Architecture</a>
 
@@ -77,7 +86,9 @@ Both frontends (`/blog`, and `/chat` when it lands) are lazy-loaded routes, so C
 - 🔥 [Firebase](https://firebase.google.com) — admin panel content
 - 🔐 [Clerk](https://clerk.com) — auth for `/blog` (`@clerk/clerk-react`)
 - 🔄 [TanStack Query](https://tanstack.com/query) + [Axios](https://axios-http.com) — data fetching for `/blog` against the Express API
-- ✍️ [React Quill](https://github.com/mercycorps/react-quill-new) + [react-toastify](https://fkhadra.github.io/react-toastify) — blog post authoring UI (upcoming)
+- ✍️ [React Quill](https://github.com/mercycorps/react-quill-new) + [react-toastify](https://fkhadra.github.io/react-toastify) — blog post authoring UI
+- 🖼️ [ImageKit](https://imagekit.io) (`imagekitio-react`) — blog cover images: uploaded straight from the browser, served and resized on the fly
+- 🕒 [timeago.js](https://timeago.org) — relative timestamps on posts and comments
 
 **Backend (`server/`, separately deployed):** Express 5, MongoDB Atlas + Mongoose, Clerk (`@clerk/express`), Socket.io, ImageKit. Full architecture, API surface, and design rationale in **[`server/README.md`](server/README.md)**.
 
@@ -103,7 +114,7 @@ Both frontends (`/blog`, and `/chat` when it lands) are lazy-loaded routes, so C
 
 🔎 **GitHub Follower Tracker (`/gft`):** Look up any GitHub account and compare snapshots of its followers/following over time — who's new, who unfollowed — entirely client-side against the public GitHub REST API, with snapshots persisted in `localStorage`. No backend involved.
 
-📝 **Blog (`/blog`, in active development):** A Clerk-authenticated blog — posts, comments, admin-only authoring, ImageKit-hosted cover images — backed by the dedicated Express/MongoDB API in [`server/`](server/README.md), deployed separately on Render. The data/auth layer and page shell are live; full post authoring/browsing lands over the next several iterations.
+📝 **Blog (`/blog`):** A Clerk-authenticated blog backed by the dedicated Express/MongoDB API in [`server/`](server/README.md), deployed separately on Render. Rich-text authoring with cover images uploaded straight from the browser to ImageKit; a featured section and a browse page with category, author, full-text search and sort filters (including visit-counter-backed Most Popular and Trending), all driven through the URL so any filtered view is a shareable link; and a comment thread on every post. Reading is open to everyone, commenting takes any signed-in account, and authoring is restricted to the owner — enforced at the API, not just hidden in the UI. It loads as a lazy route with its own light theme, so none of it touches the 3D portfolio's bundle or styling.
 
 ## 🤸 <a name="quick-start">Quick Start</a>
 
@@ -146,9 +157,12 @@ VITE_FIREBASE_APP_ID=
 
 VITE_CLERK_PUBLISHABLE_KEY=
 VITE_API_URL=
+
+VITE_IK_URL_ENDPOINT=
+VITE_IK_PUBLIC_KEY=
 ```
 
-Grab the Firebase values from your Firebase project settings (**Project settings → Your apps → Web app**). `VITE_CLERK_PUBLISHABLE_KEY` comes from your Clerk dashboard (**Developers → API keys**); `VITE_API_URL` is the base URL of the `server/` API (including its `/api` prefix) — either a locally-running instance or a deployed one.
+Grab the Firebase values from your Firebase project settings (**Project settings → Your apps → Web app**). `VITE_CLERK_PUBLISHABLE_KEY` comes from your Clerk dashboard (**Developers → API keys**); `VITE_API_URL` is the base URL of the `server/` API (including its `/api` prefix) — either a locally-running instance or a deployed one. The two `VITE_IK_*` values come from your ImageKit dashboard (**Developers → API keys**, plus the URL endpoint) and let the browser upload blog cover images directly — they're the public-safe half of the same account `server/` uses; the ImageKit **private** key stays on the backend and is never exposed here.
 
 **Running the Project**
 

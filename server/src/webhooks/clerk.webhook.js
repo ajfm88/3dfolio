@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js";
 import Comment from "../models/comment.model.js";
+import Message from "../models/message.model.js";
 import { verifyWebhook } from "@clerk/backend/webhooks";
 
 // Clerk -> Mongo user sync. Clerk POSTs here on user.created/updated/deleted so
@@ -60,6 +61,12 @@ router.post("/", async (req, res) => {
         if (deletedUser) {
           await Post.deleteMany({ user: deletedUser._id });
           await Comment.deleteMany({ user: deletedUser._id });
+          await Message.deleteMany({
+            $or: [
+              { senderId: deletedUser._id },
+              { receiverId: deletedUser._id },
+            ],
+          });
         }
       }
     }

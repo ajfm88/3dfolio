@@ -11,6 +11,7 @@ import clerkWebhook from "./webhooks/clerk.webhook.js";
 import authRoutes from "./routes/auth.route.js";
 import postRoutes from "./routes/post.route.js";
 import commentRoutes from "./routes/comment.route.js";
+import messageRoutes from "./routes/message.route.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -39,7 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 
-// (chat messages -> chat-plan Phase A)
+app.use("/api/messages", messageRoutes);
 
 // central error handler
 app.use((err, req, res, next) => {

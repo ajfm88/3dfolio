@@ -1,0 +1,43 @@
+/* Chat's scoped theme. Imported from src/pages/Chat.jsx, so it ships inside the
+   lazy /chat chunk and never reaches the portfolio's own CSS. Everything is
+   scoped under .chat-root (the wrapper in Chat.jsx) so no rule here leaks out to
+   /, /blog, /gft, or the admin panel.
+
+   Unlike the blog — which had to force a light theme against the portfolio's
+   global dark color-scheme — chat is dark by design and harmonizes with the
+   portfolio: a deep near-black base, a soft purple glow, and the same
+   rgb(112,66,248) accent the portfolio nav uses. The palette lives here as CSS
+   custom properties so the components (built across the next slices) can share
+   one source of truth via Tailwind arbitrary values, e.g. bg-[var(--chat-panel)]. */
+.chat-root {
+  --chat-bg: #04030f;
+  --chat-panel: #0b0920;
+  --chat-panel-2: #100d28;
+  --chat-elevated: #17123a;
+  --chat-glass: rgba(11, 9, 32, 0.72);
+  --chat-border: rgba(140, 120, 240, 0.16);
+  --chat-border-strong: rgba(140, 120, 240, 0.3);
+  --chat-text: #ece9fb;
+  --chat-muted: #a29fc0;
+  --chat-faint: #6f6b93;
+  --chat-accent: #7042f8;
+  --chat-accent-2: #9d5cff;
+  --chat-accent-glow: rgba(112, 66, 248, 0.45);
+
+  color-scheme: dark;
+  color: var(--chat-text);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(112, 66, 248, 0.12), transparent 60%),
+    var(--chat-bg);
+}
+
+/* Gentle hover on the signed-out gate's logo tile. */
+@keyframes chat-float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

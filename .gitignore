@@ -1,8 +1,10 @@
 node_modules
 dist
-blog-main
-chat
-admin-dashboard
+# Root-anchored so these top-level reference folders are ignored without also
+# swallowing same-named source dirs like src/chat (the ported /chat frontend).
+/blog-main
+/chat-main
+/admin-dashboard
 *.local
 blog-plan.md
 chat-plan.md

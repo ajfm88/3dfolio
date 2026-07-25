@@ -1,57 +1,60 @@
-import { UserButton } from "@clerk/clerk-react";
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
 
 import { alejandro } from "../../assets";
+import ChatSidebar from "../components/ChatSidebar";
+import ChatHeader from "../components/ChatHeader";
+import MessageList from "../components/MessageList";
+import { useChatStore } from "../store/useChatStore";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
-// The signed-in chat shell: the two-pane frame — a conversation sidebar and the
-// open-thread pane — that the following slices fill in. The sidebar's contact
-// list, the message history, and the composer arrive in slices 5–7; for now each
-// pane renders its empty state so the layout and its responsive behavior are
-// demoable on their own.
-//
-// Responsive: below lg the sidebar takes the full width and the thread pane is
-// hidden (the single-pane sidebar⇄thread swap lands in the mobile slice); from
-// lg up both panes sit side by side.
-const ChatPage = () => (
-  <div className="flex h-[100dvh] flex-col overflow-hidden p-2 sm:p-3 md:p-6">
-    <div className="mx-auto flex w-full max-w-6xl flex-1 overflow-hidden rounded-2xl border border-[var(--chat-border)] bg-[var(--chat-panel)] shadow-2xl shadow-black/40">
-      {/* Sidebar */}
-      <aside className="flex w-full flex-col border-r border-[var(--chat-border)] bg-[var(--chat-panel-2)] lg:w-80 lg:max-w-sm">
-        {/* Brand + account row */}
-        <header className="flex shrink-0 items-center gap-3 border-b border-[var(--chat-border)] px-4 py-3">
-          <img src={alejandro} alt="" className="h-8 w-8 shrink-0 object-contain" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[var(--chat-text)]">ajfm88 Chat</p>
-            <Link
-              to="/"
-              className="text-xs text-[var(--chat-muted)] transition-colors hover:text-[var(--chat-accent-2)]"
-            >
-              ← Back to portfolio
-            </Link>
-          </div>
-          <UserButton />
-        </header>
+const ChatPage = () => {
+  const getUsers = useChatStore((s) => s.getUsers);
+  const getConversations = useChatStore((s) => s.getConversations);
+  const getMessages = useChatStore((s) => s.getMessages);
+  const subscribeToMessages = useChatStore((s) => s.subscribeToMessages);
+  const unsubscribeFromMessages = useChatStore((s) => s.unsubscribeFromMessages);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const selectedUser = useChatStore((s) => s.selectedUser);
+  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
 
-        {/* Conversation list — populated in the next slice */}
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--chat-muted)]">
-          Your conversations will appear here.
-        </div>
-      </aside>
+  useEffect(() => {
+    getUsers();
+    getConversations();
+  }, [getUsers, getConversations]);
 
-      {/* Conversation pane */}
-      <section className="hidden flex-1 flex-col items-center justify-center p-8 text-center lg:flex">
-        <div className="max-w-xs">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--chat-border-strong)] bg-[var(--chat-elevated)]">
-            <img src={alejandro} alt="" className="h-7 w-7 object-contain opacity-80" />
-          </div>
-          <p className="text-base font-medium text-[var(--chat-text)]">Select a conversation</p>
-          <p className="mt-1.5 text-sm text-[var(--chat-muted)]">
-            Choose someone from the sidebar to start messaging.
-          </p>
-        </div>
-      </section>
+  useEffect(() => {
+    if (!activeConversationId) return;
+    getMessages(activeConversationId);
+    subscribeToMessages(activeConversationId);
+    return () => unsubscribeFromMessages();
+  }, [activeConversationId, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+
+  return (
+    <div className="flex h-[100dvh] flex-col overflow-hidden p-2 sm:p-3 md:p-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 overflow-hidden rounded-2xl border border-[var(--chat-border)] bg-[var(--chat-panel)] shadow-2xl shadow-black/40">
+        <ChatSidebar activeConversationId={activeConversationId} />
+
+        {/* Conversation pane */}
+        <section
+          className={`flex-1 flex-col overflow-hidden ${
+            !isLargeScreen && !activeConversationId ? "hidden lg:flex" : "flex"
+          }`}
+        >
+          <ChatHeader selectedUser={selectedUser} />
+          <MessageList activeConversationId={activeConversationId} />
+
+          {/* Composer arrives in slice 7 */}
+          {selectedUser && (
+            <div className="shrink-0 border-t border-[var(--chat-border)] px-4 py-3">
+              <div className="rounded-xl border border-[var(--chat-border)] bg-[var(--chat-elevated)] px-4 py-2.5 text-sm text-[var(--chat-faint)]">
+                Composer coming soon...
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default ChatPage;

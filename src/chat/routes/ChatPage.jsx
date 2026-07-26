@@ -4,6 +4,7 @@ import { alejandro } from "../../assets";
 import ChatSidebar from "../components/ChatSidebar";
 import ChatHeader from "../components/ChatHeader";
 import MessageList from "../components/MessageList";
+import ChatComposer from "../components/ChatComposer";
 import { useChatStore } from "../store/useChatStore";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
@@ -43,13 +44,8 @@ const ChatPage = () => {
           <ChatHeader selectedUser={selectedUser} />
           <MessageList activeConversationId={activeConversationId} />
 
-          {/* Composer arrives in slice 7 */}
           {selectedUser && (
-            <div className="shrink-0 border-t border-[var(--chat-border)] px-4 py-3">
-              <div className="rounded-xl border border-[var(--chat-border)] bg-[var(--chat-elevated)] px-4 py-2.5 text-sm text-[var(--chat-faint)]">
-                Composer coming soon...
-              </div>
-            </div>
+            <ChatComposer activeConversationId={activeConversationId} />
           )}
         </section>
       </div>

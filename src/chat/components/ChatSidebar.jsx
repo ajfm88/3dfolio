@@ -9,13 +9,14 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getInitials } from "../lib/utils";
 import ConversationRow from "./ConversationRow";
 
-function mapUserForList(user, onlineUsers) {
+function mapUserForList(user, onlineUsers, unreadByUser) {
   return {
     _id: user._id,
     name: user.fullName,
     avatarUrl: user.profilePic,
     initials: getInitials(user.fullName),
     isOnline: onlineUsers.includes(user._id),
+    unread: unreadByUser[user._id] || 0,
   };
 }
 
@@ -27,13 +28,20 @@ const ChatSidebar = ({ activeConversationId }) => {
   const sidebarTab = useChatStore((s) => s.sidebarTab);
   const setSidebarTab = useChatStore((s) => s.setSidebarTab);
   const setActiveConversationId = useChatStore((s) => s.setActiveConversationId);
+  const unreadByUser = useChatStore((s) => s.unreadByUser);
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
 
   const query = searchQuery.trim().toLowerCase();
 
-  const conversationUsers = conversations.map((u) => mapUserForList(u, onlineUsers));
-  const allUsers = users.map((u) => mapUserForList(u, onlineUsers));
+  const conversationUsers = conversations.map((u) =>
+    mapUserForList(u, onlineUsers, unreadByUser),
+  );
+  const allUsers = users.map((u) => mapUserForList(u, onlineUsers, unreadByUser));
+
+  // onlineUsers carries every connected socket including this one, but the
+  // users list comes back without you, so counting it gives other people only.
+  const onlineCount = allUsers.filter((u) => u.isOnline).length;
 
   const filteredConversations = query
     ? conversationUsers.filter((c) => c.name.toLowerCase().includes(query))
@@ -81,7 +89,8 @@ const ChatSidebar = ({ activeConversationId }) => {
             placeholder="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-[var(--chat-border)] bg-[var(--chat-elevated)] py-2 pl-9 pr-8 text-sm text-[var(--chat-text)] placeholder-[var(--chat-faint)] outline-none transition-colors focus:border-[var(--chat-accent)]"
+            // 16px on phones, same iOS focus-zoom reason as the composer.
+            className="w-full rounded-xl border border-[var(--chat-border)] bg-[var(--chat-elevated)] py-2 pl-9 pr-8 text-base text-[var(--chat-text)] placeholder-[var(--chat-faint)] outline-none transition-colors focus:border-[var(--chat-accent)] sm:text-sm"
           />
           {searchQuery && (
             <button
@@ -113,6 +122,19 @@ const ChatSidebar = ({ activeConversationId }) => {
           <Users className="h-3.5 w-3.5 opacity-80" aria-hidden />
           Users
         </button>
+      </div>
+
+      {/* Presence strip */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--chat-border)] px-4 py-1.5">
+        <span
+          className={`h-2 w-2 shrink-0 rounded-full ${onlineCount > 0 ? "bg-emerald-500" : "bg-[#636366]"}`}
+          aria-hidden
+        />
+        <p className="truncate text-xs text-[var(--chat-muted)]">
+          {onlineCount > 0
+            ? `${onlineCount} other${onlineCount === 1 ? "" : "s"} online`
+            : "No one else online"}
+        </p>
       </div>
 
       {/* List */}

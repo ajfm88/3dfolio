@@ -2,8 +2,12 @@ import { useRef, useState } from "react";
 import { ImagePlus, Loader, SendHorizontal, X } from "lucide-react";
 
 import { useChatStore } from "../store/useChatStore";
+import useKeyboardSound from "../hooks/useKeyboardSound";
 
 const ACCEPT = "image/*,video/*";
+
+// Held-down keys and bare modifiers would otherwise machine-gun the click.
+const SILENT_KEYS = ["Shift", "Control", "Alt", "Meta", "CapsLock", "Tab"];
 
 const ChatComposer = ({ activeConversationId }) => {
   const composerText = useChatStore((s) => s.composerText);
@@ -11,6 +15,8 @@ const ChatComposer = ({ activeConversationId }) => {
   const sendTextMessage = useChatStore((s) => s.sendTextMessage);
   const sendMediaMessage = useChatStore((s) => s.sendMediaMessage);
   const isSendingMedia = useChatStore((s) => s.isSendingMedia);
+  const isSoundEnabled = useChatStore((s) => s.isSoundEnabled);
+  const { playRandomKeyStrokeSound } = useKeyboardSound();
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const [mediaPreview, setMediaPreview] = useState(null);
@@ -32,6 +38,10 @@ const ChatComposer = ({ activeConversationId }) => {
   };
 
   const handleKeyDown = (e) => {
+    if (isSoundEnabled && !e.repeat && !SILENT_KEYS.includes(e.key)) {
+      playRandomKeyStrokeSound();
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -116,7 +126,9 @@ const ChatComposer = ({ activeConversationId }) => {
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           disabled={isSendingMedia}
-          className="max-h-[120px] min-h-[24px] flex-1 resize-none bg-transparent text-[15px] leading-snug text-[var(--chat-text)] placeholder-[var(--chat-faint)] outline-none disabled:opacity-40"
+          // 16px on phones: iOS Safari zooms the page in on focus for anything
+          // smaller, which leaves the thread scrolled sideways.
+          className="max-h-[120px] min-h-[24px] flex-1 resize-none bg-transparent text-base leading-snug text-[var(--chat-text)] placeholder-[var(--chat-faint)] outline-none disabled:opacity-40 sm:text-[15px]"
         />
 
         <button

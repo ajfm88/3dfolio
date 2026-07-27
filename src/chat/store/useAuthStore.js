@@ -48,6 +48,14 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+
+    // Presence is only ever known from a server broadcast, so a dropped
+    // connection has to reset it. Without this the last list stays on screen as
+    // stale green dots — and on Render's free tier the server does spin down.
+    // socket.io reconnects on its own, and the server re-broadcasts on connect.
+    socket.on("disconnect", () => {
+      set({ onlineUsers: [] });
+    });
   },
 
   disconnectSocket: () => {

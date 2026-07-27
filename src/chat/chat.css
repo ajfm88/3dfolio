@@ -29,6 +29,13 @@
   background:
     radial-gradient(ellipse at 50% 0%, rgba(112, 66, 248, 0.12), transparent 60%),
     var(--chat-bg);
+
+  /* Mobile: the shell is already viewport-height with its own scrolling panes,
+     so a pull past the end of the message list should stop there rather than
+     rubber-band the whole page behind it. */
+  overscroll-behavior: none;
+  /* Suppresses the grey flash Android paints over every tapped row/button. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Gentle hover on the signed-out gate's logo tile. */

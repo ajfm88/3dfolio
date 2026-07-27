@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { toast } from "react-toastify";
 
 import { axiosInstance } from "../lib/axios";
+import { playNotificationSound } from "../lib/notificationSound";
 import { useAuthStore } from "./useAuthStore";
 
 // The chat data store: contacts, conversations, and the open thread, plus the
@@ -21,6 +22,7 @@ export const useChatStore = create(
       isUsersLoading: false,
       isMessagesLoading: false,
       activeConversationId: null,
+      unreadByUser: {},
       searchQuery: "",
       sidebarTab: "chats",
       composerText: "",
@@ -85,19 +87,35 @@ export const useChatStore = create(
         }
       },
 
-      subscribeToMessages: (userId) => {
-        if (!userId) return;
-
+      // One subscription for the whole session, not one per open thread: a
+      // message from someone you are not currently reading still has to reach
+      // the sidebar as an unread badge and a chime. The handler reads the open
+      // thread off the store at delivery time, so it stays correct as the
+      // selection changes without ever being torn down and rebuilt.
+      subscribeToMessages: () => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
 
         socket.off("newMessage");
         socket.on("newMessage", (newMessage) => {
-          // Ignore anything not from the person whose thread is currently open.
-          if (String(newMessage.senderId) !== String(userId)) return;
+          const senderId = String(newMessage.senderId);
+          const isOpenThread = senderId === String(get().activeConversationId);
 
-          set({ messages: [...get().messages, newMessage] });
+          if (isOpenThread) {
+            set({ messages: [...get().messages, newMessage] });
+          } else {
+            set((state) => ({
+              unreadByUser: {
+                ...state.unreadByUser,
+                [senderId]: (state.unreadByUser[senderId] || 0) + 1,
+              },
+            }));
+          }
 
+          if (get().isSoundEnabled) playNotificationSound();
+
+          // Refreshed either way: a first message from a new contact has to
+          // appear in the Chats tab, and an existing thread has to re-sort.
           get().getConversations();
         });
       },
@@ -110,14 +128,21 @@ export const useChatStore = create(
       setSelectedUser: (selectedUser) => set({ selectedUser }),
 
       setActiveConversationId: (activeConversationId) => {
-        set((state) => ({
-          activeConversationId,
-          selectedUser:
-            state.users.find((user) => user._id === activeConversationId) ||
-            state.conversations.find((user) => user._id === activeConversationId) ||
-            null,
-          messages: activeConversationId ? state.messages : [],
-        }));
+        set((state) => {
+          // Opening a thread reads it, so its badge clears.
+          const unreadByUser = { ...state.unreadByUser };
+          delete unreadByUser[activeConversationId];
+
+          return {
+            activeConversationId,
+            unreadByUser,
+            selectedUser:
+              state.users.find((user) => user._id === activeConversationId) ||
+              state.conversations.find((user) => user._id === activeConversationId) ||
+              null,
+            messages: activeConversationId ? state.messages : [],
+          };
+        });
       },
 
       setSearchQuery: (searchQuery) => set({ searchQuery }),

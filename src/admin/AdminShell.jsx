@@ -4,27 +4,33 @@ import {
   Menu,
   Briefcase,
   User,
-  Cpu,
   FolderGit2,
   Mail,
   LogOut,
 } from "lucide-react";
 
 import ExperienceManager from "./ExperienceManager";
+import ProjectManager from "./ProjectManager";
 
-// Only "Experience" is live today. The rest are placeholders for the later steps
-// of the no-more-hardcoding migration and are shown disabled.
+// "Experience" and "Projects" are live today. The rest are placeholders for the
+// later steps of the no-more-hardcoding migration and are shown disabled. Tech
+// Stack is intentionally excluded — staying hardcoded by choice.
 const NAV_ITEMS = [
   { name: "Experience", icon: Briefcase, color: "#818cf8", live: true },
   { name: "About", icon: User, color: "#f472b6", live: false },
-  { name: "Tech Stack", icon: Cpu, color: "#34d399", live: false },
-  { name: "Projects", icon: FolderGit2, color: "#fbbf24", live: false },
+  { name: "Projects", icon: FolderGit2, color: "#fbbf24", live: true },
   { name: "Contact", icon: Mail, color: "#60a5fa", live: false },
 ];
 
+const PANELS = {
+  Experience: ExperienceManager,
+  Projects: ProjectManager,
+};
+
 const AdminShell = ({ user, logout }) => {
   const [open, setOpen] = useState(true);
-  const [active] = useState("Experience");
+  const [active, setActive] = useState("Experience");
+  const ActivePanel = PANELS[active];
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
@@ -52,6 +58,7 @@ const AdminShell = ({ user, logout }) => {
               <div
                 key={item.name}
                 title={item.live ? item.name : `${item.name} (coming soon)`}
+                onClick={() => item.live && setActive(item.name)}
                 className={`flex items-center p-4 text-sm font-medium rounded-lg mb-2 ${
                   item.name === active
                     ? "bg-gray-700"
@@ -99,7 +106,7 @@ const AdminShell = ({ user, logout }) => {
         </header>
 
         <main className="p-6">
-          <ExperienceManager />
+          <ActivePanel />
         </main>
       </div>
     </div>

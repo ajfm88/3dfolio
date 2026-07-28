@@ -2,7 +2,7 @@
 
 The Node/Express service that powers the dynamic, authenticated parts of my portfolio: the **`/blog`** (posts + comments) and **`/chat`** (real-time messaging) features. Everything else on the site is a static 3D React front end; this server is where identity, persistence, and real-time live.
 
-> **Status:** Backend complete and deployed (slices 1–6). Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wired up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. Slice 6 deployed the service to Render, live at `https://3dfolio-ajfm88-server.onrender.com`, with the Clerk webhook registered against the deployed URL and an external keep-alive ping holding the free-tier instance warm. The `src/blog/` frontend (lazy `/blog` in the portfolio) is complete and runs against this live API — every endpoint below now has a consumer. Chat messages (chat-plan Phase A) build on top of this base next.
+> **Status:** Backend complete and deployed — both features. Slices 1–2 landed the server skeleton, database + socket wiring, Clerk authentication, and the Clerk→Mongo user-sync webhook. Slice 3 added the **blog posts API** (`/api/posts`) with public reads, admin-gated writes, and visit-counter-backed Popular/Trending sorts. Slice 4 added the **blog comments API** (`/api/comments`) and closed the loop on orphaned data with cascade deletes. Slice 5 wired up **ImageKit** (`GET /api/posts/upload-auth`) for client-side cover-image uploads. Slice 6 deployed the service to Render, live at `https://3dfolio-ajfm88-server.onrender.com`, with the Clerk webhook registered against the deployed URL and an external keep-alive ping holding the free-tier instance warm. Chat Phase A then added the **messages API** (`/api/messages`) — contacts, conversations, message history, and server-side media upload — plus the **Socket.io real-time layer** (presence + instant delivery) riding the same `http.Server`. Both the `src/blog/` and `src/chat/` frontends (lazy `/blog` and `/chat` in the portfolio) are complete and run against this live API — every endpoint below has a consumer.
 
 ---
 
@@ -37,7 +37,7 @@ The cost of that decision was reconciling two different data models and two diff
 | Database       | **MongoDB Atlas + Mongoose**                   | Document model fits blog posts and chat messages naturally; Mongoose gives me schema validation and a typed-ish model layer over a schemaless store.            |
 | Authentication | **Clerk** (`@clerk/express`)                   | Offloads the genuinely hard, high-risk parts of auth — password storage, sessions, OAuth, MFA — to a specialist. I own my app logic, not a credential database. |
 | Real-time      | **Socket.io**                                  | Presence (who's online) and instant message delivery for chat, with automatic reconnection and a room/broadcast model.                                          |
-| Media uploads  | **ImageKit** (`@imagekit/nodejs`) + **Multer** | Off-loads image storage, CDN delivery, and on-the-fly transforms. Blog uploads go client-side straight to ImageKit (wired, slice 5); Multer is reserved for chat's server-side upload path, not yet wired (chat-plan Phase A).                         |
+| Media uploads  | **ImageKit** (`@imagekit/nodejs`) + **Multer** | Off-loads image storage, CDN delivery, and on-the-fly transforms. Blog cover images upload client-side straight to ImageKit (slice 5); chat media uploads server-side through **Multer** (in-memory, 25 MB cap, image/video-only filter) into the same ImageKit account, since a chat message needs the URL persisted before it can be emitted over the socket. |
 | Config         | **dotenv**                                     | Twelve-factor style — every secret and environment difference comes from the environment, nothing is hardcoded.                                                 |
 | Dev loop       | **nodemon**                                    | Auto-restart on save.                                                                                                                                           |
 
@@ -92,7 +92,7 @@ const io = new Server(server, { cors: { origin: CLIENT_URLS } });
 
 `index.js` then calls `server.listen(...)` (the HTTP server), **not** `app.listen(...)` (Express's convenience wrapper) — so Express handles REST and Socket.io handles WebSockets over the same port and process.
 
-Presence is tracked in an in-memory `userId → socketId` map. On connect I record the socket and broadcast the full online set; on disconnect I remove it and broadcast again. A `getReceiverSocketId()` helper is exported so a later slice can deliver a chat message straight to one recipient's socket. (In-memory presence is the right trade-off for a single-instance hobby deploy; scaling to multiple instances would swap this for a Redis adapter — a change I've scoped but not needed yet.)
+Presence is tracked in an in-memory `userId → socketId` map. On connect I record the socket and broadcast the full online set; on disconnect I remove it and broadcast again. A `getReceiverSocketId()` helper looks up one recipient's socket by their Mongo `_id`, and `sendMessage` uses it to `io.to(receiverSocketId).emit("newMessage", newMessage)` — a message is delivered straight to the one open socket that needs it, not broadcast to everyone. If the recipient isn't currently connected, the emit is simply skipped; they'll see the message via the normal `GET /api/messages/:id` fetch next time they open the thread. (In-memory presence is the right trade-off for a single-instance hobby deploy; scaling to multiple instances would swap this for a Redis adapter — a change I've scoped but not needed yet.)
 
 ---
 
@@ -171,7 +171,7 @@ Two things carry over directly from the posts API, and one thing is new:
 
 ---
 
-## Media uploads (`GET /api/posts/upload-auth`)
+## Blog media uploads (`GET /api/posts/upload-auth`)
 
 Cover images upload **client-side, straight from the browser to ImageKit** — the file itself never passes through this server. What the server provides is a short-lived, signed authorization the browser presents to ImageKit's upload API.
 
@@ -180,6 +180,30 @@ Cover images upload **client-side, straight from the browser to ImageKit** — t
 - **The private key never leaves the server** — it signs the params here and is never sent to the client; only the resulting `token`/`expire`/`signature` are.
 - **The ImageKit client is built lazily, not at import time** ([`src/lib/imagekit.js`](src/lib/imagekit.js)). The `@imagekit/nodejs` SDK's constructor throws *synchronously* if `IK_PRIVATE_KEY` is missing — and this module is imported by `post.route.js` on every server boot, so building the client eagerly at the top of the file would have crashed `npm run dev` the instant ImageKit wasn't configured yet, exactly like every other slice built ahead of its third-party keys. Instead `getImageKitClient()` checks the env var first and only constructs (and caches) the client once it's present; `getUploadAuth` returns a clean `503 "Image upload is not configured yet"` if it's still missing, the same pattern the Clerk webhook already uses for its own missing signing secret.
 - **`img` on `Post` stays a plain string** ([`src/models/post.model.js`](src/models/post.model.js)) — the create flow doesn't change; the frontend sends the path the direct upload hands back as one more field in the existing `createPost` whitelist.
+
+---
+
+## The chat messages API (`/api/messages`)
+
+Chat reuses the identity layer wholesale (same `protectRoute`, same unified `User`) but everything about *what* it stores and *how it's delivered* is new — a message needs two participants instead of one author, has to arrive in real time instead of waiting for the next page load, and its media has to reach ImageKit through the server rather than straight from the browser.
+
+**The routes** ([`src/routes/message.route.js`](src/routes/message.route.js)) — all behind `protectRoute`, no public reads (unlike the blog, chat is not content meant to be browsed signed-out):
+
+| Method | Path                     | What it does                                                        |
+| ------ | ------------------------ | -------------------------------------------------------------------- |
+| `GET`  | `/api/messages/users`    | Every other synced user, for the "start a new conversation" list     |
+| `GET`  | `/api/messages/conversations` | Just the people you've already exchanged messages with, most-recent first |
+| `GET`  | `/api/messages/:id`      | Full message history with one other user, oldest first               |
+| `POST` | `/api/messages/send/:id` | Send text and/or one image/video to that user                        |
+
+A few decisions worth walking through:
+
+- **Conversations are derived, not stored.** There's no `Conversation` model — [`getConversationsForSidebar`](src/controllers/message.controller.js) runs a Mongo aggregation over `Message` itself: match every message where I'm the sender or receiver, group by "the other participant" (a `$cond` picking whichever side isn't me), keep the most recent timestamp per group, sort, then `$lookup` each group's `_id` back into a full `User` document. One collection stays the single source of truth instead of a second one I'd have to keep in sync with it.
+
+- **Server-side upload, unlike the blog.** Cover images go straight from the browser to ImageKit (see [Blog media uploads](#blog-media-uploads-get-apipostsupload-auth) above); chat media goes through this server instead ([`upload.middleware.js`](src/middleware/upload.middleware.js) — Multer, in-memory storage, a 25 MB cap, and a `fileFilter` that rejects anything that isn't `image/*` or `video/*`). The reason for the different pattern: `sendMessage` has to know the resulting media URL *before* it can save the message and emit it over the socket, so the upload has to complete inside the same request that creates the message — there's no separate "upload, then reference the URL" step like the blog's editor has. `uploadChatMedia` ([`src/lib/imagekit.js`](src/lib/imagekit.js)) reuses the same lazily-built ImageKit client the blog's upload-auth endpoint uses, just calling `files.upload()` directly with the buffer instead of only signing params, into a separate `/chat` folder on the same ImageKit account.
+- **Real-time delivery, not polling.** After saving, `sendMessage` looks up the receiver's live socket via `getReceiverSocketId()` and emits `newMessage` directly to it (see [Real-time](#real-time-why-the-server-is-an-httpserver-not-applisten) above) — if they have the app open, the message appears instantly; if not, it's just there next time they fetch the thread.
+- **Whitelist by construction, not by filtering.** `sendMessage` builds the new `Message` from exactly four fields it derives itself (`senderId` from the session, `receiverId` from the URL param, `text` from the body, `image`/`video` from the upload result) — there's no `req.body` spread to whitelist *against* in the first place, so there's no mass-assignment surface to close.
+- **Media is genuinely optional, on both ends.** A message can be text-only, media-only, or both — `text` is never required, and the frontend composer only appends it to the upload's `FormData` when there's actually a caption to send.
 
 ---
 
@@ -207,19 +231,23 @@ server/
 │   │   └── socket.js             # http.Server + Socket.io, presence map, app/server export
 │   ├── middleware/
 │   │   ├── auth.middleware.js    # protectRoute (signed-in) + requireAdmin (role gate)
-│   │   └── increaseVisit.js      # atomic $inc of a post's visit counter
+│   │   ├── increaseVisit.js      # atomic $inc of a post's visit counter
+│   │   └── upload.middleware.js  # Multer: in-memory, 25MB cap, image/video-only filter (chat)
 │   ├── controllers/
 │   │   ├── auth.controller.js    # checkAuth: return the synced user
 │   │   ├── post.controller.js    # posts: list / read / create / delete / feature
-│   │   └── comment.controller.js # comments: list / add / delete
+│   │   ├── comment.controller.js # comments: list / add / delete
+│   │   └── message.controller.js # messages: users / conversations / history / send + socket emit
 │   ├── models/
 │   │   ├── user.model.js         # unified User schema
 │   │   ├── post.model.js         # Post schema (author ref, slug, content, visit)
-│   │   └── comment.model.js      # Comment schema (user ref, post ref, desc)
+│   │   ├── comment.model.js      # Comment schema (user ref, post ref, desc)
+│   │   └── message.model.js      # Message schema (sender ref, receiver ref, text, image, video)
 │   ├── routes/
 │   │   ├── auth.route.js         # /api/auth
 │   │   ├── post.route.js         # /api/posts
-│   │   └── comment.route.js      # /api/comments
+│   │   ├── comment.route.js      # /api/comments
+│   │   └── message.route.js      # /api/messages
 │   └── webhooks/
 │       └── clerk.webhook.js      # Clerk -> Mongo user sync (raw body + signature verify + cascade delete)
 ├── .env.example
@@ -246,8 +274,10 @@ Concerns are split the conventional way — routes declare endpoints, middleware
 | `POST`   | `/api/comments/:postId` | signed-in        | Add a comment                              |
 | `DELETE` | `/api/comments/:id`   | admin or owner     | Delete a comment                           |
 | `GET`    | `/api/posts/upload-auth` | admin           | Signed params for a direct client → ImageKit upload |
-
-Chat (`/api/messages`) routes land in an upcoming slice (chat-plan Phase A).
+| `GET`    | `/api/messages/users`         | signed-in     | Every other synced user (start a new conversation) |
+| `GET`    | `/api/messages/conversations` | signed-in     | Users you've already exchanged messages with, most-recent first |
+| `GET`    | `/api/messages/:id`           | signed-in     | Full message history with one other user            |
+| `POST`   | `/api/messages/send/:id`      | signed-in     | Send text and/or one image/video; emits `newMessage` to the recipient's socket |
 
 ---
 
@@ -287,8 +317,8 @@ npm run dev            # nodemon, restarts on save
 3. **Environment variables** — copy straight from local `server/.env`: `NODE_ENV=production`, `CLIENT_URL` (comma-separated: the Vercel origin(s) + `http://localhost:5173` for local frontend dev against the live API), `MONGO_URI`, `CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `IK_URL_ENDPOINT`, `IK_PUBLIC_KEY`, `IK_PRIVATE_KEY`. Don't set `PORT` — Render injects its own and expects the app to bind to it. Leave `CLERK_WEBHOOK_SIGNING_SECRET` out for now, added in step 5.
 4. **Health Check Path** (under Advanced): `/health`. Deploy, confirm `https://<service>.onrender.com/health` → `{ok:true}`.
 5. **Clerk dashboard → Webhooks → Add endpoint** → `https://<service>.onrender.com/api/webhooks/clerk`, subscribe to `user.created` / `user.updated` / `user.deleted`. Copy the signing secret into Render's `CLERK_WEBHOOK_SIGNING_SECRET` (triggers a redeploy). Verified via Clerk's Testing tab — a sample `user.created` event delivered with a `200`.
-6. **External keep-alive:** a FastCron job hits `/health` every 10 minutes so the free-tier instance doesn't spin down (Render free web services sleep after 15 min idle). Lives outside the repo by design (see [Context](#context) above — no in-app cron).
-7. **Still pending:** the [pre-deploy Clerk checklist](../blog-plan.md) admin-role step (`ale@ajfm88.com` → `{"role":"admin"}` in Clerk public metadata). The sign-in flow now exists in the frontend (blog slice 7), so this is unblocked — it just hasn't been done yet. Every admin-gated write route 403s until this is set, so it's a hard blocker for blog slice 10 (Write page) but not before.
+6. **External keep-alive:** a FastCron job hits `/health` every 10 minutes so the free-tier instance doesn't spin down (Render free web services sleep after 15 min idle). Lives outside the repo by design — no in-app cron.
+7. **Pre-deploy Clerk checklist — done:** `ale@ajfm88.com` has `{"role":"admin"}` set in Clerk public metadata, *and* Sessions → Customize session token includes `{ "metadata": "{{user.public_metadata}}" }` so `resolveRole` reads the role straight off the session claim rather than only the webhook-mirrored fallback. Verified end-to-end: sign in, create a post, delete a post — no 403s.
 
 ---
 
@@ -299,8 +329,8 @@ npm run dev            # nodemon, restarts on save
 - [x] **Slice 4 — Blog comments API:** Comment model, `/api/comments` list/add/delete, signed-in-to-write gating, cascade-delete on both post delete and `user.deleted`.
 - [x] **Slice 5 — ImageKit uploads:** admin-gated, lazily-built `GET /api/posts/upload-auth` returns signed client-upload params; private key never leaves the server.
 - [x] **Slice 6 — Deploy:** live on Render, Clerk webhook registered and verified delivering, external FastCron keep-alive on `/health`. See [Deploying (Render)](#deploying-render) above.
-- [ ] **Chat Phase A:** Message model, message routes, Socket.io delivery via `getReceiverSocketId`.
+- [x] **Chat Phase A:** Message model, `/api/messages` routes (users / conversations / history / send), server-side ImageKit upload via Multer, Socket.io delivery via `getReceiverSocketId`.
 
-The backend is done for now, and the blog **frontend** (`src/blog/`, lazy `/blog`) that consumes it is complete too — authoring, listing, filtering, reading, and comments all run against these endpoints; see `blog-plan.md` at the repo root for that tracker. Chat is what's left.
+The backend is done, and both frontends that consume it are complete too: the blog (`src/blog/`, lazy `/blog`) — authoring, listing, filtering, reading, comments — and chat (`src/chat/`, lazy `/chat`) — sidebar, real-time messaging, media, presence, sounds, mobile. See `blog-plan.md` and `chat-plan.md` at the repo root for their trackers.
 
 Built incrementally, one small slice per commit, on purpose — each step is reviewable on its own and the server is runnable at every commit.

@@ -14,10 +14,6 @@ import mongodb from "./tech/mongodb.png";
 import postgresql from "./tech/postgresql.png";
 import nextjs from "./tech/nextjs.webp";
 
-import suburbia from "./suburbia.png";
-import jobify from "./jobify.png";
-import airesume from "./ai-resume-builder.png";
-
 export {
   alejandro,
   alejandroBlog,
@@ -33,7 +29,4 @@ export {
   mongodb,
   postgresql,
   nextjs,
-  suburbia,
-  jobify,
-  airesume,
 };

@@ -139,7 +139,7 @@ const Contact = () => {
             href="https://linkedin.com/in/ajfm88"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-[#915EFF] transition-colors duration-300"
+            className="text-white hover:text-[#0077b5] transition-colors duration-300"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -154,7 +154,7 @@ const Contact = () => {
             href="https://linktr.ee/ajfm88"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-[#915EFF] transition-colors duration-300"
+            className="text-white hover:text-[#4afb15] transition-colors duration-300"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

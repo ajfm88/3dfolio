@@ -113,18 +113,18 @@ function EntryList({ items, variant }) {
   return items.map((item) => (
     <li key={item.id}>
       <a href={item.html_url} target="_blank" rel="noreferrer">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-700/50 transition-colors min-w-0">
+        <div className="flex items-center gap-1.5 xs:gap-3 rounded-lg px-1 xs:px-3 py-1.5 xs:py-2 hover:bg-gray-700/50 transition-colors min-w-0">
           <img
             src={item.avatar_url}
             alt={item.login}
-            className="w-10 h-10 rounded-full flex-shrink-0"
+            className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
           />
-          <span className={`text-sm truncate ${tint}`}>{item.login}</span>
+          <span className={`text-xs xs:text-sm truncate ${tint}`}>{item.login}</span>
           {variant === "added" && (
-            <UserPlus size={16} className="text-green-400 ml-auto flex-shrink-0" />
+            <UserPlus size={14} className="text-green-400 ml-auto flex-shrink-0" />
           )}
           {variant === "deleted" && (
-            <UserMinus size={16} className="text-red-400 ml-auto flex-shrink-0" />
+            <UserMinus size={14} className="text-red-400 ml-auto flex-shrink-0" />
           )}
         </div>
       </a>
@@ -281,9 +281,9 @@ const GithubFollowerTracker = () => {
 
         {message && <p className="text-center text-gray-400 mt-4">{message}</p>}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
-          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-4 sm:p-6">
-            <h2 className="text-xl font-semibold text-gray-100 mb-4">
+        <section className="grid grid-cols-2 gap-2 xs:gap-3 sm:gap-6 mt-8">
+          <div className="min-w-0 bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-2 xs:p-3 sm:p-6">
+            <h2 className="text-sm xs:text-base sm:text-xl font-semibold text-gray-100 mb-2 sm:mb-4">
               Followers{hasData ? `: ${followersCount}` : ""}
             </h2>
             <ul className="space-y-1">
@@ -296,8 +296,8 @@ const GithubFollowerTracker = () => {
               )}
             </ul>
           </div>
-          <div className="bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-4 sm:p-6">
-            <h2 className="text-xl font-semibold text-gray-100 mb-4">
+          <div className="min-w-0 bg-gray-800/50 backdrop-blur-md border border-gray-700 rounded-xl p-2 xs:p-3 sm:p-6">
+            <h2 className="text-sm xs:text-base sm:text-xl font-semibold text-gray-100 mb-2 sm:mb-4">
               Following{hasData ? `: ${followingCount}` : ""}
             </h2>
             <ul className="space-y-1">

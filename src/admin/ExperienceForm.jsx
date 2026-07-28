@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Plus, Trash2, X, Upload, Loader2 } from "lucide-react";
 
@@ -48,15 +49,18 @@ const ExperienceForm = ({ experience, onSubmit, onClose }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 overflow-y-auto">
+  // Rendered into a portal so the modal's `fixed` positioning is relative to the
+  // real viewport, not to ExperienceManager's animated (transformed) wrapper — a
+  // transformed ancestor becomes the containing block for `position: fixed`.
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <motion.form
         onSubmit={handleSubmit}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl my-8 bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-2xl"
+        className="w-full max-w-2xl max-h-[85vh] bg-gray-800 border border-gray-700 rounded-xl shadow-2xl flex flex-col overflow-hidden"
       >
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-100">
             {experience.id ? "Edit experience" : "Add experience"}
           </h2>
@@ -70,6 +74,7 @@ const ExperienceForm = ({ experience, onSubmit, onClose }) => {
           </button>
         </div>
 
+        <div className="overflow-y-auto p-6 flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className={labelClass}>Title</label>
@@ -192,8 +197,9 @@ const ExperienceForm = ({ experience, onSubmit, onClose }) => {
         </div>
 
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+        </div>
 
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -211,7 +217,8 @@ const ExperienceForm = ({ experience, onSubmit, onClose }) => {
           </button>
         </div>
       </motion.form>
-    </div>
+    </div>,
+    document.body
   );
 };
 

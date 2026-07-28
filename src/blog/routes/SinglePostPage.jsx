@@ -124,8 +124,8 @@ const SinglePostPage = () => {
             <Link className="underline" to="/blog/posts?cat=seo">
               Search Engines
             </Link>
-            <Link className="underline" to="/blog/posts?cat=marketing">
-              Marketing
+            <Link className="underline" to="/blog/posts?cat=game-dev">
+              Game Dev
             </Link>
           </div>
           <h1 className="mt-8 mb-4 text-sm font-medium">Search</h1>

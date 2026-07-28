@@ -14,7 +14,7 @@ const CATEGORIES = [
   { value: "development", label: "Development" },
   { value: "databases", label: "Databases" },
   { value: "seo", label: "Search Engines" },
-  { value: "marketing", label: "Marketing" },
+  { value: "game-dev", label: "Game Dev" },
 ];
 
 // The /blog/posts sidebar: a search box, sort radios, and category filters.

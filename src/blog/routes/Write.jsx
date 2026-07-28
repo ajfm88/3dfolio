@@ -95,7 +95,7 @@ const Write = () => {
             <option value="development">Development</option>
             <option value="databases">Databases</option>
             <option value="seo">Search Engines</option>
-            <option value="marketing">Marketing</option>
+            <option value="game-dev">Game Dev</option>
           </select>
         </div>
         <textarea

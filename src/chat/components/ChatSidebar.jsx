@@ -1,5 +1,5 @@
 import { UserButton } from "@clerk/clerk-react";
-import { MessageSquare, Users, Search, X } from "lucide-react";
+import { Loader, MessageSquare, Users, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { alejandro } from "../../assets";
@@ -29,6 +29,8 @@ const ChatSidebar = ({ activeConversationId }) => {
   const setSidebarTab = useChatStore((s) => s.setSidebarTab);
   const setActiveConversationId = useChatStore((s) => s.setActiveConversationId);
   const unreadByUser = useChatStore((s) => s.unreadByUser);
+  const isConversationsLoading = useChatStore((s) => s.isConversationsLoading);
+  const isUsersLoading = useChatStore((s) => s.isUsersLoading);
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
 
@@ -52,6 +54,10 @@ const ChatSidebar = ({ activeConversationId }) => {
     : allUsers;
 
   const list = sidebarTab === "chats" ? filteredConversations : filteredUsers;
+  // Only the initial fetch (list still empty) should block the list with a
+  // spinner — a background refresh with existing data shouldn't flash one.
+  const isLoading =
+    (sidebarTab === "chats" ? isConversationsLoading : isUsersLoading) && list.length === 0;
   const emptyLabel =
     sidebarTab === "chats"
       ? query
@@ -139,7 +145,11 @@ const ChatSidebar = ({ activeConversationId }) => {
 
       {/* List */}
       <div className="flex-1 overflow-x-hidden overflow-y-auto">
-        {list.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader className="h-5 w-5 animate-spin text-[var(--chat-muted)]" />
+          </div>
+        ) : list.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-[var(--chat-muted)]">{emptyLabel}</p>
         ) : (
           list.map((item) => (

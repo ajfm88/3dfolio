@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import Tilt from "react-parallax-tilt";
 import { motion } from "framer-motion";
 
 import { styles } from "../styles";
 import { github } from "../assets";
 import { SectionWrapper } from "../hoc";
-import { projects } from "../constants";
 import { fadeIn, textVariant } from "../utils/motion";
+import { fetchCollection } from "../utils/firestoreRest";
 import AnimatedLetters from "./AnimatedLetters";
 
 const ProjectCard = ({
@@ -20,13 +19,7 @@ const ProjectCard = ({
 }) => {
   return (
     <motion.div variants={fadeIn("up", "spring", index * 0.5, 0.75)}>
-      <Tilt
-        tiltMaxAngleX={45}
-        tiltMaxAngleY={45}
-        scale={1}
-        transitionSpeed={450}
-        className="bg-tertiary p-5 rounded-2xl sm:w-[360px] w-full transition-all"
-      >
+      <div className="bg-tertiary p-5 rounded-2xl sm:w-[360px] w-full transition-transform duration-300 ease-out hover:scale-105 hover:shadow-card">
         <div className="relative w-full h-[230px]">
           <a
             href={url || "#"}
@@ -57,8 +50,10 @@ const ProjectCard = ({
         </div>
 
         <div className="mt-5">
-          <a href={source_code_link} target="_blank">
-            <h3 className="text-white font-bold text-[24px]">{name}</h3>
+          <a href={url || "#"} target="_blank" rel="noopener noreferrer">
+            <h3 className="text-white font-bold text-[24px] transition-colors duration-300 hover:text-[#915EFF]">
+              {name}
+            </h3>
           </a>
           <p className="mt-2 text-secondary text-[14px]">{description}</p>
         </div>
@@ -73,13 +68,14 @@ const ProjectCard = ({
             </p>
           ))}
         </div>
-      </Tilt>
+      </div>
     </motion.div>
   );
 };
 
 const Works = () => {
   const [isMobile, setIsMobile] = useState(false);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     // Check if screen is mobile size
@@ -96,6 +92,14 @@ const Works = () => {
     return () => {
       mediaQuery.removeEventListener("change", handleMediaQueryChange);
     };
+  }, []);
+
+  useEffect(() => {
+    fetchCollection("projects")
+      .then((docs) => docs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
+      .then((docs) => docs.map((doc) => ({ ...doc, image: doc.imageUrl })))
+      .then(setProjects)
+      .catch(() => setProjects([]));
   }, []);
 
   // Show only first 3 projects on mobile
@@ -118,9 +122,9 @@ const Works = () => {
           The following projects showcase my skills and experience across
           different tech stacks. Each project is briefly described in its
           respective card and there are links to code repositories (by clicking
-          in the upper right corner of the card, on the GitHub logo. Or clicking
-          on the name of the project itself), and to live demos (by clicking on
-          the image of the project). These projects reflect my ability to solve
+          in the upper right corner of the card, on the GitHub logo), and to
+          live demos (by clicking on the image of the project, or on the name
+          of the project itself). These projects reflect my ability to solve
           complex problems, work with different technologies, and manage tasks
           effectively. To see more projects, please feel free to visit my&nbsp;
           <a href="https://github.com/ajfm88" target="_blank">

@@ -36,7 +36,7 @@ const Navbar = () => {
           >
             &nbsp;| &nbsp;
             <AnimatedLetters
-              letterClass="text-animate-hover ajfm88-letter"
+              letterClass="text-color-hover ajfm88-letter"
               text="ajfm88"
               idx={1}
             />

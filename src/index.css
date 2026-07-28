@@ -5,7 +5,8 @@
 @tailwind utilities;
 
 .text-animate-hover,
-.text-animate-hover-gold {
+.text-animate-hover-gold,
+.text-color-hover {
   display: inline-block;
   min-width: 4px;
   cursor: default;
@@ -20,6 +21,10 @@
 .text-animate-hover-gold:hover {
   animation: rubberBand 1s;
   color: #ffd700;
+}
+
+.text-color-hover:hover {
+  color: #915EFF;
 }
 
 .ajfm88-letter._1:hover,

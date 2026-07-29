@@ -7,9 +7,9 @@ import { alejandro } from "../../assets";
 // signed-out visitor into an inert shell, they get this prompt. Sign-in opens as
 // a Clerk modal (same as the blog), so we never navigate away from the page.
 //
-// This is the reference app's two-panel auth hero restyled down to a single
-// Tailwind 3 card: HeroUI and the wallpaper/theme pickers were dropped under the
-// single-Tailwind plan, keeping just the essential sign-in call to action.
+// Deliberately one Tailwind 3 card rather than a full-width marketing hero: the
+// only thing a signed-out visitor can do here is sign in, so the gate stays a
+// single call to action and the app keeps one Tailwind version throughout.
 const ChatAuthGate = () => (
   <div className="flex min-h-[100dvh] items-center justify-center p-4 sm:p-6">
     <div className="w-full max-w-md rounded-3xl border border-[var(--chat-border)] bg-[var(--chat-glass)] px-6 py-10 text-center shadow-2xl shadow-black/40 backdrop-blur sm:px-10">

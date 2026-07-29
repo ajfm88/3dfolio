@@ -3,9 +3,9 @@ import { useRef } from "react";
 import { toast } from "react-toastify";
 import { api } from "../lib/axios";
 
-// upload-auth is admin-gated (protectRoute + requireAdmin), unlike the
-// reference's plain fetch — go through the shared `api` instance so the
-// Clerk bearer token interceptor attaches, or every request 401s.
+// upload-auth is admin-gated (protectRoute + requireAdmin), so a plain fetch
+// won't do — go through the shared `api` instance so the Clerk bearer token
+// interceptor attaches, or every request 401s.
 const authenticator = async () => {
   try {
     const res = await api.get("/posts/upload-auth");

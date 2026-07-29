@@ -5,21 +5,19 @@ import {
   Briefcase,
   User,
   FolderGit2,
-  Mail,
   LogOut,
 } from "lucide-react";
 
 import ExperienceManager from "./ExperienceManager";
 import ProjectManager from "./ProjectManager";
 
-// "Experience" and "Projects" are live today. The rest are placeholders for the
-// later steps of the no-more-hardcoding migration and are shown disabled. Tech
-// Stack is intentionally excluded — staying hardcoded by choice.
+// "Experience" and "Projects" are live today. "About" is a placeholder for the
+// last step of the no-more-hardcoding migration and is shown disabled. Tech
+// Stack and Contact are intentionally excluded — staying hardcoded by choice.
 const NAV_ITEMS = [
   { name: "Experience", icon: Briefcase, color: "#818cf8", live: true },
   { name: "About", icon: User, color: "#f472b6", live: false },
   { name: "Projects", icon: FolderGit2, color: "#fbbf24", live: true },
-  { name: "Contact", icon: Mail, color: "#60a5fa", live: false },
 ];
 
 const PANELS = {

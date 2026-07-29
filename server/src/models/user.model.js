@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
 
-// Unified User model — merges the two reference schemas:
-//   - blog-main/backend keyed users on `clerkUserId` with `username` + `img` (+ savedPosts)
-//   - chat/backend       keyed users on `clerkId`     with `fullName` + `profilePic`
-// We standardize on `clerkId`, keep a canonical `img` avatar (chat's profilePic
-// maps here during the chat port), and add `role` for admin gating. Rows are
-// created/updated by the Clerk webhook, never by user input.
+// One User model serving both features, which want different things from the
+// same person: the blog needs an author handle and a byline image, chat needs a
+// display name and a sidebar avatar, both need a stable key back to Clerk, and
+// only the blog needs a role. Rather than let each feature add its own field for
+// the same idea (an `img` here, a `profilePic` there), there's one canonical
+// name per concept: `clerkId` to join, `img` for any avatar, `role` for admin
+// gating. Rows are created/updated by the Clerk webhook, never by user input.
 const userSchema = new mongoose.Schema(
   {
     clerkId: {

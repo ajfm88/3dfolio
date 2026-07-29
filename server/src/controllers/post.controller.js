@@ -13,8 +13,8 @@ import { getImageKitClient } from "../lib/imagekit.js";
 // "load more" without a second count request.
 export async function getPosts(req, res) {
   const page = parseInt(req.query.page) || 1;
-  // Default to 10 (the reference's 2 was a tutorial demo value) and cap the
-  // client-supplied limit so a request can't ask for an unbounded page.
+  // Default to a real page size, and cap the client-supplied limit so a request
+  // can't ask for an unbounded page.
   const limit = Math.min(parseInt(req.query.limit) || 10, 50);
 
   const query = {};
@@ -54,8 +54,8 @@ export async function getPosts(req, res) {
     .limit(limit)
     .skip((page - 1) * limit);
 
-  // Count against the SAME query (the reference counted all posts, so hasMore
-  // was wrong under any filter) so pagination is correct for filtered lists.
+  // Count against the SAME query, not the whole collection — otherwise hasMore
+  // is wrong the moment a category or search narrows the set.
   const totalPosts = await Post.countDocuments(query);
   const hasMore = page * limit < totalPosts;
 

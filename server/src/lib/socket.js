@@ -32,6 +32,28 @@ io.on("connection", (socket) => {
   // broadcast the current online set to everyone
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+  // Typing goes straight to the one recipient instead of being broadcast:
+  // chat is 1:1, so looking up their socket is the entire routing decision.
+  // Nothing is persisted — a typing flag only means anything while both sockets
+  // are open — and it no-ops when the recipient isn't connected.
+  socket.on("typing", (payload) => {
+    // Destructured in the body, not the signature: a default parameter only
+    // covers undefined, so a client emitting an explicit null would throw right
+    // here — and socket.io does not catch handler errors, so that exception
+    // takes the whole process down with it. Validate before touching it.
+    if (!userId || !payload || typeof payload !== "object") return;
+
+    const { receiverId, isTyping } = payload;
+    if (!receiverId) return;
+
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (!receiverSocketId) return;
+
+    // Coerced rather than passed through: this value is relayed to another
+    // client, so it leaves here as a boolean and nothing else.
+    io.to(receiverSocketId).emit("typing", { userId, isTyping: Boolean(isTyping) });
+  });
+
   socket.on("disconnect", () => {
     if (userId) delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));

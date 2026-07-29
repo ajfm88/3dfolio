@@ -56,8 +56,8 @@ router.post("/", async (req, res) => {
     if (evt.type === "user.deleted") {
       if (evt.data.id) {
         const deletedUser = await User.findOneAndDelete({ clerkId: evt.data.id });
-        // A deleted Clerk account shouldn't leave orphaned content behind — mirror
-        // the cascade blog-main's webhook did, now that Post/Comment both exist.
+        // A deleted Clerk account shouldn't leave orphaned content behind, so the
+        // delete cascades into everything that references the user.
         if (deletedUser) {
           await Post.deleteMany({ user: deletedUser._id });
           await Comment.deleteMany({ user: deletedUser._id });

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader, SendHorizontal, X } from "lucide-react";
 
 import { useChatStore } from "../store/useChatStore";
@@ -9,6 +9,11 @@ const ACCEPT = "image/*,video/*";
 // Held-down keys and bare modifiers would otherwise machine-gun the click.
 const SILENT_KEYS = ["Shift", "Control", "Alt", "Meta", "CapsLock", "Tab"];
 
+// A pause this long ends the burst and retracts the flag. Comfortably shorter
+// than the receiver's own expiry, so in the normal case the indicator clears
+// because the sender said so, not because the safety net fired.
+const TYPING_IDLE_MS = 2000;
+
 const ChatComposer = ({ activeConversationId }) => {
   const composerText = useChatStore((s) => s.composerText);
   const setComposerText = useChatStore((s) => s.setComposerText);
@@ -16,16 +21,39 @@ const ChatComposer = ({ activeConversationId }) => {
   const sendMediaMessage = useChatStore((s) => s.sendMediaMessage);
   const isSendingMedia = useChatStore((s) => s.isSendingMedia);
   const isSoundEnabled = useChatStore((s) => s.isSoundEnabled);
+  const setTyping = useChatStore((s) => s.setTyping);
   const { playRandomKeyStrokeSound } = useKeyboardSound();
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingIdleTimerRef = useRef(null);
+  const isTypingRef = useRef(false);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaFile, setMediaFile] = useState(null);
 
   const canSend = composerText.trim().length > 0 || mediaFile;
 
+  // Whether I am currently marked as typing is a ref, not state: it gates an
+  // emit and never affects what this component renders.
+  const stopTyping = useCallback(() => {
+    clearTimeout(typingIdleTimerRef.current);
+    typingIdleTimerRef.current = null;
+
+    if (!isTypingRef.current) return;
+    isTypingRef.current = false;
+    setTyping(activeConversationId, false);
+  }, [activeConversationId, setTyping]);
+
+  // Returning stopTyping as the cleanup retracts the flag when the thread
+  // changes or the composer unmounts — and because the effect re-runs on a new
+  // activeConversationId, the retraction still goes to the person who was being
+  // typed at, not the newly opened one.
+  useEffect(() => stopTyping, [stopTyping]);
+
   const handleSend = async () => {
     if (!canSend || isSendingMedia) return;
+
+    // The message itself is the end of the burst.
+    stopTyping();
 
     if (mediaFile) {
       await sendMediaMessage({ conversationId: activeConversationId, file: mediaFile });
@@ -53,6 +81,23 @@ const ChatComposer = ({ activeConversationId }) => {
     const el = e.target;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
+
+    // Nobody to tell, or nothing left to be typing about.
+    if (!activeConversationId || !el.value) {
+      stopTyping();
+      return;
+    }
+
+    // One emit per burst, not one per keystroke: `true` goes out only on the
+    // idle-to-typing transition, and every character after it just pushes the
+    // idle deadline back. The receiver's view is identical either way.
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      setTyping(activeConversationId, true);
+    }
+
+    clearTimeout(typingIdleTimerRef.current);
+    typingIdleTimerRef.current = setTimeout(stopTyping, TYPING_IDLE_MS);
   };
 
   const handleFileSelect = (e) => {

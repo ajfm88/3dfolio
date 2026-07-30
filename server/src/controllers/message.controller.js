@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import { hasImageKitConfig, uploadChatMedia } from "../lib/imagekit.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import { io } from "../lib/socket.js";
 
 export async function getUsersForSidebar(req, res) {
   const loggedInUserId = req.user._id;
@@ -95,10 +95,10 @@ export async function sendMessage(req, res) {
 
   await newMessage.save();
 
-  const receiverSocketId = getReceiverSocketId(receiverId);
-  if (receiverSocketId) {
-    io.to(receiverSocketId).emit("newMessage", newMessage);
-  }
+  // Sent to the recipient's room rather than a single socket, so the message
+  // arrives in every tab they have open instead of only the most recent one.
+  // An empty room is a no-op, so an offline recipient needs no special case.
+  io.to(receiverId).emit("newMessage", newMessage);
 
   res.status(201).json(newMessage);
 }

@@ -9,9 +9,11 @@ import { axiosInstance } from "../lib/axios";
 const SOCKET_URL = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
 
 // Auth + realtime store for chat. It mirrors the Clerk session into a Mongo
-// user (via /auth/check) and owns the single Socket.io connection: the socket
-// is keyed on the Mongo _id so the server can map presence and route
-// newMessage events. The Chat route bootstraps this from Clerk's isSignedIn.
+// user (via /auth/check) and owns the single Socket.io connection. The socket
+// authenticates with the Clerk token, the same credential the axios
+// interceptor sends on REST calls; the server verifies it and derives the Mongo
+// _id it keys presence and newMessage routing on, so identity is never
+// something this client asserts. The Chat route bootstraps it from isSignedIn.
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   isCheckingAuth: true,
@@ -42,9 +44,28 @@ export const useAuthStore = create((set, get) => ({
   connectSocket: (user) => {
     if (!user || get().socket?.connected) return;
 
-    const socket = io(SOCKET_URL, { query: { userId: user._id } });
+    const socket = io(SOCKET_URL, {
+      // `auth` as a function rather than a plain object: socket.io calls it
+      // before every connection attempt, so a reconnect sends a freshly minted
+      // Clerk token instead of replaying the one from the first connect. That
+      // matters here because Clerk's session tokens are short-lived while this
+      // socket is meant to stay open, and Render's free tier drops it on spin
+      // down — a fixed token would make the reconnect fail permanently.
+      auth: async (cb) => {
+        const token = await window.Clerk?.session?.getToken();
+        cb({ token });
+      },
+    });
 
     set({ socket });
+
+    // The server rejects unauthenticated handshakes, so a failure here is
+    // usually a token that expired between attempts. socket.io retries on its
+    // own with a new one, which is why this logs rather than notifies: on a
+    // working site a transient spin down would otherwise raise a toast.
+    socket.on("connect_error", (error) => {
+      console.error("Chat socket connection failed:", error.message);
+    });
 
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });

@@ -9,13 +9,14 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { getInitials } from "../lib/utils";
 import ConversationRow from "./ConversationRow";
 
-function mapUserForList(user, onlineUsers, unreadByUser) {
+function mapUserForList(user, onlineUsers, unreadByUser, typingUsers) {
   return {
     _id: user._id,
     name: user.fullName,
     avatarUrl: user.profilePic,
     initials: getInitials(user.fullName),
     isOnline: onlineUsers.includes(user._id),
+    isTyping: typingUsers.includes(user._id),
     unread: unreadByUser[user._id] || 0,
   };
 }
@@ -29,6 +30,7 @@ const ChatSidebar = ({ activeConversationId }) => {
   const setSidebarTab = useChatStore((s) => s.setSidebarTab);
   const setActiveConversationId = useChatStore((s) => s.setActiveConversationId);
   const unreadByUser = useChatStore((s) => s.unreadByUser);
+  const typingUsers = useChatStore((s) => s.typingUsers);
   const isConversationsLoading = useChatStore((s) => s.isConversationsLoading);
   const isUsersLoading = useChatStore((s) => s.isUsersLoading);
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
@@ -37,9 +39,11 @@ const ChatSidebar = ({ activeConversationId }) => {
   const query = searchQuery.trim().toLowerCase();
 
   const conversationUsers = conversations.map((u) =>
-    mapUserForList(u, onlineUsers, unreadByUser),
+    mapUserForList(u, onlineUsers, unreadByUser, typingUsers),
   );
-  const allUsers = users.map((u) => mapUserForList(u, onlineUsers, unreadByUser));
+  const allUsers = users.map((u) =>
+    mapUserForList(u, onlineUsers, unreadByUser, typingUsers),
+  );
 
   // onlineUsers carries every connected socket including this one, but the
   // users list comes back without you, so counting it gives other people only.

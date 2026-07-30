@@ -20,8 +20,18 @@ const ConversationRow = ({ user, selected, onSelect }) => (
       )}
     </AvatarWithOnlineIndicator>
 
-    <div className="min-w-0 flex-1">
+    <div className="relative min-w-0 flex-1">
       <p className="truncate text-[15px] font-semibold text-[var(--chat-text)]">{user.name}</p>
+
+      {/* Positioned out of flow on purpose: as a second line in the layout it
+          would add height, so every row in the list would grow and shrink as
+          people started and stopped typing. There is no last-message preview
+          to swap this into, so it overlays the empty space under the name. */}
+      {user.isTyping && (
+        <p className="absolute inset-x-0 top-full mt-0.5 truncate text-xs font-medium leading-none text-[var(--chat-accent-2)]">
+          typing…
+        </p>
+      )}
     </div>
 
     {/* Counts messages that arrived while a different thread was open; opening

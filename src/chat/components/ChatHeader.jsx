@@ -11,10 +11,12 @@ const ChatHeader = ({ selectedUser }) => {
   const setActiveConversationId = useChatStore((s) => s.setActiveConversationId);
   const isSoundEnabled = useChatStore((s) => s.isSoundEnabled);
   const setSoundEnabled = useChatStore((s) => s.setSoundEnabled);
+  const typingUsers = useChatStore((s) => s.typingUsers);
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
 
   const isOnline = selectedUser ? onlineUsers.includes(selectedUser._id) : false;
+  const isTyping = selectedUser ? typingUsers.includes(selectedUser._id) : false;
 
   // Governs both the typing clicks and the incoming-message chime, and is the
   // one piece of chat state kept in localStorage.
@@ -68,8 +70,12 @@ const ChatHeader = ({ selectedUser }) => {
             <p className="truncate text-[15px] font-semibold leading-tight text-[var(--chat-text)]">
               {selectedUser.fullName}
             </p>
+            {/* Typing outranks Online: it implies presence and is the more
+                specific thing to say about someone who is doing both. */}
             <p className="truncate text-xs text-[var(--chat-muted)]">
-              {isOnline ? (
+              {isTyping ? (
+                <span className="font-medium text-[var(--chat-accent-2)]">typing…</span>
+              ) : isOnline ? (
                 <span className="font-medium text-emerald-400">Online</span>
               ) : (
                 "Offline"

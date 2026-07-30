@@ -6,6 +6,23 @@ import { axiosInstance } from "../lib/axios";
 import { playNotificationSound } from "../lib/notificationSound";
 import { useAuthStore } from "./useAuthStore";
 
+// How long a lull counts as still typing on the receiving end. A sender whose
+// tab dies mid-word never sends the matching `false`, so every `true` also arms
+// a timer that retracts the flag on its own — presence gets the same treatment
+// on disconnect for the same reason.
+const TYPING_EXPIRY_MS = 5000;
+
+// Timer handles per sender. Deliberately outside the store: they are plumbing,
+// not state, and nothing re-renders when one is armed or cleared.
+const typingExpiryTimers = new Map();
+
+// Held at module scope so it can be removed by reference. A bare
+// socket.off("disconnect") would also strip useAuthStore's presence reset,
+// which listens to the same event on the same shared socket.
+function handleSocketDisconnect() {
+  useChatStore.getState().resetTyping();
+}
+
 // The chat data store: contacts, conversations, and the open thread, plus the
 // UI bits that need to survive a route change (selected user, search, composer
 // text). Only the sound preference is persisted to localStorage; everything
@@ -23,6 +40,12 @@ export const useChatStore = create(
       isMessagesLoading: false,
       activeConversationId: null,
       unreadByUser: {},
+      // Ids of people currently typing to me. Sits here beside unreadByUser as
+      // per-conversation UI state rather than in useAuthStore next to
+      // onlineUsers, because clearing it is part of handling an incoming
+      // message and both handlers belong on the same subscription. No key by
+      // conversation: in a 1:1 chat, whoever is typing is typing to you.
+      typingUsers: [],
       searchQuery: "",
       sidebarTab: "chats",
       composerText: "",
@@ -87,6 +110,41 @@ export const useChatStore = create(
         }
       },
 
+      // Announce that I am typing to someone. The recipient is named, but the
+      // sender is not: the server stamps that from the verified handshake.
+      setTyping: (receiverId, isTyping) => {
+        if (!receiverId) return;
+
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.emit("typing", { receiverId, isTyping });
+      },
+
+      // Drop one person's typing flag and disarm their expiry timer. Called
+      // from the socket listener, and again when a message from them lands.
+      clearTypingFor: (userId) => {
+        const timer = typingExpiryTimers.get(userId);
+        if (timer) {
+          clearTimeout(timer);
+          typingExpiryTimers.delete(userId);
+        }
+
+        set((state) =>
+          state.typingUsers.includes(userId)
+            ? { typingUsers: state.typingUsers.filter((id) => id !== userId) }
+            : state,
+        );
+      },
+
+      // A dropped socket means every flag is now unverifiable, so none of them
+      // survive it — the same reasoning that resets onlineUsers on disconnect.
+      resetTyping: () => {
+        typingExpiryTimers.forEach((timer) => clearTimeout(timer));
+        typingExpiryTimers.clear();
+        set({ typingUsers: [] });
+      },
+
       // One subscription for the whole session, not one per open thread: a
       // message from someone you are not currently reading still has to reach
       // the sidebar as an unread badge and a chime. The handler reads the open
@@ -96,10 +154,46 @@ export const useChatStore = create(
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
 
+        socket.off("typing");
+        socket.on("typing", (payload) => {
+          if (!payload || typeof payload !== "object") return;
+
+          const userId = payload.userId ? String(payload.userId) : null;
+          if (!userId) return;
+
+          if (!payload.isTyping) {
+            get().clearTypingFor(userId);
+            return;
+          }
+
+          set((state) =>
+            state.typingUsers.includes(userId)
+              ? state
+              : { typingUsers: [...state.typingUsers, userId] },
+          );
+
+          // Re-armed on every `true`, so a continuing burst keeps pushing the
+          // deadline back and only a real silence lets it fire.
+          clearTimeout(typingExpiryTimers.get(userId));
+          typingExpiryTimers.set(
+            userId,
+            setTimeout(() => get().clearTypingFor(userId), TYPING_EXPIRY_MS),
+          );
+        });
+
+        socket.off("disconnect", handleSocketDisconnect);
+        socket.on("disconnect", handleSocketDisconnect);
+
         socket.off("newMessage");
         socket.on("newMessage", (newMessage) => {
           const senderId = String(newMessage.senderId);
           const isOpenThread = senderId === String(get().activeConversationId);
+
+          // Their message arrived, so whatever they were typing is sent. The
+          // sender clears its own flag too, but this covers the case where that
+          // emit is lost and would otherwise leave `typing…` under a message
+          // that is already on screen.
+          get().clearTypingFor(senderId);
 
           if (isOpenThread) {
             set({ messages: [...get().messages, newMessage] });
@@ -123,6 +217,10 @@ export const useChatStore = create(
       unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket?.off("newMessage");
+        socket?.off("typing");
+        // By reference, so useAuthStore's presence reset keeps its listener.
+        socket?.off("disconnect", handleSocketDisconnect);
+        get().resetTyping();
       },
 
       setSelectedUser: (selectedUser) => set({ selectedUser }),

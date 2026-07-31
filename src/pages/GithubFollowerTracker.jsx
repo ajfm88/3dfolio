@@ -7,6 +7,7 @@ import {
   Users,
   GitCompare,
   Save,
+  Trash2,
   UserPlus,
   UserMinus,
 } from "lucide-react";
@@ -24,7 +25,7 @@ const RESOLVED_PREFIX = "gft:resolved:";
 async function fetchGitPage(url, page) {
   const response = await fetch(`${url}${page}`);
   if (response.status === 404) {
-    throw new Error("This username doesn't exist.");
+    throw new Error("This username doesn’t exist.");
   }
   if (response.status === 403) {
     throw new Error("You have exceeded the available number of requests for now.");
@@ -72,6 +73,31 @@ function loadResolvedIdentity(id) {
 
 function saveResolvedIdentity(id, data) {
   localStorage.setItem(`${RESOLVED_PREFIX}${id}`, JSON.stringify(data));
+}
+
+// Everything this page writes is namespaced under `gft:`, which is the whole
+// reason a reset button can exist: localStorage is shared with the rest of the
+// site, so localStorage.clear() would also destroy the Firebase admin session,
+// the Clerk session and the chat sound preference. Only these keys are ours.
+function gftKeys() {
+  // Object.keys returns a snapshot, so removing entries while looping over it is
+  // safe. Walking localStorage.key(i) by index would not be — every removal
+  // shifts the remaining indices down and the loop skips half the keys.
+  return Object.keys(localStorage).filter((key) => key.startsWith(STORAGE_PREFIX));
+}
+
+// Tracked users only: the resolved-identity entries share the `gft:` namespace
+// but are a lookup cache keyed by GitHub id, not something the user chose to
+// track, so counting them would inflate the number shown before a wipe.
+function countTrackedUsers() {
+  return gftKeys().filter((key) => !key.startsWith(RESOLVED_PREFIX)).length;
+}
+
+// Clears the cached identities along with the snapshots. They are only an
+// optimisation, but they never expire on their own, so a wipe is also the one
+// chance to pick up profiles that were renamed since they were first resolved.
+function clearStoredData() {
+  for (const key of gftKeys()) localStorage.removeItem(key);
 }
 
 // GitHub user ids are permanent even across username changes, so re-resolving
@@ -142,6 +168,9 @@ const GithubFollowerTracker = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasData, setHasData] = useState(false);
+  // Read once on mount rather than on every render: it drives whether there is
+  // anything to delete, and that only changes when this page writes or wipes.
+  const [trackedUsers, setTrackedUsers] = useState(countTrackedUsers);
 
   const runSearch = async (e) => {
     e.preventDefault();
@@ -182,6 +211,7 @@ const GithubFollowerTracker = () => {
         setView("changes");
       } else {
         savePreviousData(cleanUsername, newFollowers, newFollowing);
+        setTrackedUsers(countTrackedUsers());
         setChanges(null);
         setMessage(`The user ${cleanUsername} has been added to your tracker.`);
         setView("all");
@@ -196,7 +226,29 @@ const GithubFollowerTracker = () => {
 
   const handleSave = () => {
     savePreviousData(username, followersList, followingList);
+    setTrackedUsers(countTrackedUsers());
     setMessage("Saved!");
+  };
+
+  // Replaces clearing the browser's site data by hand, which was the only way to
+  // start a tracker over. On-screen results are reset too — leaving them would
+  // imply a snapshot still exists, and Save would silently write it back.
+  const handleClear = () => {
+    const count = trackedUsers;
+    const subject = count === 1 ? "1 tracked user" : `${count} tracked users`;
+    if (!window.confirm(`Clear stored data for ${subject}? The next search starts fresh.`)) {
+      return;
+    }
+
+    clearStoredData();
+    setTrackedUsers(0);
+    setUsername(null);
+    setFollowersList([]);
+    setFollowingList([]);
+    setChanges(null);
+    setView("all");
+    setHasData(false);
+    setMessage("Stored data cleared. The next search starts a new snapshot.");
   };
 
   const followersCount =
@@ -276,6 +328,19 @@ const GithubFollowerTracker = () => {
             onClick={handleSave}
           >
             <Save size={16} /> Save
+          </button>
+          <button
+            type="button"
+            title={
+              trackedUsers
+                ? "Clear this tool's stored snapshots from your browser"
+                : "Nothing stored yet"
+            }
+            className="inline-flex items-center gap-2 rounded-lg bg-gray-700 hover:bg-red-600 px-4 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700"
+            disabled={!trackedUsers}
+            onClick={handleClear}
+          >
+            <Trash2 size={16} /> Delete
           </button>
         </div>
 

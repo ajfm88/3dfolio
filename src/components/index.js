@@ -7,6 +7,7 @@ import Experience from "./Experience";
 import Works from "./Works";
 import Contact from "./Contact";
 import CanvasLoader from "./Loader";
+import ErrorBoundary from "./ErrorBoundary";
 
 export {
   Hero,
@@ -17,6 +18,7 @@ export {
   Works,
   Contact,
   CanvasLoader,
+  ErrorBoundary,
   EarthCanvas,
   BallCanvas,
   StarsCanvas,

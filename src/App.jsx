@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {
   About,
   Contact,
+  ErrorBoundary,
   Experience,
   Hero,
   Navbar,
@@ -16,6 +17,18 @@ const GithubFollowerTracker = lazy(() => import("./pages/GithubFollowerTracker")
 const Admin = lazy(() => import("./pages/Admin"));
 const Blog = lazy(() => import("./pages/Blog"));
 const Chat = lazy(() => import("./pages/Chat"));
+
+// The boundary sits outside Suspense rather than inside it, so it also catches a
+// route that fails before it ever renders: a chunk that 404s after a redeploy,
+// or a module that throws while evaluating — which is how a missing environment
+// variable surfaces — rejects the dynamic import, and React re-throws it here.
+// The key is insurance: a tripped boundary keeps rendering its fallback until it
+// unmounts, and two lazy routes would otherwise reconcile into one instance.
+const LazyRoute = ({ feature, children }) => (
+  <ErrorBoundary key={feature} feature={feature}>
+    <Suspense fallback={null}>{children}</Suspense>
+  </ErrorBoundary>
+);
 
 const Portfolio = () => (
   <div className="relative z-0 bg-primary">
@@ -46,37 +59,46 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Portfolio />} />
+        {/* No feature name on the portfolio itself: its fallback has nowhere to
+            send anyone but back to the page that just failed. */}
+        <Route
+          path="/"
+          element={
+            <ErrorBoundary>
+              <Portfolio />
+            </ErrorBoundary>
+          }
+        />
         <Route
           path="/gft"
           element={
-            <Suspense fallback={null}>
+            <LazyRoute feature="The follower tracker">
               <GithubFollowerTracker />
-            </Suspense>
+            </LazyRoute>
           }
         />
         <Route
           path="/ajfoucault/*"
           element={
-            <Suspense fallback={null}>
+            <LazyRoute feature="The admin panel">
               <Admin />
-            </Suspense>
+            </LazyRoute>
           }
         />
         <Route
           path="/blog/*"
           element={
-            <Suspense fallback={null}>
+            <LazyRoute feature="The blog">
               <Blog />
-            </Suspense>
+            </LazyRoute>
           }
         />
         <Route
           path="/chat/*"
           element={
-            <Suspense fallback={null}>
+            <LazyRoute feature="Chat">
               <Chat />
-            </Suspense>
+            </LazyRoute>
           }
         />
       </Routes>

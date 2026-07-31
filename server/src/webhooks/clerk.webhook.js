@@ -8,8 +8,13 @@ import { verifyWebhook } from "@clerk/backend/webhooks";
 // Clerk -> Mongo user sync. Clerk POSTs here on user.created/updated/deleted so
 // posts/comments/messages can reference a local User doc. The raw body is required
 // for signature verification, so index.js mounts this behind express.raw() BEFORE
-// express.json(). Ported from chat/backend, extended to fill the unified schema
-// (username + role) that the blog needs.
+// express.json().
+//
+// This is the ONLY thing that writes a User document — nothing else in the API
+// creates one. So an account that exists in Clerk but has no row here cannot heal
+// itself by signing in: protectRoute answers 404 and the socket handshake is
+// refused. user.updated upserts as well as user.created, which is the way back —
+// touching the account in the Clerk dashboard re-fires the sync.
 const router = express.Router();
 
 router.post("/", async (req, res) => {

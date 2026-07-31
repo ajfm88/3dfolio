@@ -8,26 +8,29 @@ import {
   LogOut,
 } from "lucide-react";
 
+import AboutManager from "./AboutManager";
 import ExperienceManager from "./ExperienceManager";
 import ProjectManager from "./ProjectManager";
 
-// "Experience" and "Projects" are live today. "About" is a placeholder for the
-// last step of the no-more-hardcoding migration and is shown disabled. Tech
+// Every editable section is live: About was the last one still hardcoded. Tech
 // Stack and Contact are intentionally excluded — staying hardcoded by choice.
+// Ordered to match the order the sections appear on the portfolio itself, so the
+// panel list reads as a map of the page rather than the order they were built in.
 const NAV_ITEMS = [
+  { name: "About", icon: User, color: "#f472b6", live: true },
   { name: "Experience", icon: Briefcase, color: "#818cf8", live: true },
-  { name: "About", icon: User, color: "#f472b6", live: false },
   { name: "Projects", icon: FolderGit2, color: "#fbbf24", live: true },
 ];
 
 const PANELS = {
+  About: AboutManager,
   Experience: ExperienceManager,
   Projects: ProjectManager,
 };
 
 const AdminShell = ({ user, logout }) => {
   const [open, setOpen] = useState(true);
-  const [active, setActive] = useState("Experience");
+  const [active, setActive] = useState(NAV_ITEMS[0].name);
   const ActivePanel = PANELS[active];
 
   return (

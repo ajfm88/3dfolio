@@ -5,8 +5,12 @@ import ParticlesBackground from "./canvas/Particles";
 import AnimatedLetters from "./AnimatedLetters";
 
 const Hero = () => {
+  // min-h-screen rather than h-screen so the hero can outgrow a short viewport.
+  // The decorative layers are absolute, so overflow-hidden still clips those;
+  // what it must not clip is the content, which a fixed height made unavoidable
+  // on any laptop under roughly 650px of usable height.
   return (
-    <section className={`relative w-full h-screen mx-auto overflow-hidden`}>
+    <section className={`relative w-full min-h-screen mx-auto overflow-hidden`}>
       {/* Animated background gradient */}
       <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#120E29] via-[#1D1836] to-[#0A0A12] opacity-80">
         <motion.div
@@ -28,8 +32,13 @@ const Hero = () => {
 
       <ParticlesBackground />
 
+      {/* In flow rather than absolutely positioned. Absolute content contributes
+          nothing to its parent's height, so the section could never grow to fit
+          it and the tail — the Resume/LinkedIn/GitHub row — was simply cut off.
+          The old inset-0 top offset becomes padding, which reads the same on a
+          tall screen and pushes the section taller on a short one. */}
       <div
-        className={`absolute inset-0 top-[80px] sm:top-[120px] max-w-7xl mx-auto ${styles.paddingX} flex flex-col items-center md:items-start md:flex-row md:justify-between gap-4 md:gap-8 z-10`}
+        className={`relative pt-[80px] sm:pt-[120px] pb-12 max-w-7xl mx-auto ${styles.paddingX} flex flex-col items-center md:items-start md:flex-row md:justify-between gap-4 md:gap-8 z-10`}
       >
         {/* Left side content */}
         <motion.div

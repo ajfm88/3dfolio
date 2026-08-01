@@ -29,28 +29,47 @@ const Homepage = () => {
           </p>
         </div>
         {/* animated button */}
-        <Link to="/blog/write" className="hidden md:block relative">
+        <Link to="/blog/write" className="write-cta hidden md:block relative">
           <svg
             viewBox="0 0 200 200"
             width="200"
             height="200"
-            className="text-lg tracking-widest"
+            className="write-cta-ring text-lg tracking-widest"
           >
             <path
               id="circlePath"
               fill="none"
               d="M 100, 100 m -75, 0 a 75,75 0 1,1 150,0 a 75,75 0 1,1 -150,0"
             />
-            <text>
-              <textPath href="#circlePath" startOffset="0%">
-                Write your story •
+            {/* Phrase, bullet, phrase, bullet, each centred on its own offset
+                via text-anchor. The bullets are separate textPaths rather than
+                characters trailing a phrase, which is what let one hug the
+                phrase it belonged to and sit a half-circle from the other.
+
+                The phrases are a half-turn apart, but the bullets are not on
+                the quarter-turns between them: the two phrases do not render to
+                the same width, so quarter-turns leave each bullet nearer the
+                wider one. 44.4% and 95.6% are the midpoints of the gaps as they
+                actually render, which puts 26px of arc on all four sides.
+                Re-measure if the copy or the type scale changes. Offsets start
+                at 20% rather than 0% to keep the first phrase across the top of
+                the ring, where it has always sat. */}
+            <text textAnchor="middle">
+              <textPath href="#circlePath" startOffset="20%">
+                Write your story
               </textPath>
-              <textPath href="#circlePath" startOffset="50%">
-                Share your idea •
+              <textPath href="#circlePath" startOffset="44.4%">
+                ●
+              </textPath>
+              <textPath href="#circlePath" startOffset="70%">
+                Share your ideas
+              </textPath>
+              <textPath href="#circlePath" startOffset="95.6%">
+                ●
               </textPath>
             </text>
           </svg>
-          <button className="absolute top-0 left-0 right-0 bottom-0 m-auto w-20 h-20 bg-blue-800 rounded-full flex items-center justify-center">
+          <button className="write-cta-arrow absolute top-0 left-0 right-0 bottom-0 m-auto w-20 h-20 bg-blue-800 rounded-full flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"

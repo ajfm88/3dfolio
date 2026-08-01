@@ -28,8 +28,10 @@ app.use(express.json());
 app.use(cors({ origin: CLIENT_URLS, credentials: true }));
 app.use(clerkMiddleware());
 
+// Landing line for anyone opening the service URL directly — the API itself
+// lives under /api, and uptime checks hit /health.
 app.get("/", (req, res) => {
-  res.send("Hello from JS + Express");
+  res.send("3dfolio API — the shared backend behind /blog and /chat. Health check: /health");
 });
 
 app.get("/health", (req, res) => {

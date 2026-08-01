@@ -36,15 +36,15 @@
   object-fit: contain;
 }
 
+/* Cube geometry: each rule pushes one panel out to its own side of a 200px cube.
+   These are structural and not content — the per-logo turn that used to sit
+   alongside them, as a hand-written counter-rotation on face 2, is now stored
+   with the face and applied inline by RotatingCube.jsx. */
 .cubespinner .face1 {
   transform: translateZ(100px);
 }
 .cubespinner .face2 {
   transform: rotateY(90deg) translateZ(100px);
-}
-
-.cubespinner .face2 img {
-  transform: rotate(-90deg);
 }
 .cubespinner .face3 {
   transform: rotateY(90deg) rotateX(90deg) translateZ(100px);

@@ -2,13 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Personal website of Alejandro J. Foucault (ajfm88), featuring projects and portfolio work."
+      content="Full Stack 3D React portfolio of Alejandro J. Foucault (ajfm88), with a MERN stack blog and real-time chat. Deployed on Vercel and Render."
     />
     <title>Alejandro Foucault | ajfm88</title>
+
+    <!-- Link previews. A crawler never runs the app, so everything it needs has
+         to sit in this file as literal text, and every URL has to be absolute --
+         relative paths are resolved against the crawler, not the site. The image
+         is served from public/ rather than imported from src/assets for the same
+         reason: Vite fingerprints a bundled asset on every build, so the URL a
+         platform cached would 404 after the next deploy. -->
+    <link rel="canonical" href="https://www.ajfm88.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ajfm88" />
+    <meta property="og:title" content="Alejandro Foucault | ajfm88" />
+    <meta
+      property="og:description"
+      content="Full Stack 3D React portfolio of Alejandro J. Foucault (ajfm88), with a MERN stack blog and real-time chat. Deployed on Vercel and Render."
+    />
+    <meta property="og:url" content="https://www.ajfm88.com" />
+    <meta property="og:image" content="https://www.ajfm88.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Alejandro" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Alejandro Foucault | ajfm88" />
+    <meta
+      name="twitter:description"
+      content="Full Stack 3D React portfolio of Alejandro J. Foucault (ajfm88), with a MERN stack blog and real-time chat. Deployed on Vercel and Render."
+    />
+    <meta name="twitter:image" content="https://www.ajfm88.com/og-image.png" />
   </head>
   <body>
     <div id="root"></div>

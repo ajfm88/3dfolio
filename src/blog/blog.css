@@ -15,6 +15,42 @@
   border: none !important;
 }
 
+/* The homepage "write" call-to-action: the ring of text orbits the arrow while
+   the pointer is on it, and the arrow lifts off the page to meet the cursor.
+
+   The animation is always attached and parked in `paused` rather than applied on
+   hover, so entering picks the rotation up from wherever it stopped and leaving
+   freezes it in place — applying the animation on :hover instead would snap the
+   text back to 0deg on every enter and every leave. Both live here because
+   neither a paused animation nor a hover-driven play state has a Tailwind
+   utility. */
+@keyframes blog-write-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.blog-root .write-cta-ring {
+  transform-origin: center;
+  animation: blog-write-orbit 10s linear infinite;
+  animation-play-state: paused;
+}
+
+.blog-root .write-cta:hover .write-cta-ring,
+.blog-root .write-cta:focus-visible .write-cta-ring {
+  animation-play-state: running;
+}
+
+.blog-root .write-cta-arrow {
+  transition: transform 300ms ease, box-shadow 300ms ease;
+}
+
+.blog-root .write-cta:hover .write-cta-arrow,
+.blog-root .write-cta:focus-visible .write-cta-arrow {
+  transform: translateY(-0.5rem);
+  box-shadow: 0 12px 20px -8px rgba(30, 64, 175, 0.6); /* blue-800 */
+}
+
 /* Published post bodies.
 
    The editor emits ordinary semantic HTML — headings, lists, blockquotes, code,

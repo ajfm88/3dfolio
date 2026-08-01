@@ -1,10 +1,42 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TypeAnimation } from "react-type-animation";
 import { styles } from "../styles";
+import { fetchCollection } from "../utils/firestoreRest";
+import { parseRichText } from "../utils/richText";
+import { DEFAULT_HERO_TAGLINE } from "../constants/hero";
 import ParticlesBackground from "./canvas/Particles";
 import AnimatedLetters from "./AnimatedLetters";
 
 const Hero = () => {
+  // Seeded with the copy built into the bundle rather than starting empty, so the
+  // hero always has a tagline to render: a Firestore read that is slow, blocked or
+  // has no document yet shows the shipped text instead of a gap directly under the
+  // name, which is the first thing a visitor looks at.
+  const [tagline, setTagline] = useState(DEFAULT_HERO_TAGLINE);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchCollection("hero")
+      .then((docs) => {
+        const stored = docs[0]?.tagline;
+        if (!cancelled && typeof stored === "string" && stored.trim()) {
+          setTagline(stored);
+        }
+      })
+      .catch(() => {
+        // Falling back to the shipped copy is the entire error path — there is
+        // nothing a visitor could do with a Firestore failure.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const taglineBlocks = useMemo(() => parseRichText(tagline), [tagline]);
+
   // min-h-screen rather than h-screen so the hero can outgrow a short viewport.
   // The decorative layers are absolute, so overflow-hidden still clips those;
   // what it must not clip is the content, which a fixed height made unavoidable
@@ -65,7 +97,7 @@ const Hero = () => {
             />
             <br />
             <AnimatedLetters
-              letterClass="text-animate-hover-gold alejandro-letter"
+              letterClass="text-animate-hover alejandro-letter"
               text="Alejandro"
               idx={8}
             />
@@ -115,16 +147,22 @@ const Hero = () => {
             />
           </motion.div>
 
-          <motion.p
-            className="mt-6 sm:mt-8 text-secondary max-w-md text-[14px] sm:text-[16px] leading-relaxed text-center md:text-left px-4 sm:px-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            Full Stack Software Engineer based in Los Angeles, CA — passionate
-            about creating innovative and efficient solutions to complex
-            problems.
-          </motion.p>
+          {/* One paragraph in practice, but a stored tagline can hold a blank
+              line, and rendering the blocks it parses into beats printing the
+              newline as literal text. */}
+          {taglineBlocks.map((nodes, index) => (
+            <motion.p
+              key={index}
+              className={`${
+                index === 0 ? "mt-6 sm:mt-8" : "mt-4"
+              } text-secondary max-w-md text-[14px] sm:text-[16px] leading-relaxed text-center md:text-left px-4 sm:px-0`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              {nodes}
+            </motion.p>
+          ))}
 
           <motion.div
             className="mt-6 sm:mt-8 flex flex-wrap justify-center md:justify-start gap-3 sm:gap-4 px-4 sm:px-0"
@@ -205,7 +243,7 @@ const Hero = () => {
           <div className="relative w-full max-w-[1000px]">
             <img
               src="/hero-bg.svg"
-              alt="hero background"
+              alt="Constellation of the technologies Alejandro Foucault (ajfm88) builds with"
               className="w-full select-none"
               draggable={false}
             />

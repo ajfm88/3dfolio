@@ -1,11 +1,5 @@
 node_modules
-dist
 *.local
-blog-plan.md
-chat-plan.md
-
-# Editor directories and files
-.claude
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -15,5 +9,4 @@ chat-plan.md
 *.njsproj
 *.sln
 *.sw?
-
 .env

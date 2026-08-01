@@ -1,6 +1,6 @@
 import { SignInButton } from "@clerk/clerk-react";
 
-import { alejandro } from "../../assets";
+import { LOGO_SRC, LOGO_ALT } from "../../constants/brand";
 
 // Signed-out gate for /chat. The entire chat experience needs a Clerk session —
 // every message API call sits behind protectRoute — so rather than drop a
@@ -15,7 +15,7 @@ const ChatAuthGate = () => (
     <div className="w-full max-w-md rounded-3xl border border-[var(--chat-border)] bg-[var(--chat-glass)] px-6 py-10 text-center shadow-2xl shadow-black/40 backdrop-blur sm:px-10">
       <div className="mb-6 flex justify-center">
         <div className="rounded-2xl border border-[var(--chat-border-strong)] bg-[var(--chat-elevated)] p-3 animate-[chat-float-y_4.5s_ease-in-out_infinite] motion-reduce:animate-none">
-          <img src={alejandro} alt="" className="h-12 w-12 object-contain" />
+          <img src={LOGO_SRC} alt={LOGO_ALT} className="h-12 w-12 object-contain" />
         </div>
       </div>
 

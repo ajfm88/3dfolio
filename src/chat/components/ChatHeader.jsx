@@ -1,6 +1,6 @@
 import { ChevronLeft, Volume2, VolumeX, X } from "lucide-react";
 
-import { alejandro } from "../../assets";
+import { LOGO_SRC, LOGO_ALT } from "../../constants/brand";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -53,9 +53,9 @@ const ChatHeader = ({ selectedUser }) => {
       {selectedUser ? (
         <>
           <AvatarWithOnlineIndicator isOnline={isOnline}>
-            {selectedUser.profilePic ? (
+            {selectedUser.img ? (
               <img
-                src={selectedUser.profilePic}
+                src={selectedUser.img}
                 alt={selectedUser.fullName}
                 className="h-9 w-9 shrink-0 rounded-full object-cover"
               />
@@ -101,7 +101,7 @@ const ChatHeader = ({ selectedUser }) => {
       ) : (
         <>
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <img src={alejandro} alt="" className="h-9 w-9 rounded-xl object-contain" />
+            <img src={LOGO_SRC} alt={LOGO_ALT} className="h-9 w-9 rounded-xl object-contain" />
             <p className="truncate text-sm font-medium text-[var(--chat-muted)]">
               Select a conversation
             </p>

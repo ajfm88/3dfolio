@@ -2,7 +2,7 @@ import { UserButton } from "@clerk/clerk-react";
 import { Loader, MessageSquare, Users, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { alejandro } from "../../assets";
+import { LOGO_SRC, LOGO_ALT } from "../../constants/brand";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -13,7 +13,7 @@ function mapUserForList(user, onlineUsers, unreadByUser, typingUsers) {
   return {
     _id: user._id,
     name: user.fullName,
-    avatarUrl: user.profilePic,
+    avatarUrl: user.img,
     initials: getInitials(user.fullName),
     isOnline: onlineUsers.includes(user._id),
     isTyping: typingUsers.includes(user._id),
@@ -77,7 +77,7 @@ const ChatSidebar = ({ activeConversationId }) => {
     >
       {/* Brand + account row */}
       <header className="flex shrink-0 items-center gap-3 border-b border-[var(--chat-border)] px-4 py-3">
-        <img src={alejandro} alt="" className="h-8 w-8 shrink-0 object-contain" />
+        <img src={LOGO_SRC} alt={LOGO_ALT} className="h-8 w-8 shrink-0 object-contain" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-[var(--chat-text)]">ajfm88 Chat</p>
           <Link

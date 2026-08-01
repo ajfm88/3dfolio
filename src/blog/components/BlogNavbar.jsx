@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react";
-import { alejandroBlog } from "../../assets";
+import { LOGO_BLOG_SRC, LOGO_ALT } from "../../constants/brand";
 import { useIsAdmin } from "../lib/useIsAdmin";
 
 const BlogNavbar = () => {
@@ -12,7 +12,7 @@ const BlogNavbar = () => {
     <div className="w-full h-16 md:h-20 flex items-center justify-between">
       {/* LOGO */}
       <Link to="/blog" className="flex items-center">
-        <img src={alejandroBlog} alt="Alejandro" className="h-10 md:h-14 w-auto object-contain invert" />
+        <img src={LOGO_BLOG_SRC} alt={LOGO_ALT} className="h-10 md:h-14 w-auto object-contain invert" />
       </Link>
 
       {/* MOBILE MENU */}

@@ -4,42 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
-.text-animate-hover,
-.text-animate-hover-gold,
-.text-color-hover {
+.text-animate-hover {
   display: inline-block;
   min-width: 4px;
   cursor: default;
   transition: color 0.3s;
 }
 
+/* The bounce and a fallback colour for every animated heading. Alejandro also
+   carries .alejandro-letter, whose per-letter rules below are one class more
+   specific and so decide its colour — this rule only supplies its bounce. */
 .text-animate-hover:hover {
   animation: rubberBand 1s;
   color: #915EFF;
-}
-
-.text-animate-hover-gold:hover {
-  animation: rubberBand 1s;
-  color: #ffd700;
-}
-
-.text-color-hover:hover {
-  color: #915EFF;
-}
-
-.ajfm88-letter._1:hover,
-.ajfm88-letter._4:hover {
-  color: #f5d020;
-}
-
-.ajfm88-letter._2:hover,
-.ajfm88-letter._5:hover {
-  color: #2196f3;
-}
-
-.ajfm88-letter._3:hover,
-.ajfm88-letter._6:hover {
-  color: #e0434d;
 }
 
 .alejandro-letter._8:hover,

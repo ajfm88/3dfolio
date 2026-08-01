@@ -5,26 +5,34 @@ import {
   Briefcase,
   User,
   FolderGit2,
+  Sparkles,
+  Boxes,
   LogOut,
 } from "lucide-react";
 
+import HeroManager from "./HeroManager";
 import AboutManager from "./AboutManager";
 import ExperienceManager from "./ExperienceManager";
+import TechManager from "./TechManager";
 import ProjectManager from "./ProjectManager";
 
-// Every editable section is live: About was the last one still hardcoded. Tech
-// Stack and Contact are intentionally excluded — staying hardcoded by choice.
-// Ordered to match the order the sections appear on the portfolio itself, so the
-// panel list reads as a map of the page rather than the order they were built in.
+// Every editable section is live. Contact is intentionally excluded — it stays
+// hardcoded by choice. Ordered to match the order the sections appear on the
+// portfolio itself, so the panel list reads as a map of the page rather than the
+// order they were built in, which puts Hero first.
 const NAV_ITEMS = [
+  { name: "Hero", icon: Sparkles, color: "#a78bfa", live: true },
   { name: "About", icon: User, color: "#f472b6", live: true },
   { name: "Experience", icon: Briefcase, color: "#818cf8", live: true },
+  { name: "Tech Stack", icon: Boxes, color: "#34d399", live: true },
   { name: "Projects", icon: FolderGit2, color: "#fbbf24", live: true },
 ];
 
 const PANELS = {
+  Hero: HeroManager,
   About: AboutManager,
   Experience: ExperienceManager,
+  "Tech Stack": TechManager,
   Projects: ProjectManager,
 };
 

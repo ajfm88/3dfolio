@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 
-import { alejandro } from "../../assets";
 import ChatSidebar from "../components/ChatSidebar";
 import ChatHeader from "../components/ChatHeader";
 import MessageList from "../components/MessageList";

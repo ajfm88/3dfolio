@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lists the public routes and declares the logo images through the image sitemap
+  extension. The images matter as much as the pages here: this is a client-rendered
+  app, so a crawler only sees an <img> after it runs the bundle, and naming the
+  files outright gives image indexing a path that does not depend on that. Both URLs
+  are stable because the files are served from public/ rather than fingerprinted by
+  the build.
+
+  Every URL is on www, because ajfm88.com 308-redirects there and www is what is
+  actually indexed. A sitemap entry pointing at a redirect is reported as such in
+  Search Console and may not be indexed as listed.
+
+  Absent on purpose: the admin route, matching robots.txt, and /chat, which is
+  behind a sign-in gate and so has nothing on it for a crawler to read. Individual
+  blog posts are absent because they live in Mongo, which a static file cannot
+  know about; they are found by following the links on /blog instead.
+
+  changefreq and priority are also absent: Google states outright that it ignores
+  both. lastmod it does use, so long as the date is truthful.
+-->
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+>
+  <url>
+    <loc>https://www.ajfm88.com/</loc>
+    <lastmod>2026-07-31</lastmod>
+    <image:image>
+      <image:loc>https://www.ajfm88.com/ajfm88-alejandro-foucault.png</image:loc>
+      <image:title>Alejandro Foucault — ajfm88</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.ajfm88.com/blog</loc>
+    <lastmod>2026-07-31</lastmod>
+    <image:image>
+      <image:loc>https://www.ajfm88.com/ajfm88-alejandro-foucault-blog.png</image:loc>
+      <image:title>Alejandro Foucault — ajfm88</image:title>
+    </image:image>
+  </url>
+</urlset>

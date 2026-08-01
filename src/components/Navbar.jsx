@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { navLinks } from "../constants";
-import { alejandro, menu, close } from "../assets";
-import AnimatedLetters from "./AnimatedLetters";
+import { menu, close } from "../assets";
+import { LOGO_SRC, LOGO_ALT } from "../constants/brand";
 
 const Navbar = () => {
   const [active, setActive] = useState("");
@@ -23,8 +23,8 @@ const Navbar = () => {
             }}
           >
             <img
-              src={alejandro}
-              alt="logo"
+              src={LOGO_SRC}
+              alt={LOGO_ALT}
               className="w-15 h-10 object-contain transition-all duration-300 hover:[filter:brightness(0)_saturate(100%)_invert(60%)_sepia(90%)_saturate(500%)_hue-rotate(58deg)_brightness(1.1)]"
             />
           </Link>
@@ -35,16 +35,24 @@ const Navbar = () => {
             className="text-white text-[18px] font-bold cursor-pointer flex items-center whitespace-nowrap"
           >
             &nbsp;| &nbsp;
-            <AnimatedLetters
-              letterClass="text-color-hover ajfm88-letter"
-              text="ajfm88"
-              idx={1}
-            />
+            {/* One word, one hover — the wordmark reads as a logo beside the
+                image logo rather than as six letters that each do their own
+                thing. The span rather than the anchor carries the hover so the
+                divider bar stays out of it. */}
+            <span className="transition-colors duration-300 hover:text-[#26a7de]">
+              ajfm88
+            </span>
           </a>
         </div>
 
-        {/* Desktop Nav — pill glass container */}
-        <div className="hidden min-[810px]:flex items-center border border-[rgba(112,66,248,0.38)] bg-[rgba(3,0,20,0.37)] px-6 py-2.5 rounded-full gap-8 text-gray-200">
+        {/* Desktop Nav — pill glass container.
+            Spacing tightens below 1080px because the pill turns on at 810px but
+            needs closer to 1000px to lay out at full size, and the shortfall used
+            to be paid in wrapped labels: a two-line pill outgrows the navbar's
+            fixed 65px and gets its border sliced off. Every link is nowrap so the
+            failure can never take that shape again, and shrink-0 keeps the pill at
+            its content width so a squeeze lands on the logo instead. */}
+        <div className="hidden min-[810px]:flex shrink-0 items-center border border-[rgba(112,66,248,0.38)] bg-[rgba(3,0,20,0.37)] px-4 min-[1080px]:px-6 py-2.5 rounded-full gap-4 min-[1080px]:gap-8 text-gray-200">
           {navLinks.map((nav) => (
             <a
               key={nav.id}
@@ -52,7 +60,7 @@ const Navbar = () => {
               onClick={() => setActive(nav.title)}
               className={`${
                 active === nav.title ? "text-white" : "text-gray-300"
-              } hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[15px] font-medium cursor-pointer`}
+              } hover:text-[rgb(112,66,248)] transition-colors duration-200 whitespace-nowrap text-[13px] min-[1080px]:text-[15px] font-medium cursor-pointer`}
             >
               {nav.title}
             </a>
@@ -60,14 +68,14 @@ const Navbar = () => {
           <Link
             to="/blog"
             onClick={() => setActive("")}
-            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[15px] font-medium cursor-pointer"
+            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 whitespace-nowrap text-[13px] min-[1080px]:text-[15px] font-medium cursor-pointer"
           >
             Blog
           </Link>
           <Link
             to="/chat"
             onClick={() => setActive("")}
-            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[15px] font-medium cursor-pointer"
+            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 whitespace-nowrap text-[13px] min-[1080px]:text-[15px] font-medium cursor-pointer"
           >
             Chat
           </Link>

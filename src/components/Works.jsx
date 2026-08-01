@@ -29,7 +29,7 @@ const ProjectCard = ({
           >
             <img
               src={image}
-              alt="project_image"
+              alt={`${name} — a project by Alejandro Foucault (ajfm88)`}
               className="w-full h-full object-cover rounded-2xl"
             />
           </a>
@@ -42,7 +42,7 @@ const ProjectCard = ({
             >
               <img
                 src={github}
-                alt="source code"
+                alt={`Source code for ${name} on GitHub`}
                 className="w-1/2 h-1/2 object-contain"
               />
             </div>

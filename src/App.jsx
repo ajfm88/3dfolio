@@ -10,13 +10,19 @@ import {
   Navbar,
   Tech,
   Works,
-  StarsCanvas,
 } from "./components";
 
 const GithubFollowerTracker = lazy(() => import("./pages/GithubFollowerTracker"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Blog = lazy(() => import("./pages/Blog"));
 const Chat = lazy(() => import("./pages/Chat"));
+
+// Every three.js scene on the page is lazy, so three, React Three Fiber and drei
+// ship in their own chunk rather than the entry bundle: the hero text paints
+// without first downloading and parsing the 3D stack, and the scenes appear
+// behind it once their chunk arrives. Earth and the Tech Stack models do the
+// same in Contact.jsx and Tech.jsx.
+const StarsCanvas = lazy(() => import("./components/canvas/Stars"));
 
 // The boundary sits outside Suspense rather than inside it, so it also catches a
 // route that fails before it ever renders: a chunk that 404s after a redeploy,
@@ -32,7 +38,9 @@ const LazyRoute = ({ feature, children }) => (
 
 const Portfolio = () => (
   <div className="relative z-0 bg-primary">
-    <StarsCanvas />
+    <Suspense fallback={null}>
+      <StarsCanvas />
+    </Suspense>
     <div
       className="fixed inset-0 pointer-events-none"
       style={{

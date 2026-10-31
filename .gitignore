@@ -10,3 +10,5 @@ node_modules
 *.sln
 *.sw?
 .env
+dist
+package-lock.json

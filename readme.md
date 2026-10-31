@@ -264,12 +264,10 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   │   └── chat.css                        # Chat-scoped styles
 │   ├── components/
 │   │   ├── canvas/
-│   │   │   ├── Ball.jsx                    # Floating tech sphere
 │   │   │   ├── Earth.jsx                   # Rotatable earth in the contact section
 │   │   │   ├── Particles.jsx               # Particle background
 │   │   │   ├── Stars.jsx                   # Procedural starfield
-│   │   │   ├── TechIconCard.jsx            # 3D model card for one technology
-│   │   │   └── index.js                    # Canvas barrel export
+│   │   │   └── TechIconCard.jsx            # 3D model card for one technology
 │   │   ├── About.jsx                       # About section, content from Firestore
 │   │   ├── AnimatedLetters.jsx             # Per-letter hover animation
 │   │   ├── Contact.jsx                     # Contact form and social links
@@ -280,6 +278,7 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   │   ├── Navbar.jsx                      # Portfolio navigation
 │   │   ├── RotatingCube.jsx                # Six-faced tech cube, content from Firestore
 │   │   ├── RotatingCube.css                # Cube face geometry and spin keyframes
+│   │   ├── TakeOnMeDot.jsx                 # Hero dot hiding the Take On Me easter egg
 │   │   ├── Tech.jsx                        # Tech stack section
 │   │   ├── Works.jsx                       # Project cards, content from Firestore
 │   │   └── index.js                        # Component barrel export
@@ -289,6 +288,8 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   │   ├── hero.js                         # Seed and fallback copy for the hero
 │   │   ├── index.js                        # Navigation links and timeline icons
 │   │   └── tech.js                         # Seed and fallback data for the cube
+│   ├── easterEgg/
+│   │   └── takeOnMe.ditty.js               # Tonny Espeset's Dittytoy score, credit kept
 │   ├── hoc/
 │   │   ├── SectionWrapper.jsx              # Shared section padding and scroll anchor
 │   │   └── index.js                        # HOC barrel export

@@ -1,6 +1,6 @@
 import {
   mongodb,
-  nextjs,
+  java,
   postgresql,
   javascript,
   python,
@@ -28,7 +28,7 @@ import {
 // turned.
 export const DEFAULT_TECH_FACES = [
   { label: "MongoDB", src: mongodb, rotation: 0 },
-  { label: "Next.js", src: nextjs, rotation: 270 },
+  { label: "Java", src: java, rotation: 270 },
   { label: "PostgreSQL", src: postgresql, rotation: 0 },
   { label: "JavaScript", src: javascript, rotation: 0 },
   { label: "Python", src: python, rotation: 0 },

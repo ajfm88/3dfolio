@@ -1,8 +1,13 @@
+import { Suspense, lazy } from "react";
 import { SectionWrapper } from "../hoc";
 import { styles } from "../styles";
 import RotatingCube from "./RotatingCube";
 import AnimatedLetters from "./AnimatedLetters";
-import TechIconCard from "./canvas/TechIconCard";
+
+// Lazy for the same reason as StarsCanvas in App.jsx: keeps three.js out of the
+// entry bundle. Each card sits in a fixed-size box, so nothing shifts while the
+// chunk loads.
+const TechIconCard = lazy(() => import("./canvas/TechIconCard"));
 
 const leftModels = [
   {
@@ -57,7 +62,9 @@ const Tech = () => {
         <div className="hidden md:flex gap-4">
           {leftModels.map((model, i) => (
             <div key={`left-${i}`} className="w-44 h-44">
-              <TechIconCard {...model} />
+              <Suspense fallback={null}>
+                <TechIconCard {...model} />
+              </Suspense>
             </div>
           ))}
         </div>
@@ -69,7 +76,9 @@ const Tech = () => {
         <div className="hidden md:flex gap-4">
           {rightModels.map((model, i) => (
             <div key={`right-${i}`} className="w-44 h-44">
-              <TechIconCard {...model} />
+              <Suspense fallback={null}>
+                <TechIconCard {...model} />
+              </Suspense>
             </div>
           ))}
         </div>

@@ -7,6 +7,7 @@ import { parseRichText } from "../utils/richText";
 import { DEFAULT_HERO_TAGLINE } from "../constants/hero";
 import ParticlesBackground from "./canvas/Particles";
 import AnimatedLetters from "./AnimatedLetters";
+import TakeOnMeDot from "./TakeOnMeDot";
 
 const Hero = () => {
   // Seeded with the copy built into the bundle rather than starting empty, so the
@@ -80,7 +81,7 @@ const Hero = () => {
           transition={{ duration: 0.8 }}
         >
           <div className="flex items-center mb-4 sm:mb-6">
-            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#915EFF]" />
+            <TakeOnMeDot className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#915EFF]" />
             <div className="w-20 sm:w-40 h-1 ml-2 violet-gradient" />
           </div>
 

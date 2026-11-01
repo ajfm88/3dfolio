@@ -99,7 +99,8 @@ server/
 │   │   ├── db.js                     # MongoDB connection, exits the process on failure
 │   │   ├── roles.js                  # resolveRole — Clerk claim, webhook-mirrored fallback
 │   │   ├── imagekit.js               # Lazily built ImageKit client and chat media upload
-│   │   └── socket.js                 # http.Server + Socket.io, auth, presence map
+│   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
+│   │   └── socket.js                 # Shared http.Server + Socket.io, auth, feature registration
 │   ├── middleware/
 │   │   ├── auth.middleware.js        # protectRoute (signed in) and requireAdmin (role gate)
 │   │   ├── increaseVisit.js          # Atomic $inc of a post's visit counter
@@ -119,6 +120,8 @@ server/
 │   │   ├── post.route.js             # /api/posts routes
 │   │   ├── comment.route.js          # /api/comments routes
 │   │   └── message.route.js          # /api/messages routes
+│   ├── sockets/
+│   │   └── chat.socket.js            # Chat presence, typing, and disconnect handlers
 │   ├── webhooks/
 │   │   └── clerk.webhook.js          # Clerk to MongoDB user sync and cascade deletes
 │   └── index.js                      # Express app entry point
@@ -242,6 +245,8 @@ Clerk owns identity; MongoDB owns application data. Every Clerk user has a corre
 The `user.deleted` handler cascades, removing that user's posts and comments. If a request arrives before the webhook has synced its user, the guard returns `404` rather than crashing.
 
 ## Socket.io Events
+
+Handlers live in per-feature modules under `src/sockets/`, registered from `src/lib/socket.js`.
 
 The server is created as an `http.Server` rather than through `app.listen()`, so Express handles REST and Socket.io handles WebSockets over the same port and process.
 

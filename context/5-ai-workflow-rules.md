@@ -108,5 +108,14 @@ Fix only these. Do not change anything else. Update the slice note and mark it R
 **Close** (user, after Claude approves):
 
 ```text
-Slice NN is approved. Commit it as "<next number>. <summary>:" with bullet points, matching the repo's history.
+Slice NN is approved. Commit it as <next number>. <summary>: with bullet points, matching the repo's history.
+Follow the commit message rules in context/5-ai-workflow-rules.md.
 ```
+
+## Commit Messages
+
+These rules apply to every commit message, whoever drafts it (Claude, Grok, Codex, or the user):
+
+- **Never use the double-quote character (`"`) anywhere in a commit message**: not in the subject, the bullets, code names, JSON, or quoted strings. Rephrase instead. For example, describe a script as: add an npm test script that runs node --test. Don't paste its JSON.
+- Format: `<next number>. <summary>:`, then bullet points, matching the repo's history (`git log`).
+- Number: the previous commit's number plus one.

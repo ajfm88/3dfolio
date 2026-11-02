@@ -12,6 +12,7 @@ import authRoutes from "./routes/auth.route.js";
 import postRoutes from "./routes/post.route.js";
 import commentRoutes from "./routes/comment.route.js";
 import messageRoutes from "./routes/message.route.js";
+import projectRoutes from "./routes/project.route.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -43,6 +44,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 
 app.use("/api/messages", messageRoutes);
+app.use("/api/projects", projectRoutes);
 
 // central error handler
 app.use((err, req, res, next) => {

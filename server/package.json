@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
+    "test": "node --test",
     "build": "echo \"No build step for the server\" && exit 0"
   },
   "keywords": [],

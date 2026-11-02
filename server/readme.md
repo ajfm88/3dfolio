@@ -99,6 +99,7 @@ server/
 │   │   ├── db.js                     # MongoDB connection, exits the process on failure
 │   │   ├── roles.js                  # resolveRole — Clerk claim, webhook-mirrored fallback
 │   │   ├── imagekit.js               # Lazily built ImageKit client and chat media upload
+│   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   └── socket.js                 # Shared http.Server + Socket.io, auth, feature registration
 │   ├── middleware/
@@ -109,22 +110,29 @@ server/
 │   │   ├── auth.controller.js        # Returns the current synced user
 │   │   ├── post.controller.js        # Post CRUD, featuring, and upload authorization
 │   │   ├── comment.controller.js     # Comment list, add, and delete handlers
-│   │   └── message.controller.js     # Message history, conversations, and send + emit
+│   │   ├── message.controller.js     # Message history, conversations, and send + emit
+│   │   └── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
 │   ├── models/
 │   │   ├── user.model.js             # Mongoose User model — shared by both features
 │   │   ├── post.model.js             # Mongoose Post model
 │   │   ├── comment.model.js          # Mongoose Comment model
-│   │   └── message.model.js          # Mongoose Message model
+│   │   ├── message.model.js          # Mongoose Message model
+│   │   ├── project.model.js          # Project ownership, members, and pending invites
+│   │   └── canvas.model.js           # One versioned canvas snapshot per project
 │   ├── routes/
 │   │   ├── auth.route.js             # /api/auth routes
 │   │   ├── post.route.js             # /api/posts routes
 │   │   ├── comment.route.js          # /api/comments routes
-│   │   └── message.route.js          # /api/messages routes
+│   │   ├── message.route.js          # /api/messages routes
+│   │   └── project.route.js          # /api/projects routes
 │   ├── sockets/
 │   │   └── chat.socket.js            # Chat presence, typing, and disconnect handlers
 │   ├── webhooks/
 │   │   └── clerk.webhook.js          # Clerk to MongoDB user sync and cascade deletes
 │   └── index.js                      # Express app entry point
+├── test/
+│   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
+│   └── models.test.js                # Project and Canvas schema validation without a database
 ├── .env                              # Environment variables
 ├── .env.example
 ├── package.json
@@ -207,6 +215,20 @@ All requests to `/api/messages` require a valid Clerk session. Chat has no publi
 | POST   | `/api/messages/send/:id`      | Send text and/or one image or video                  |
 
 Conversations are derived rather than stored. There is no `conversations` collection — the sidebar list is a MongoDB aggregation over `messages`, grouping by the other participant and keeping the most recent timestamp per group.
+
+### Project Routes (Protected)
+
+All requests to `/api/projects` require a valid Clerk session.
+
+| Method | Endpoint            | Who                               | Description                             |
+| ------ | ------------------- | --------------------------------- | --------------------------------------- |
+| GET    | `/api/projects`     | Any signed-in user                | Owned and shared projects, newest first |
+| POST   | `/api/projects`     | Any signed-in user, under the cap | Create a project                        |
+| GET    | `/api/projects/:id` | Member (any role)                 | One project and the caller's role       |
+| PATCH  | `/api/projects/:id` | Owner                             | Rename or change the description        |
+| DELETE | `/api/projects/:id` | Owner                             | Delete the project and its canvas       |
+
+A non-member, or a request with an invalid id, gets `404`, so a project's existence never leaks. A member without permission gets `403`.
 
 ## Authorization
 
@@ -335,6 +357,95 @@ Sent as `multipart/form-data` with `text` (optional) and `media` (optional, one 
 
 The same document is emitted to the recipient's room as `newMessage`.
 
+### GET `/api/projects`
+
+**Response:**
+
+```json
+{
+  "owned": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d5",
+      "name": "Checkout service",
+      "description": "Payment path and the services around it.",
+      "role": "owner",
+      "memberCount": 1,
+      "owner": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+        "fullName": "Alejandro Foucault",
+        "img": ""
+      },
+      "createdAt": "2026-03-15T10:00:00.000Z",
+      "updatedAt": "2026-03-15T10:00:00.000Z"
+    }
+  ],
+  "shared": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d6",
+      "name": "Edge cache",
+      "description": "",
+      "role": "editor",
+      "memberCount": 2,
+      "owner": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d4",
+        "fullName": "Sam Rivera",
+        "img": ""
+      },
+      "createdAt": "2026-03-14T10:00:00.000Z",
+      "updatedAt": "2026-03-16T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+List items never include `invites`.
+
+### GET `/api/projects/:id`
+
+Called as the owner.
+
+**Response:**
+
+```json
+{
+  "project": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d5",
+    "name": "Checkout service",
+    "description": "Payment path and the services around it.",
+    "owner": {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "fullName": "Alejandro Foucault",
+      "img": ""
+    },
+    "members": [
+      {
+        "user": {
+          "_id": "64f1a2b3c4d5e6f7a8b9c0d4",
+          "fullName": "Sam Rivera",
+          "img": ""
+        },
+        "role": "editor",
+        "addedAt": "2026-03-16T12:00:00.000Z"
+      }
+    ],
+    "invites": [
+      {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d7",
+        "email": "teammate@example.com",
+        "role": "viewer",
+        "invitedBy": "64f1a2b3c4d5e6f7a8b9c0d1",
+        "createdAt": "2026-03-16T12:30:00.000Z"
+      }
+    ],
+    "createdAt": "2026-03-15T10:00:00.000Z",
+    "updatedAt": "2026-03-16T12:30:00.000Z"
+  },
+  "role": "owner"
+}
+```
+
+A non-owner member receives no `invites` key. It is absent, not an empty array.
+
 ## Database Schema
 
 ### Users Collection
@@ -402,6 +513,52 @@ Written by the Clerk webhook, never by user input. One canonical field per conce
   updatedAt:  Date
 }
 ```
+
+### Projects Collection
+
+```
+{
+  _id:         ObjectId,
+  name:        String (required, trimmed, 1–80 characters),
+  description: String (default: "", trimmed, max 500 characters),
+  owner:       ObjectId (ref: User, required, indexed),
+  members:     [{                       // default: []; no subdocument _id
+    user:      ObjectId (ref: User, required),
+    role:      String (required, enum: "editor" | "viewer"),
+    addedAt:   Date (default: Date.now)
+  }],
+  invites:     [{                       // default: []; each invite keeps its _id
+    _id:       ObjectId,
+    email:     String (required, lowercase, trimmed),
+    role:      String (required, enum: "editor" | "viewer"),
+    invitedBy: ObjectId (ref: User, required),
+    createdAt: Date (default: Date.now)
+  }],
+  createdAt:   Date,
+  updatedAt:   Date
+}
+Indexes: { owner: 1 }, { "members.user": 1 }, { "invites.email": 1 }
+```
+
+The owner isn't stored in `members`; ownership takes priority when resolving a role.
+
+### Canvases Collection
+
+```
+{
+  _id:       ObjectId,
+  project:   ObjectId (ref: Project, required, unique),
+  nodes:     [Mixed] (default: []),
+  edges:     [Mixed] (default: []),
+  version:   Number (default: 0, min: 0),
+  updatedBy: ObjectId (ref: User, optional),
+  createdAt: Date,
+  updatedAt: Date
+}
+Index: { project: 1 } (unique)
+```
+
+Canvas content is validated field by field by the shared canvas ops module (S06), not the schema; a snapshot is created lazily on first workspace join (S13).
 
 ## Validation Rules
 
@@ -479,6 +636,7 @@ An external cron job hits `/health` every 10 minutes to keep the free-tier insta
 | --------------- | ------------------------------------------------------- |
 | `npm run dev`   | Start development server with hot reloading via nodemon |
 | `npm start`     | Start without nodemon — what Render runs                |
+| `npm test`      | Run unit tests for pure server modules with `node:test` |
 | `npm run build` | No-op, the server ships as plain ESM                    |
 
 ---

@@ -90,7 +90,7 @@ There's no component library: components are hand-built with Tailwind and the to
 - **Canvas:** React Flow (`@xyflow/react`). Custom `ShapeNode` and `LinkEdge`. `NodeResizer` and `NodeToolbar` come from React Flow. Its stylesheet is imported in the collaborate chunk only.
 - **Toasts:** react-toastify, bottom-right.
 - **Relative times:** timeago.js.
-- **Dialogs:** hand-built and portaled into `document.body`, the same reason the admin modals are: transformed ancestors break `position: fixed`.
+- **Dialogs:** hand-built and portaled into `document.body`, the same reason the admin modals are: transformed ancestors break `position: fixed`. The portal sits outside `.collab-root`, so the portaled root carries the class `collab-portal`, which `collaborate.css` gives the same tokens (S05). All dialogs use the shared `components/ui/Dialog.jsx` shell.
 
 ## Layout Patterns
 

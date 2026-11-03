@@ -16,6 +16,7 @@ const GithubFollowerTracker = lazy(() => import("./pages/GithubFollowerTracker")
 const Admin = lazy(() => import("./pages/Admin"));
 const Blog = lazy(() => import("./pages/Blog"));
 const Chat = lazy(() => import("./pages/Chat"));
+const Collaborate = lazy(() => import("./pages/Collaborate"));
 
 // Every three.js scene on the page is lazy, so three, React Three Fiber and drei
 // ship in their own chunk rather than the entry bundle: the hero text paints
@@ -104,6 +105,14 @@ const App = () => {
           element={
             <LazyRoute feature="Chat">
               <Chat />
+            </LazyRoute>
+          }
+        />
+        <Route
+          path="/collaborate/*"
+          element={
+            <LazyRoute feature="Collaborate">
+              <Collaborate />
             </LazyRoute>
           }
         />

@@ -86,7 +86,7 @@
 - Ownership transfer.
 - Running more than one server instance (room and turn state are in memory).
 - Migrating from MongoDB to PostgreSQL.
-- Any change to `/blog`, the portfolio, the admin panel, or `/gft`. Changes to `/chat` wait for the decision on Q1 in `6-progress-tracker.md`.
+- Any change to `/blog`, the portfolio, the admin panel, or `/gft`. `/chat` will be retired in post-launch slices (Q1 in `6-progress-tracker.md`), and `/blog` may follow (Q5). Both keep working, unchanged, until then.
 
 ## Success Criteria
 

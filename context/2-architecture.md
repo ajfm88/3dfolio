@@ -45,10 +45,11 @@ server/test/      projectAccess · canvasOps · workspaceRooms · turns · rateL
 src/pages/Collaborate.jsx           S04  lazy route root
 src/collaborate/
 ├── collaborate.css                 S04  scoped theme under .collab-root
-├── lib/        axios.js · tabId.js · throttle.js · userColor.js
+├── lib/        axios.js · projectLimits.js · tabId.js · throttle.js · userColor.js
 ├── store/      useSessionStore.js · useProjectsStore.js · useWorkspaceStore.js
 ├── routes/     CollaborateAuthGate.jsx · ProjectsPage.jsx · WorkspacePage.jsx
 └── components/
+    ├── ui/         Dialog (S05: portaled, focus-trapped shell, reused by ShareDialog)
     ├── projects/   ProjectCard · ProjectDialogs · InvitationsList
     ├── workspace/  WorkspaceNavbar · ParticipantStack · TurnBar · ShareDialog · ConnectionBanner
     ├── canvas/     WorkspaceCanvas · ShapeNode · LinkEdge · ShapePanel · ColorToolbar · CanvasControls · PresenceCursors

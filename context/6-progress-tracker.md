@@ -4,17 +4,19 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase A: Server foundation (S01 committed; S02 and S03 approved, awaiting one combined commit)
+- Phase B: Client shell (S04 and S05 approved, awaiting one combined commit). Phase A committed: S01 as `421a99a`, S02 + S03 together as `06716fa`.
 
 ## Current Goal
 
-- Commit S02 + S03 together (user decision, 2026-11-01). Then S04 (client shell) and S06 (shared canvas ops) are unblocked and can run in parallel.
+- Commit S04 + S05 together (user decision, 2026-11-02). Then S06 (shared canvas ops), whose spec Claude writes next.
 
 ## Completed
 
 - S01: Split socket handlers by feature (approved 2026-10-31, committed 2026-11-01 as `421a99a`).
-- S02: Project + Canvas models, access helpers, test harness (approved 2026-11-01, not yet committed).
-- S03: Project REST API (approved 2026-11-01, not yet committed; to be committed together with S02).
+- S02: Project + Canvas models, access helpers, test harness (approved 2026-11-01, committed 2026-11-01 as `06716fa`, together with S03).
+- S03: Project REST API (approved 2026-11-01, committed 2026-11-01 as `06716fa`, together with S02).
+- S04: `/collaborate` route shell + session (approved 2026-11-02, not yet committed; to be committed together with S05).
+- S05: Projects dashboard (approved 2026-11-02, not yet committed; to be committed together with S04).
 
 ## In Progress
 
@@ -22,7 +24,7 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Next Up
 
-- S04 (client) and S06 (server, pure) in parallel, then S05 once S04 is done. Specs to be written by Claude. See `specs/00-build-plan.md`.
+- After S05 is approved and S04 + S05 are committed: S06 (shared canvas ops module, server, pure), then S07 (canvas foundation). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
 
 ## Slice Status
 
@@ -31,10 +33,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | # | Slice | Lane | Depends on | Spec | Status | Implementer | Commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 | Split socket handlers by feature | server | — | ✓ | Committed | Codex | `421a99a` |
-| S02 | Project + Canvas models, access helpers, test harness | server | S01 | ✓ | Approved | Codex | |
-| S03 | Project REST API | server | S02 | ✓ | Approved | Grok | |
-| S04 | `/collaborate` route shell + session | client | — | | Todo | | |
-| S05 | Projects dashboard | client | S03, S04 | | Todo | | |
+| S02 | Project + Canvas models, access helpers, test harness | server | S01 | ✓ | Committed | Codex | `06716fa` |
+| S03 | Project REST API | server | S02 | ✓ | Committed | Grok | `06716fa` |
+| S04 | `/collaborate` route shell + session | client | — | ✓ | Approved | Codex | |
+| S05 | Projects dashboard | client | S03, S04 | ✓ | Approved | Codex | |
 | S06 | Shared canvas ops module | server | S02 | | Todo | | |
 | S07 | Canvas foundation | client | S05, S06 | | Todo | | |
 | S08 | Shape panel + drop | client | S07 | | Todo | | |
@@ -173,6 +175,8 @@ Server boot, `/blog`, and `/chat` runtime checks are still blocked on `server/.e
 
 Approved — 2026-11-01
 
+Committed — 2026-11-01 as `06716fa` ("58. Add the /collaborate server foundation…"), together with S03.
+
 Post-approval (Claude, 2026-11-01): `server/.env` now present. `node src/index.js` boots with `Server is up and running on PORT: 3000` and `MongoDB connected: … / 3dfolio`, with no errors or warnings. `/blog` and `/chat` browser checks are still not run.
 
 ### S03 — Project REST API
@@ -228,11 +232,169 @@ Post-approval (Claude, 2026-11-01): `server/.env` now present. `node src/index.j
 
 Approved — 2026-11-01
 
+Committed — 2026-11-01 as `06716fa`, together with S02.
+
+### S04 — `/collaborate` route shell and session
+
+**Implementer:** Codex
+
+**Changed:**
+
+- `src/App.jsx`: added only the lazy Collaborate import and `/collaborate/*` route through the existing feature boundary.
+- `src/pages/Collaborate.jsx`: scoped Clerk and toast providers, loader, signed-out gate, retryable session error card, nested placeholder routes, and socket cleanup when leaving the route.
+- `src/collaborate/collaborate.css`: all 17 prescribed tokens, scoped dark theme, and reduced-motion-compatible logo animation.
+- `src/collaborate/lib/axios.js`: independent API client with Clerk Bearer interceptor.
+- `src/collaborate/store/useSessionStore.js`: guarded session requests, one socket including while connecting, fresh tokens on reconnect, connection status, and unconditional listener/socket cleanup.
+- `src/collaborate/routes/{CollaborateAuthGate,ProjectsPage,WorkspacePage}.jsx`: modal sign-in gate that preserves deep links and the two specified placeholders. No project API, canvas, or workspace events added.
+
+**Verified (2026-11-02):**
+
+- PASS: baseline `npm run build`, before implementation, produced entry `dist/assets/index-8qGLiKNx.js`, **576,888 bytes** (576.89 kB, gzip 180.72 kB). Final build produced `dist/assets/index-Chza-XZ2.js`, **577,550 bytes** (577.55 kB, gzip 180.91 kB): **+662 bytes**. Both builds report only the existing large-chunk warning.
+- PASS: separate `Collaborate-DdpOpePv.js` (6,186 bytes) and `Collaborate-uT-ov48Z.css` (820 bytes). A source assertion confirms the entry contains neither `collab-root`, the collaborate socket error string, nor `/auth/check`. Collaborate code stays behind the lazy import; Rollup shares existing auth/socket libraries across lazy feature chunks.
+- PASS: automated assertions confirm all 17 CSS token names and values exactly match `3-ui-context.md`, no chat/blog imports in the new code, no raw hex in JSX, and no new dependencies. `node --check` passes for both new plain-JS modules; `git diff --check` passes.
+- PASS: `cd server; npm test` passes all 67 unchanged tests with no failures, skips, or warnings.
+- PASS: local `npm run dev` in `server/` boots on port 3000 and connects to the existing `3dfolio` MongoDB database. `/health` and `/api/posts` return HTTP 200. No application data was written for S04 verification.
+- PASS: frontend dev server starts with `VITE_API_URL=http://localhost:3000/api` supplied only through its process environment. No environment files were edited.
+- PASS WITH CONTROLLED SERVICES: headless Chromium exercised the real route components and zustand store under the existing React StrictMode, substituting Clerk, `/auth/check`, and Socket.io at browser request boundaries. Checked signed-out deep-link gate with no socket; transition to the same workspace id on sign-in; dashboard name; exactly one socket; connected/disconnected status; a fresh token for each auth callback; wildcard redirect; in-app navigation away removing listeners and disconnecting; verification failure and Try again recovery; and sign-out returning to the gate and closing the socket. No browser page errors occurred in the successful controlled run. This does not establish a real Clerk modal or HTTP 101 handshake.
+- PASS WITH CONTROLLED SERVICES: deferred real-store requests prove a late success after sign-out or route cleanup cannot reconnect; overlapping checks with a newer success and older failure preserve the newer user and completion state; calling connect again while a socket is still connecting reuses it; disconnect cleans up that connecting socket. The temporary browser harness is outside the repository and adds no dependencies or test files to the slice.
+- PENDING: real signed-out Clerk gate, modal deep-link sign-in, one HTTP 101 WebSocket under dev StrictMode, server stop/restart reconnect, real sign-out, and real stopped-server/retry checks. The frontend has no `.env` and no `VITE_CLERK_PUBLISHABLE_KEY`; without that key the new route correctly reaches the existing feature error boundary. These cannot be claimed from the controlled checks.
+- PENDING: browser `/blog` post loading and two-account `/chat` DM/typing/presence regressions require the frontend Clerk configuration and authenticated sessions. The public posts endpoint returns 200; that and the passing build do not establish browser behavior. Existing chat/blog source and all server source remain unchanged.
+- PASS: implementation files are confined to the spec's Design list plus this tracker. The S04 spec and tracker edits were already present at task start. A concurrent edit to `context/1-project-overview.md` and Q1/Q5 notes was observed during the slice and preserved; it was not made by this implementation. No commit, push, branch, or next slice.
+
+**Deviations:** `disconnectSocket()` also invalidates pending auth requests. The specified unmount cleanup calls only this action; without invalidation, a pending `/auth/check` could reopen the socket after route exit. The guard applies to success, catch, and finally so superseded failures cannot erase a newer session or end its loading state. No product scope or architecture changes. Real integration verification remains pending as recorded above.
+
+**Review (Claude, 2026-11-02): Changes requested.**
+
+Confirmed:
+- The diff is confined to the Design list. `App.jsx` gains exactly the lazy import and the route.
+- There are no chat or blog imports, no raw hex in the JSX, and all 17 tokens match `3-ui-context.md`.
+- `npm run build` passes, with the entry at 577.55 kB (+662 B) and a separate `Collaborate-*.js` (6.19 kB) and `Collaborate-*.css`. `grep` finds no `collab-root` or collaborate socket code in the entry chunk.
+- `npm test` passes 67/67.
+- Real Clerk, signed out: local server and Vite with the publishable key and `CLIENT_URL` passed as process environment variables, no files written. `/collaborate/abc123` shows the gate, the URL is unchanged, and no request reaches the API or the socket.
+- Codex's deviation is accepted: `disconnectSocket()` invalidating pending checks closes a gap in the spec.
+
+Fix this one. It comes from a gap in the spec, which has been corrected:
+
+1. **Stale session on re-entry** (`useSessionStore.js`, `Collaborate.jsx`). Leaving `/collaborate` closes the socket but leaves `authUser` set and `isCheckingAuth: false`. Coming back renders `ProjectsPage` with the stale session for a frame, then the loader once `checkAuth` starts, then the page again. From S05 on, that would mount the dashboard twice and fetch projects twice. Add a `resetSession()` action: increment `authRequest`, close the socket the same way `disconnectSocket` does, and set `authUser: null, isCheckingAuth: true`. Call `resetSession()` from the unmount effect instead of `disconnectSocket()`. Leave `clearAuth` unchanged. Re-entry must go straight from the loader to the page.
+
+Notes, not findings:
+- Tailwind's `content` glob covers `src/**`, so collaborate's arbitrary-value utilities land in the global `index-*.css`, which grew from 55.4 kB to 56.9 kB. Chat already works this way, and changing it would mean editing the protected `tailwind.config.cjs`. Accepted.
+- Carry-forward to S22: when the handshake middleware rejects the socket, Socket.io doesn't retry (`socket.active` is false), so the placeholder would show `connecting…` indefinitely. The ConnectionBanner should handle a denied connection. The fresh-token `auth` callback makes this rare.
+
+Still pending, needs a signed-in browser: modal deep-link sign-in, a single `101` WebSocket under StrictMode, stop/restart reconnect, navigating away closing the socket, sign-out, the stopped-server error card and retry, and the `/blog` and `/chat` regressions. Frontend `.env` is still missing, so for local runs pass `VITE_CLERK_PUBLISHABLE_KEY` (the dev instance's `pk_test` key, the same value as `CLERK_PUBLISHABLE_KEY` in `server/.env`) and `VITE_API_URL` on the command line. Start the server with `CLIENT_URL=http://localhost:5173`, because `server/.env` lists only the production origins and CORS would otherwise block `/auth/check` and the socket.
+
+**Corrections (Codex, 2026-11-02): Ready for review.**
+
+- Added `resetSession()` in `useSessionStore.js`: invalidates pending auth requests, delegates listener/socket cleanup to `disconnectSocket()`, and sets `authUser: null, isCheckingAuth: true`. `clearAuth()` is unchanged.
+- Changed only the route's unmount effect and its explanatory comment in `Collaborate.jsx` to use `resetSession()`. Returning to the route now starts from the loader with no previous session available to mount the dashboard.
+- PASS: a one-off harness exercised the actual store actions with deferred auth and a connecting socket. Reset removes listeners and closes the socket, clears the previous user, and leaves checking true; a pending response cannot restore the old session or clear that loader; a fresh check then loads the new user; `clearAuth()` still ends in the signed-out state with checking false. No permanent test files or dependencies added.
+- PASS: root `npm run build` (7.62 seconds) and all 67 server tests, with no test warnings. The build retains only its existing large-chunk warning. Entry `index-CieJ6W9K.js` remains 577,550 bytes (+662 bytes versus the original baseline); Collaborate remains a separate JS/CSS chunk. `node --check` on the store and `git diff --check` pass.
+- Scope: this correction touches only the two requested source files and this tracker; all earlier implementation and concurrent documentation edits are preserved. No servers started, environment files changed, commits, pushes, branches, or next-slice work.
+- Real signed-out checks passed in Claude's review above. The remaining signed-in browser checks are still pending the user's sign-in and re-review; the store harness does not claim those results.
+
+**Re-review (Claude, 2026-11-02):** The finding is fixed and nothing else changed. `resetSession()` is called only from the unmount effect, and `clearAuth()` is untouched. Its own `authRequest++` repeats the one in `disconnectSocket()`; that's harmless. `npm test` passes 67/67.
+
+Signed-in browser checks, with real Clerk (dev instance) and the local server against the live `3dfolio` database. Both were started with process environment only, and no files were written.
+- PASS: signing in through the modal from `/collaborate/abc123` lands on the `abc123` workspace placeholder.
+- PASS: loading the dashboard makes one `/auth/check` (200) and one Socket.io handshake (one `sid`), and shows `Signed in as A.J. Foucault` with `Live connection: connected`.
+- PASS: `/collaborate/does/not/exist` redirects to `/collaborate`.
+- PASS: stopping the server shows `connecting…`. Restarting it reconnects to `connected` without a reload, so the reconnect's fresh token was accepted.
+- PASS: in-app navigation to `/` calls `WebSocket.close` once. Returning to `/collaborate` goes loader → page, with no stale page frame.
+- PASS: with the server stopped, a fresh load shows the toast `Failed to verify your session` and the error card. After a restart, **Try again** reaches `connected`.
+- PASS: after signing out, `/collaborate` shows the gate and makes no request to the API or socket. Clerk's `signOut()` does a full navigation to `/`, so the socket closes with the page. The in-place path (session lost without a navigation, then `clearAuth`) was observed earlier in this review, when the dev session ended between checks: the gate rendered on reload.
+- PASS: `/chat` loads, `/auth/check`, users, and conversations all return 200, and its socket connects. No DM was sent, because there was only one signed-in account and it would have messaged a real user.
+- PASS: `/blog` renders with no console errors and shows `No posts yet`, because the `posts` collection is empty.
+- Not run: the two-account `/chat` DM, typing, and presence round trip. No chat or server code changed in S04.
+
+Approved — 2026-11-02
+
+### S05 — Projects dashboard
+
+**Implementer:** Codex
+
+**Changed:**
+
+- `src/collaborate/lib/projectLimits.js`: browser-safe mirrors of the three existing server project limits; no server imports.
+- `src/collaborate/store/useProjectsStore.js`: initial load/reset, guarded latest-wins list requests, non-destructive refreshes, create/update/delete actions, server error toasts, and refresh after a stale-project 404.
+- `src/collaborate/routes/ProjectsPage.jsx`: dashboard header with Clerk UserButton and portfolio link, owned/shared sections and counts, loading/retry/empty states, cap warning, and dialog actions. Create opens the workspace; edit/delete refresh and toast. A local first-load flag hides the persistent store's old lists before the mount effect resets them, preventing the same first-frame leak found in S04.
+- `src/collaborate/components/projects/ProjectCard.jsx`: stretched card link with valid HTML, owner-only action buttons above the link, description fallback, role badge, access count, relative time, and shared owner attribution.
+- `src/collaborate/components/projects/ProjectDialogs.jsx`: create/edit/delete dialogs, trimmed input, only changed edit fields, limits/counters, disabled controls and spinner during submission, preserved input after failure, and safe delete focus on Cancel.
+- `src/collaborate/components/ui/Dialog.jsx`: body portal, labelled dialog, focus capture/trap/restoration, Escape and scrim dismissal, and body scroll locking/restoration. Submission moves focus to the panel while controls are disabled; focus cannot move behind the modal. Scrim dismissal requires the gesture to start and end on the scrim.
+- `src/collaborate/collaborate.css`: unchanged 17 tokens, color, and color scheme shared by `.collab-root` and `.collab-portal`; page-only background and other rules remain on `.collab-root`.
+
+**Verified (2026-11-02):**
+
+- PASS: final root `npm run build` (17.48 seconds), with only the existing large-chunk warning. Entry `dist/assets/index-TYg5eSnN.js` is **577,687 bytes**, **+137 bytes** versus S04's 577,550 bytes. Collaborate remains its own JS chunk (`Collaborate-C0VRvpu0.js`, 19,905 bytes) and CSS chunk (`Collaborate-D0kg0Qda.css`, 848 bytes). No dashboard store code or `collab-portal` is in the entry chunk. The shared Tailwind CSS gains the dashboard utilities, following the accepted S04 setup.
+- PASS: `cd server; npm test`: all 67 unchanged tests pass, no failures/skips or warnings. `node --check` passes for the new store and limits module. `git diff --check` passes.
+- PASS: actual store actions exercised in a one-off harness with deferred API requests: reset removes previous-user lists; latest-wins guards ignore stale success, error, and finally paths; refresh failure preserves lists; create returns without awaiting refresh; update awaits refresh; a delete 404 toasts Project not found, refreshes away the stale card, and returns false; fallback messages and initial load error state work. No permanent test files/dependencies added.
+- PASS WITH CONTROLLED SERVICES: headless Chromium exercises the real components and stores under dev StrictMode, with Clerk, Socket.io, and API responses replaced at browser request boundaries. Both empty states and create buttons work. Blank-name create sends blank values, navigates to the returned workspace id, and returns to an Untitled project owner card. Named create trims both fields and lists newest first. Input maxLength and counters enforce 80/500. Enter in Name submits. Edit is prefilled, unchanged/blank names disable Save, and description-only edits send only the trimmed description. Edit/delete display the required success toasts; delete removes the card. Action buttons open dialogs without navigating.
+- PASS WITH CONTROLLED SERVICES: request failure keeps dialog input and re-enables controls; all controls, Escape, and scrim dismissal are disabled while submitting, and Tab remains trapped even when every input/button is disabled. A 404 refresh removes the stale card and closes the dialog. Initial list failure shows the retry panel and Try again recovers. Twenty mocked owned projects disable New project and show the warning. Shared viewer cards show owner attribution and no action buttons; keyboard Enter opens the workspace.
+- PASS WITH CONTROLLED SERVICES: portal panel/text computed colors match the theme; initial focus, Tab/Shift+Tab wrapping, Escape/scrim dismissal, focus restoration to the opener, and body overflow restoration pass. A controlled sign-out/account-switch cycle uses a MutationObserver to confirm previous-account cards are never inserted into the DOM. Mobile dashboard/dialog fit a 390px viewport; screenshots were visually inspected. Successful controlled browser checks finish without page errors.
+- PASS: source assertions verify the 17 token values are unchanged, no raw hex in new JSX, no chat/blog/framer-motion imports, no API/socket imports in components, and no dependency changes. S04's route root, workspace placeholder, session store, and axios module were left untouched. Implementation changes stay inside the S05 Design list plus this tracker; previously uncommitted S04/spec/context changes are preserved.
+- PASS: local server starts on port 3000 and connects to the live `3dfolio` database with `CLIENT_URL=http://localhost:5173` supplied through process environment. `/health` and `/api/posts` return 200. No application data was created, seeded, edited, or deleted; every project/cap/shared fixture above exists only in the controlled browser harness. No cleanup of database test data is required.
+- PENDING REAL ACCOUNTS A/B: all signed-in REST/browser acceptance checks, real create/edit/delete persistence and ordering after reload, stopped-server mutation failure, stale-project deletion from a second tab, seeding/cleaning 20 live projects, B's viewer membership and removal, actual Clerk UserButton account switching, and portfolio navigation/socket closure. The controlled checks do not establish those live integrations. As agreed, the user and Claude will perform these during review with the accounts signed in.
+- PENDING REGRESSION: live `/blog` rendering and `/chat` authentication/connection checks for this slice. S04's approved review records those working; their sources and all server code are unchanged. A 200 public posts API response is not a browser regression check.
+
+**Deviations:** No product/API/dependency/scope changes. The page adds a local initial-load guard to satisfy the no-stale-project-render requirement before the specified mount-effect store reset runs. Dialog focus also covers the all-controls-disabled submission state. Real browser/service verification remains pending as listed above. Temporary harnesses and screenshots are outside the repo. Stopped the server and temporary frontend started for verification; the already-running frontend on 5173 was left alone. No environment files changed, commits, pushes, branches, or subsequent slice work.
+
+**Review (Claude, 2026-11-02): No blocking findings.**
+
+Code:
+- Matches the spec. The diff is confined to the Design list plus this tracker, alongside S04's uncommitted files.
+- No raw hex, no chat/blog/framer-motion imports, and components don't touch axios or the socket.
+- Both of Codex's deviations are accepted:
+  - the `hasRequested` initial-load guard, which closes the gap before the mount effect resets the store
+  - focus held on the dialog panel while every control is disabled
+
+Build and tests:
+- `npm run build` passes. The entry is 577.69 kB, +140 B over S04, from Vite's preload map for a new 1 kB shared chunk (`timeago.js` is now used by both Blog and Collaborate). `Collaborate-*.js` is 19.9 kB.
+- `npm test` passes 67/67.
+
+Real browser checks:
+- Setup: user A signed in, dev Clerk, local server against the live `3dfolio` database, and Vite on port 5174, because 5173 belonged to an unrelated project. Everything ran with process environment only.
+- PASS: both empty states render at 0/0. **New project** works from the empty state and from the header.
+- PASS: dialog:
+  - its colors resolve outside `.collab-root` (panel `rgb(23, 18, 58)`, text `rgb(236, 233, 251)`), so `.collab-portal` works
+  - the name field is autofocused, and body scroll is locked, then restored
+  - Tab ×4 wraps to the first field, and Shift+Tab wraps to the last
+  - Escape and a backdrop click close it, and focus returns to whichever **New project** button opened it
+- PASS: create:
+  - with a blank name → lands on `/collaborate/<new id>`. The card reads `Untitled project · Owner · 1 · updated 12 seconds ago`.
+  - with a name and description → lands on the new id. The card shows both and is listed first.
+  - the counters read `19/80` and `44/500`, and `maxLength` is 80/500.
+- PASS: edit:
+  - prefilled, and **Save changes** stays disabled until something changes; a name of only spaces keeps it disabled
+  - changing only the description sends `PATCH {"description":"Edited description"}`, then a refresh `GET`
+  - the card moves to the top, and the `Project updated` toast appears
+  - the edit button doesn't navigate
+- PASS: stale project: deleted in the database behind the UI, then edited → `PATCH` 404, the `Project not found` toast, the dialog closes, and the card disappears.
+- PASS: server stopped, then create → the `Failed to create the project` toast, the dialog stays open with the name kept, and every control is re-enabled.
+- PASS: delete:
+  - **Cancel** is autofocused, and the copy names the project
+  - **Delete project** → the toast, the card is gone, and it's still gone after a reload
+- PASS: navigation:
+  - a click on the card body (not the name) opens the project
+  - focusing the card link and pressing Enter opens it
+  - the Tab order runs `Back to portfolio → New project → user menu → card → Edit → Delete`
+  - **Back to portfolio** goes to `/` and closes the WebSocket once
+- Cleanup: both review projects are gone, with no canvases or tagged rows left. A owns 0 and has 0 shared, the same as before the review.
+- Not run in a browser:
+  - the **Shared with me** card (viewer badge, `by <owner>`, no action buttons) and the 20-project cap: the permission system blocked seeding a project owned by another real account and 20 projects on A. The user chose to approve with these noted. Both are single conditionals in `ProjectCard` and `ProjectsPage` that Codex exercised with controlled data. S28 exercises shared projects end to end with two accounts.
+  - the account switch: the `loadProjects` reset and the `hasRequested` guard are verified by reading the code. A second account wasn't available.
+  - `/blog` and `/chat`: unchanged by this slice, and checked in S04's review.
+
+Nit, not required: after a failed submit, focus stays on the dialog panel, not on the first field. The controls are re-enabled, but a keyboard user has to Tab back in. It can be picked up in the S29 accessibility pass.
+
+Approved — 2026-11-02
+
+
 ## Open Questions
 
-- **Q1. What happens to `/chat`?** The user is fine with `/chat` going away, since `/collaborate` is meant to replace it (2026-11-01). Two directions are still open: (a) retire `/chat` entirely after launch, with project chat (S23–S24) as the only chat, or (b) move 1:1 DMs into `/collaborate` as post-launch slices, then retire the standalone `/chat` route. Either way, `/chat` stays untouched and working through S30 (goal 6, invariant 10). *Leaning: retire.* Needed before S30.
+- **Q1. What happens to `/chat`?** *Resolved 2026-11-02: retire it.* Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), and its removal is planned as follow-up slices after launch. S30 adds no navbar link for it.
 - **Q2. Which database do local test runs write to?** *Resolved 2026-11-01: the live database.* The user chose it, and `server/.env` holds the values Render uses. Slice verification must clean up its test data (projects, canvases, and later project messages) and never write `users` documents.
 - **Q3. Lane assignment.** Which agent takes server-lane vs client-lane slices, and whether slices run in parallel (separate git worktrees) or strictly in sequence. *Default: sequential, S01 → S30.*
+- **Q4. Should a `/collaborate` socket count as online in `/chat`?** *Resolved 2026-11-02: accept it.* Every authenticated socket registers chat presence, so a user with only `/collaborate` open shows online in `/chat` until `/chat` is retired (Q1). No server change. The presence note in S04's `useSessionStore.js` stays.
+- **Q5. Retire `/blog` too?** The user is considering it (2026-11-02), with no decision yet. Until one is made, `/blog` keeps working through every slice (goal 6, invariant 10). If it's retired, it would happen in post-launch slices alongside `/chat`. Those would remove the blog client (`src/blog/`, `src/pages/Blog.jsx`, its route) and the server's post and comment routes, controllers, and models, plus their Clerk webhook cascades. The shared pieces stay because `/collaborate` uses them: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer. Invariant 9 (collaborate never imports from `src/blog/`) already keeps that removal clean. Needed before planning post-launch slices.
 
 ## Architecture Decisions
 
@@ -251,3 +413,4 @@ Approved — 2026-11-01
 - S01 installed `server/node_modules`. `server/.env` was added by the user on 2026-11-01 (live values, per Q2), and the server boots against the live `3dfolio` database.
 - Render's free tier is kept awake by an external cron hitting `/health` every 10 minutes (see `server/readme.md`). Sockets still drop on deploys and restarts, which is what the S13 rejoin and S22 grace handling exist for.
 - `/collaborate` stays dark-launched (URL only, no navbar link) until S30.
+- Outside `/collaborate`, not fixed: `src/main.jsx` renders in `React.StrictMode`, and chat's `connectSocket` guards on `socket?.connected`. A socket that's still connecting isn't connected yet, so StrictMode's double-run effects can make two overlapping `checkAuth` calls open two sockets in dev. Production doesn't double-run effects. The S04 spec has collaborate guard on the socket's existence instead.

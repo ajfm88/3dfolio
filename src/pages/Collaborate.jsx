@@ -2,7 +2,7 @@
 // theme. Everything imported here stays in the lazy /collaborate chunk, so its
 // auth, realtime, and UI code does not enter the portfolio's initial bundle.
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,8 +10,11 @@ import "../collaborate/collaborate.css";
 
 import CollaborateAuthGate from "../collaborate/routes/CollaborateAuthGate";
 import ProjectsPage from "../collaborate/routes/ProjectsPage";
-import WorkspacePage from "../collaborate/routes/WorkspacePage";
 import { useSessionStore } from "../collaborate/store/useSessionStore";
+
+// React Flow is only needed inside a project. Loading the workspace on demand
+// keeps that library out of the dashboard chunk.
+const WorkspacePage = lazy(() => import("../collaborate/routes/WorkspacePage"));
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -70,11 +73,13 @@ const CollaborateApp = () => {
       ) : !authUser ? (
         <SessionErrorCard checkAuth={checkAuth} />
       ) : (
-        <Routes>
-          <Route index element={<ProjectsPage />} />
-          <Route path=":projectId" element={<WorkspacePage />} />
-          <Route path="*" element={<Navigate to="/collaborate" replace />} />
-        </Routes>
+        <Suspense fallback={<CollaborateLoader />}>
+          <Routes>
+            <Route index element={<ProjectsPage />} />
+            <Route path=":projectId" element={<WorkspacePage />} />
+            <Route path="*" element={<Navigate to="/collaborate" replace />} />
+          </Routes>
+        </Suspense>
       )}
     </div>
   );

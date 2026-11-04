@@ -40,6 +40,21 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* React Flow exposes the canvas, the dot pattern, and the attribution chip as
+   variables. The attribution link color is hardcoded in its stylesheet, so
+   that one rule is a selector. Both sit under .collab-root so the light
+   defaults never show on this canvas. */
+.collab-root .react-flow {
+  --xy-background-color: var(--collab-bg);
+  --xy-background-pattern-color: var(--collab-grid);
+  --xy-attribution-background-color: var(--collab-panel);
+}
+
+.collab-root .react-flow__attribution,
+.collab-root .react-flow__attribution a {
+  color: var(--collab-faint);
+}
+
 /* Gentle hover on the signed-out gate's logo tile. */
 @keyframes collab-float-y {
   0%,

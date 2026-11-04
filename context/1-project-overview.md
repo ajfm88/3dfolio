@@ -86,7 +86,7 @@
 - Ownership transfer.
 - Running more than one server instance (room and turn state are in memory).
 - Migrating from MongoDB to PostgreSQL.
-- Any change to `/blog`, the portfolio, the admin panel, or `/gft`. `/chat` will be retired in post-launch slices (Q1 in `6-progress-tracker.md`), and `/blog` may follow (Q5). Both keep working, unchanged, until then.
+- Any change to `/blog`, the portfolio, the admin panel, or `/gft`. `/blog` and `/chat` are **scheduled for deletion** in post-launch slices (Q1 and Q5 in `6-progress-tracker.md`), because neither sets this app apart. Parts of `/chat` survive only if they prove useful to `/collaborate`. Both keep working, unchanged, until then.
 
 ## Success Criteria
 

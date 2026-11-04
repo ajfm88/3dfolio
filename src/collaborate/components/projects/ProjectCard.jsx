@@ -2,11 +2,7 @@ import { Pencil, Trash2, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "timeago.js";
 
-const BADGES = {
-  owner: "bg-[var(--collab-elevated)] text-[var(--collab-accent-2)] border border-[var(--collab-border-strong)]",
-  editor: "text-[var(--collab-success)] border border-[var(--collab-border)]",
-  viewer: "text-[var(--collab-muted)] border border-[var(--collab-border)]",
-};
+import RoleBadge from "../ui/RoleBadge";
 
 const ProjectCard = ({ project, onEdit, onDelete }) => (
   <article className="relative rounded-2xl border border-[var(--collab-border)] bg-[var(--collab-panel)] p-5 transition-colors hover:border-[var(--collab-border-strong)] hover:bg-[var(--collab-panel-2)]">
@@ -32,7 +28,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => (
       {project.description || "No description"}
     </p>
     <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[var(--collab-faint)]">
-      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${BADGES[project.role] || BADGES.viewer}`}>{project.role}</span>
+      <RoleBadge role={project.role} />
       <span className="inline-flex items-center gap-1" aria-label={`${project.memberCount} people have access`} title={`${project.memberCount} people have access`}>
         <Users className="h-4 w-4" />{project.memberCount}
       </span>

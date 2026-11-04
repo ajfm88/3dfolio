@@ -263,12 +263,21 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 - **Done when:** every invariant in `2-architecture.md` is confirmed in the progress file, line by line, with file references.
 
 #### S30 · Launch `client` + docs · after S29
-- `Navbar.jsx`: add Collaborate (desktop and mobile). Handle `/chat` per Q1's answer: keep it, or plan its retirement as follow-up slices.
+- `Navbar.jsx`: add Collaborate (desktop and mobile). Don't add a `/chat` link (Q1).
 - Root `readme.md`: introduction, features, project structure tree, routes, and the Collaborate tech.
 - `server/readme.md`: final consistency pass and the single-instance note.
 - Run and record the full two-browser QA script (below) in the progress file.
 - Reminder for the user: update the portfolio's About and project snippet in the admin panel.
 - **Done when:** QA passes end to end on the deployed site.
+
+### Phase K: Post-launch removal (planned, not yet sliced)
+
+`/blog` and `/chat` are scheduled for deletion (Q1, Q5): neither sets this app apart. They keep working through S30. After launch, Claude writes removal slices, roughly:
+
+- **Retire `/blog`:** the client (`src/blog/`, `src/pages/Blog.jsx`, its route and navbar link) and the server's post and comment routes, controllers, models, and Clerk webhook cascades.
+- **Retire `/chat`:** the client (`src/chat/`, `src/pages/Chat.jsx`, its route) and the DM routes, controller, model, and `chat.socket.js` presence and typing, **except** any piece that proved useful to `/collaborate` (Q1's exception). Those get moved under collaborate ownership first.
+- Shared pieces stay: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer.
+- Afterward, drop invariant 10 and the "`/blog` and `/chat` still work" checks from the done rule, the workflow rules, and the QA script.
 
 ---
 

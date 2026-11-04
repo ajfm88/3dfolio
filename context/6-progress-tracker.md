@@ -4,19 +4,19 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase B: Client shell (S04 and S05 approved, awaiting one combined commit). Phase A committed: S01 as `421a99a`, S02 + S03 together as `06716fa`.
+- Phase C: Canvas. S06 and S07 approved 2026-11-03, awaiting one combined commit. Phases A and B are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`.
 
 ## Current Goal
 
-- Commit S04 + S05 together (user decision, 2026-11-02). Then S06 (shared canvas ops), whose spec Claude writes next.
+- Commit S06 + S07 together (user decision, 2026-11-03). Then S08 (shape panel + drop), whose spec Claude writes next.
 
 ## Completed
 
 - S01: Split socket handlers by feature (approved 2026-10-31, committed 2026-11-01 as `421a99a`).
 - S02: Project + Canvas models, access helpers, test harness (approved 2026-11-01, committed 2026-11-01 as `06716fa`, together with S03).
 - S03: Project REST API (approved 2026-11-01, committed 2026-11-01 as `06716fa`, together with S02).
-- S04: `/collaborate` route shell + session (approved 2026-11-02, not yet committed; to be committed together with S05).
-- S05: Projects dashboard (approved 2026-11-02, not yet committed; to be committed together with S04).
+- S04: `/collaborate` route shell + session (approved 2026-11-02, committed 2026-11-02 as `7ad4bbb`, together with S05).
+- S05: Projects dashboard (approved 2026-11-02, committed 2026-11-02 as `7ad4bbb`, together with S04).
 
 ## In Progress
 
@@ -24,7 +24,7 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Next Up
 
-- After S05 is approved and S04 + S05 are committed: S06 (shared canvas ops module, server, pure), then S07 (canvas foundation). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
+- S08 (shape panel + drop), then S09 (node rendering). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
 
 ## Slice Status
 
@@ -35,10 +35,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S01 | Split socket handlers by feature | server | — | ✓ | Committed | Codex | `421a99a` |
 | S02 | Project + Canvas models, access helpers, test harness | server | S01 | ✓ | Committed | Codex | `06716fa` |
 | S03 | Project REST API | server | S02 | ✓ | Committed | Grok | `06716fa` |
-| S04 | `/collaborate` route shell + session | client | — | ✓ | Approved | Codex | |
-| S05 | Projects dashboard | client | S03, S04 | ✓ | Approved | Codex | |
-| S06 | Shared canvas ops module | server | S02 | | Todo | | |
-| S07 | Canvas foundation | client | S05, S06 | | Todo | | |
+| S04 | `/collaborate` route shell + session | client | — | ✓ | Committed | Codex | `7ad4bbb` |
+| S05 | Projects dashboard | client | S03, S04 | ✓ | Committed | Codex | `7ad4bbb` |
+| S06 | Shared canvas ops module | server | S02 | ✓ | Approved | Grok | |
+| S07 | Canvas foundation | client | S05, S06 | ✓ | Approved | Grok | |
 | S08 | Shape panel + drop | client | S07 | | Todo | | |
 | S09 | Node rendering | client | S08 | | Todo | | |
 | S10 | Move, resize, delete as ops | client | S09 | | Todo | | |
@@ -387,14 +387,116 @@ Nit, not required: after a failed submit, focus stays on the dialog panel, not o
 
 Approved — 2026-11-02
 
+### S06 — Shared canvas ops module
+
+**Implementer:** Grok
+
+**Changed:**
+
+- `server/src/shared/canvasOps.js`: pure canvas constants, sanitizers, `applyOps`, and `normalizeCanvas`. No imports. Ids use `globalThis.crypto.randomUUID()`.
+- `server/test/canvasOps.test.js`: constants, ids, sanitizers, atomic batches, limits, frozen inputs, `__proto__` ids, and `normalizeCanvas`.
+- `server/readme.md`: structure tree only. `shared/canvasOps.js` and `test/canvasOps.test.js` were added. API and Socket.io tables were not changed.
+
+**Verified (2026-11-03):**
+
+- PASS: `cd server; npm test` — 104 passed, 0 failed, 0 skipped, no warnings. The previous 67 tests still pass, and `canvasOps.test.js` is included.
+- PASS: `node --check server/src/shared/canvasOps.js`. A source test strips comments and asserts there is no import statement and no `require(` call. `grep` over the file finds neither.
+- PASS: the constants test asserts the export list matches the spec and that nothing else is exported (`invertOps` is not present).
+- PASS: atomicity is a test. Five valid ops plus one duplicate `node.add` in the middle return `ok: false`, `index: 2`, no canvas, and a snapshot of the input is unchanged.
+- PASS: deep-freeze tests. A frozen canvas and frozen ops do not throw, match the unfrozen result, and mutating the result does not change the input.
+- PASS: `node --input-type=module -e` imported the module outside the test runner and ran one `node.add`. It returned `ok`, type `shape`, and the neutral default color. `version` was not copied onto the result.
+- PASS: root `npm run build` (41.83s, 4222 modules). Vite printed only its existing large-chunk warning. The entry chunk is still `index-TYg5eSnN.js` at 577.69 kB, the same as the S05 build. `dist/` does not contain the string `Too many changes at once`, so this module is not in the client bundle.
+- PASS: `cd server; npm run dev` printed `Server is up and running on PORT: 3000` and `MongoDB connected: … / 3dfolio`, with no errors or warnings. `GET /health` returned 200. `GET /api/posts?limit=5` returned 200 `{ posts: [], hasMore: false }` (the posts collection is empty). `GET /api/messages/users` and `GET /api/projects` with no token each returned 401 `{"message":"Unauthorized"}`. No application data was written. The dev server was stopped afterward.
+- PASS: `git diff --check` is clean. Readme `#` comments stay on column 39. The readme diff is the two tree entries only.
+- Node: local `node -v` is v24.19.0, so `globalThis.crypto.randomUUID()` works. Neither `package.json` pins `engines`, and there is no `.nvmrc` or `render.yaml`. This session has no Render CLI config and could not open the service's build log or Node setting. No shim was added. If that setting is below 19, this needs an open question before S07 bundles the file.
+
+**Deviations:** No implementation deviations. `/blog` and `/chat` were not re-checked in a browser. This slice adds a module the server does not import, and no blog or chat file changed. The posts route returns 200 and the message route still requires a session.
+
+Concurrent documentation that this slice did not write was left as it stood: `context/1-project-overview.md`, `context/specs/00-build-plan.md`, the untracked spec `context/specs/06-canvas-ops-module.md`, and the Q1/Q5 tracker wording. No commit, push, branch, or S07 work.
+
+**Review (Claude):**
+
+- Diff scope correct: the new module and test file, two readme tree lines, and the tracker. No client, route, socket, model, or manifest changes.
+- Every export in the spec exists and nothing else is exported. Zero imports. Rules match the spec: field-by-field rebuild, uppercase colors, handles default to `null`, `type` forced, unknown patch keys dropped at every level, `"Nothing to change"` for empty patches, partial `position` rejected, cascade on `node.remove`, batch checks with `index: -1`, all-or-nothing application, `Map`/`Set` lookups.
+- Probed by hand outside the tests: normalized ops are whitelisted (rogue patch keys gone, color uppercased), ops and the returned canvas share no references, a `null` label patch and a string width are rejected, `normalizeCanvas` drops an edge whose endpoint node was dropped and keeps a self-loop, and the frozen `ID_PATTERN` can be `.test`ed repeatedly.
+- Re-ran `cd server && npm test` (104 pass) and root `npm run build` (pass, existing large-chunk warning only).
+- Design note, not a finding: `applyOps` copies the incoming canvas without re-validating it, and silently skips structurally broken entries. That's correct because the canvas it receives is always the output of `normalizeCanvas` (server load) or of a previous `applyOps`. S13 must keep that true: normalize on load, before the room caches the canvas.
+- Nit, not required: the readme tree puts `shared/` between `lib/` and `middleware/`, not in alphabetical order.
+- Open before S07: Render's Node version isn't confirmed. The user checks it (19+ needed for global `crypto.randomUUID`).
+
+Approved — 2026-11-03
+
+### S07 — Canvas foundation
+
+**Implementer:** Grok
+
+**Changed:**
+
+- `package.json`: `@xyflow/react` `^12.12.1`. No other dependency was added. `package-lock.json` is gitignored, so it is not in `git diff`. npm wrote `@xyflow/react` 12.12.1, `@xyflow/system` 0.0.84 (that package depends on `@types/d3-drag`, `@types/d3-interpolate`, `@types/d3-selection`, `@types/d3-transition`, and `@types/d3-zoom`), `classcat`, and a nested `zustand` 4.5.7. Optional peer ranges for `@types/react` and `@types/react-dom` are recorded on `@xyflow/react` and the nested zustand. They were not added to `package.json`. `@types/react` and `@types/react-dom` `^19.0.0` were already devDependencies.
+- `vite.config.js`: `@shared` alias to `server/src/shared`, plus the comment that the import only goes client to server.
+- `src/pages/Collaborate.jsx`: `WorkspacePage` is `React.lazy`, and `Routes` sit in `Suspense` with `CollaborateLoader`.
+- `src/collaborate/store/useWorkspaceStore.js`: load, reset, `dispatch`, and the display-only change handlers. The canvas starts empty.
+- `src/collaborate/routes/WorkspacePage.jsx`: loader, not-found card, error card, navbar, and canvas.
+- `src/collaborate/components/workspace/WorkspaceNavbar.jsx`: back link, name, role.
+- `src/collaborate/components/canvas/WorkspaceCanvas.jsx` and `CanvasControls.jsx`: React Flow, dot background, zoom pill.
+- `src/collaborate/components/ui/RoleBadge.jsx`: the badge moved out of `ProjectCard`. `ProjectCard` renders it in the same spot.
+- `src/collaborate/collaborate.css`: React Flow variables under `.collab-root .react-flow`.
+
+The canvas is local only. Every open starts from `{ nodes: [], edges: [], version: 0 }`. Nothing is saved or sent. The stored canvas arrives with `workspace:join` in S13, and sync arrives in S15.
+
+**Verified (2026-11-03):**
+
+- PASS: root `npm run build` (7.20s, 4244 modules). Vite printed only its existing large-chunk warning. Chunks:
+  - Entry `dist/assets/index-aGfbmty4.js` 577.75 kB. After S06 the entry was `index-TYg5eSnN.js` at 577.69 kB. `grep` finds no `xyflow`, `react-flow`, or `Too many changes at once` in this file.
+  - Dashboard `Collaborate-D_XHlYq8.js` 20.23 kB and `Collaborate-dYbC-kr_.css` 1.12 kB. After S06 those were `Collaborate-C0VRvpu0.js` 19.91 kB and `Collaborate-D0kg0Qda.css` 0.85 kB. The JS has no React Flow. The CSS growth is the theme rules in `collaborate.css`, which the dashboard shell already imports.
+  - Workspace `WorkspacePage-DnEXQBHa.js` 199.73 kB and `WorkspacePage-BnuhLJ6X.css` 15.87 kB. This chunk contains React Flow and `Too many changes at once`.
+- PASS: `cd server; npm test` — 104 passed, 0 failed, 0 skipped.
+- PASS: signed-in owner, opened a project from the dashboard card. Navbar showed the project name and the `owner` badge. Drag-pan moved the viewport from `0,0` to `160,80`. Wheel zoom changed scale from `1` to `1.39474`. Zoom in went to `1.67369`, zoom out returned to `1.39474`, and Fit to screen ran. The dot background and the React Flow attribution link were present.
+- PASS: scrolling element was `800/800` at 1280×800 and `844/844` at 390×844. `scrollY` stayed 0.
+- PASS: `/collaborate/` plus 24 `a`s, and `/collaborate/not-an-id`, both showed Project not found with the access line. Back to projects returned to the dashboard.
+- PASS: with the API stopped, an in-app open showed `We couldn't open this project` and `Check your connection and try again.` After the API restarted, Try again showed the project name again. A full reload while the API is down still hits the existing session card (`We couldn't verify your session`) before the workspace mounts. That card is S04. The dev server was stopped afterward. Boot had printed `Server is up and running on PORT: 3000` and `MongoDB connected` to `3dfolio`.
+- PASS: project A, then the dashboard, then project B, with network latency set to 1500ms. A mutation observer on the workspace title recorded 6 samples. A's name was not among them.
+- PASS: `dispatch`, through a temporary `window.__workspaceStore` assignment that existed only in dev and is gone. `git` has no `__workspaceStore`. A valid `node.add` returned `true` and rendered one fallback node. The console logged the missing-type warning that names fallback type `default`. An op `{ type: "nope" }` returned `false`, toasted `Unknown change type`, and left the canvas JSON unchanged. A `select` change, then `node.update` of the label, kept `selected` true, left `version` at 0, and the display node was not the canonical object.
+- PASS: a second existing synced user was added as a `viewer` member on the test project, then removed by deleting that project. The badge text was `viewer`. `dispatch` of `node.add` returned `false` and the canvas stayed empty. A viewer has no nodes to drag, so the check placed one display-only node through that same temporary store. Its position stayed `100,100`, Backspace left it on screen, and the canonical canvas stayed empty. No `users` document was written.
+- PASS: dashboard owner badge classes still include `rounded-full`, `capitalize`, `text-[11px]`, `bg-[var(--collab-elevated)]`, and `text-[var(--collab-accent-2)]`. The shared card used the viewer classes (`text-[var(--collab-muted)]`, `border-[var(--collab-border)]`).
+- PASS: `grep` — feature imports of `src/collaborate/` are only in `src/pages/Collaborate.jsx`. Nothing under `src/collaborate/` imports `src/chat/` or `src/blog/`. `@xyflow/react` is imported only from the workspace store and the two canvas components.
+- PASS: `/blog` rendered its heading and `GET /api/posts` returned 200. `/chat` between the two existing accounts showed typing, delivered one DM, and showed one other person online. The DM was deleted.
+- PASS: cleanup left 0 projects named with the `S07 verify` prefix, 0 canvases for them, 0 `projectmessages` for them, and 0 messages with the test text. Clerk sessions created for the run were revoked.
+- A search of the repo finds no `__workspaceStore`. The temporary hook is not in the source.
+
+**Deviations:**
+
+- Dot color uses `--collab-grid`, the token named for canvas grid dots. The spec allowed `--collab-border-strong` or similar.
+- React Flow hardcodes the attribution link color, so one selector under `.collab-root` sets it to `--collab-faint`. The rule uses a token, not a hex value.
+- The ready shell adds `overflow-hidden`, and the canvas box is `absolute inset-0`, so React Flow's `height: 100%` fills the flex main and the page does not grow a scrollbar.
+- Browsers expose `crypto.randomUUID()` only in secure contexts (HTTPS or `localhost`). This slice does not create ids. From S08, opening the app at a LAN IP over plain `http` would fail id creation. `localhost` and HTTPS are fine. Render's Node version is still unconfirmed from S06. This slice runs the module in the browser, and the server does not import it yet.
+
+Concurrent files this slice did not write were left as they stood: `context/1-project-overview.md`, `context/specs/00-build-plan.md`, `server/readme.md`, the untracked S06 spec, `server/src/shared/`, and `server/test/canvasOps.test.js`. No commit, push, branch, or S08 work.
+
+**Review (Claude):**
+
+- Diff scope matches the spec's Design list: `package.json`, `vite.config.js`, `Collaborate.jsx`, `collaborate.css`, `ProjectCard.jsx`, the rewritten `WorkspacePage.jsx`, and the five new files. No server, chat, or blog changes. The lockfile is gitignored in this repo, so its absence from the diff is expected.
+- Store matches the spec: latest-wins load with a reset that bumps the counter, `dispatch` as the only canonical write (viewer guard, shared `applyOps`, toast on reject, `version` untouched), display rebuilds that keep `selected`/`measured` and never reuse canonical objects, and change handlers that keep only `select`/`position`/`dimensions` (edges: `select`). `selectCanEdit` is the single edit gate for S20.
+- Canvas matches: module-level `nodeTypes`/`edgeTypes`, `ReactFlowProvider`, no `fitView` prop, viewer read-only props, custom zoom pill, stylesheet imported inside the chunk.
+- Re-ran root `npm run build`: React Flow class names and the shared module's strings appear only in `WorkspacePage-*.js` (199.7 kB), not in the entry or the dashboard's `Collaborate-*.js`. The entry grew about 60 bytes, which is Vite's preload map naming the new chunk files, not code. `cd server && npm test`: 104 pass.
+- Re-ran the import greps: nothing outside `Collaborate.jsx` (and `App.jsx`'s lazy route) reaches `src/collaborate/`, no chat or blog imports, `@xyflow/react` only under `src/collaborate/`. No `window.` hook, `__workspaceStore`, or `console.log` left in collaborate code.
+- Deviations accepted: `--collab-grid` is the right token for dots (it already existed for this purpose); the attribution selector uses a token; `overflow-hidden` plus `absolute inset-0` is the correct way to pin React Flow's `height: 100%` inside a flex column. The error card's retry calls `loadWorkspace` instead of reloading the page, which is better than the spec.
+- Note for the user: the run created and then revoked Clerk sessions and temporarily added a viewer member on the live database, cleaned up per Q2.
+- Still open: Render's Node version (19+), needed once S13 imports the module on the server.
+
+Approved — 2026-11-03
+
+### S12 — Edges
+
+**Carry-forward from S06:** S06 allows self-loops and parallel edges; decide how `LinkEdge` draws them, or add a rule to `canvasOps.js` through a spec change.
 
 ## Open Questions
 
-- **Q1. What happens to `/chat`?** *Resolved 2026-11-02: retire it.* Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), and its removal is planned as follow-up slices after launch. S30 adds no navbar link for it.
+- **Q1. What happens to `/chat`?** *Resolved 2026-11-02, refined 2026-11-03: scheduled for deletion.* `/chat` is generic (a thousand apps have DMs) and doesn't set this app apart. Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), then post-launch slices remove it. **One exception the user named:** if `/chat` code proves useful for the collaborate route, keep that part (S23–S24 copy and adapt its patterns per invariant 9, so this is about server pieces like presence and the media upload path). Decide what survives when the removal slices are planned. S30 adds no navbar link for it.
 - **Q2. Which database do local test runs write to?** *Resolved 2026-11-01: the live database.* The user chose it, and `server/.env` holds the values Render uses. Slice verification must clean up its test data (projects, canvases, and later project messages) and never write `users` documents.
 - **Q3. Lane assignment.** Which agent takes server-lane vs client-lane slices, and whether slices run in parallel (separate git worktrees) or strictly in sequence. *Default: sequential, S01 → S30.*
 - **Q4. Should a `/collaborate` socket count as online in `/chat`?** *Resolved 2026-11-02: accept it.* Every authenticated socket registers chat presence, so a user with only `/collaborate` open shows online in `/chat` until `/chat` is retired (Q1). No server change. The presence note in S04's `useSessionStore.js` stays.
-- **Q5. Retire `/blog` too?** The user is considering it (2026-11-02), with no decision yet. Until one is made, `/blog` keeps working through every slice (goal 6, invariant 10). If it's retired, it would happen in post-launch slices alongside `/chat`. Those would remove the blog client (`src/blog/`, `src/pages/Blog.jsx`, its route) and the server's post and comment routes, controllers, and models, plus their Clerk webhook cascades. The shared pieces stay because `/collaborate` uses them: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer. Invariant 9 (collaborate never imports from `src/blog/`) already keeps that removal clean. Needed before planning post-launch slices.
+- **Q5. Retire `/blog` too?** *Resolved 2026-11-03: yes, scheduled for deletion.* Same reason as `/chat`: a blog doesn't set this app apart. `/blog` keeps working, unchanged, through S30 (goal 6, invariant 10). Post-launch slices then remove the blog client (`src/blog/`, `src/pages/Blog.jsx`, its route and navbar link) and the server's post and comment routes, controllers, and models, plus their Clerk webhook cascades. The shared pieces stay because `/collaborate` uses them: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer. Invariant 9 (collaborate never imports from `src/blog/`) already keeps that removal clean. Whether to keep blog posts in the database (export first) is decided when the removal slices are planned.
 
 ## Architecture Decisions
 

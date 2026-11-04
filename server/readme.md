@@ -102,6 +102,8 @@ server/
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   └── socket.js                 # Shared http.Server + Socket.io, auth, feature registration
+│   ├── shared/
+│   │   └── canvasOps.js              # Pure canvas op semantics shared by the server and the client
 │   ├── middleware/
 │   │   ├── auth.middleware.js        # protectRoute (signed in) and requireAdmin (role gate)
 │   │   ├── increaseVisit.js          # Atomic $inc of a post's visit counter
@@ -132,7 +134,8 @@ server/
 │   └── index.js                      # Express app entry point
 ├── test/
 │   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
-│   └── models.test.js                # Project and Canvas schema validation without a database
+│   ├── models.test.js                # Project and Canvas schema validation without a database
+│   └── canvasOps.test.js             # Canvas op validation, atomic apply, and normalization
 ├── .env                              # Environment variables
 ├── .env.example
 ├── package.json

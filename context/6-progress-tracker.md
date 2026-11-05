@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase C: Canvas. S06 and S07 approved 2026-11-03, awaiting one combined commit. Phases A and B are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`.
+- Phase C: Canvas. S01–S07 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`. S08 and S09 approved 2026-11-04, awaiting one combined commit.
 
 ## Current Goal
 
-- Commit S06 + S07 together (user decision, 2026-11-03). Then S08 (shape panel + drop), whose spec Claude writes next.
+- The user commits S08 + S09 together (user decision, 2026-11-04). Then S10 (move, resize, delete as ops), whose spec Claude writes next.
 
 ## Completed
 
@@ -17,6 +17,8 @@ Update this file after every meaningful implementation change. It records the **
 - S03: Project REST API (approved 2026-11-01, committed 2026-11-01 as `06716fa`, together with S02).
 - S04: `/collaborate` route shell + session (approved 2026-11-02, committed 2026-11-02 as `7ad4bbb`, together with S05).
 - S05: Projects dashboard (approved 2026-11-02, committed 2026-11-02 as `7ad4bbb`, together with S04).
+- S06: Shared canvas ops module (approved 2026-11-03, committed 2026-11-04 as `a7e9d6d`, together with S07).
+- S07: Canvas foundation (approved 2026-11-03, committed 2026-11-04 as `a7e9d6d`, together with S06).
 
 ## In Progress
 
@@ -24,7 +26,8 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Next Up
 
-- S08 (shape panel + drop), then S09 (node rendering). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
+- Commit S08 + S09 together.
+- Then S10 (move, resize, delete as ops). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
 
 ## Slice Status
 
@@ -37,10 +40,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S03 | Project REST API | server | S02 | ✓ | Committed | Grok | `06716fa` |
 | S04 | `/collaborate` route shell + session | client | — | ✓ | Committed | Codex | `7ad4bbb` |
 | S05 | Projects dashboard | client | S03, S04 | ✓ | Committed | Codex | `7ad4bbb` |
-| S06 | Shared canvas ops module | server | S02 | ✓ | Approved | Grok | |
-| S07 | Canvas foundation | client | S05, S06 | ✓ | Approved | Grok | |
-| S08 | Shape panel + drop | client | S07 | | Todo | | |
-| S09 | Node rendering | client | S08 | | Todo | | |
+| S06 | Shared canvas ops module | server | S02 | ✓ | Committed | Grok | `a7e9d6d` |
+| S07 | Canvas foundation | client | S05, S06 | ✓ | Committed | Grok | `a7e9d6d` |
+| S08 | Shape panel + drop | client | S07 | ✓ | Approved | Codex | |
+| S09 | Node rendering | client | S08 | ✓ | Approved | Codex | |
 | S10 | Move, resize, delete as ops | client | S09 | | Todo | | |
 | S11 | Labels + colors | client | S10 | | Todo | | |
 | S12 | Edges | client | S11 | | Todo | | |
@@ -308,6 +311,8 @@ Signed-in browser checks, with real Clerk (dev instance) and the local server ag
 
 Approved — 2026-11-02
 
+Committed — 2026-11-02 as `7ad4bbb`, together with S05.
+
 ### S05 — Projects dashboard
 
 **Implementer:** Codex
@@ -387,6 +392,8 @@ Nit, not required: after a failed submit, focus stays on the dialog panel, not o
 
 Approved — 2026-11-02
 
+Committed — 2026-11-02 as `7ad4bbb`, together with S04.
+
 ### S06 — Shared canvas ops module
 
 **Implementer:** Grok
@@ -425,6 +432,8 @@ Concurrent documentation that this slice did not write was left as it stood: `co
 - Open before S07: Render's Node version isn't confirmed. The user checks it (19+ needed for global `crypto.randomUUID`).
 
 Approved — 2026-11-03
+
+Committed — 2026-11-04 as `a7e9d6d` ("60. Add the shared canvas ops module and the workspace canvas foundation…"), together with S07.
 
 ### S07 — Canvas foundation
 
@@ -486,12 +495,120 @@ Concurrent files this slice did not write were left as they stood: `context/1-pr
 
 Approved — 2026-11-03
 
+Committed — 2026-11-04 as `a7e9d6d`, together with S06.
+
+### S08 — Shape panel + drop
+
+**Implementer:** Codex
+
+**Changed:**
+
+- `src/collaborate/lib/shapeDrag.js`: lowercase drag type and a pure node builder using shared ids, sizes, and neutral colors. Unknown shapes return null; positions retain their fractions and validation stays in `applyOps`.
+- `src/collaborate/components/canvas/ShapePanel.jsx`: six draggable divs in shared shape order, accessible toolbar/title text, and off-screen dashed ghosts sized at the current zoom with centered hotspots. Below sm the pill sits above the controls.
+- `src/collaborate/components/canvas/WorkspaceCanvas.jsx`: callback-based drag/drop handlers accept only the custom type for owners/editors, convert screen coordinates once through React Flow, and dispatch one `node.add`. The panel uses the existing edit selector. All existing props, node-type comments, and viewport behavior are preserved.
+
+The canvas remains local only and empty on every load until S13/S15. Fallback boxes and missing-type warnings remain expected until S09. No store, server, dependency, stylesheet, or environment-file changes.
+
+**Verified (2026-11-04):**
+
+- PASS: root `npm run build`, 4246 modules, existing large-chunk warning only. Workspace `WorkspacePage-b0jE8n9M.js` is 202,847 bytes; dashboard `Collaborate-B-L4rHX9.js` is 20,227 bytes; entry `index-rzCDkqDp.js` is 577,748 bytes. The drag type and panel text occur only in the workspace chunk. React Flow CSS remains `WorkspacePage-BnuhLJ6X.css` (15.87 kB).
+- PASS: `cd server; npm test`: 104 passed, no failed/skipped tests.
+- PASS: external temporary Vite/Playwright harness rendered the actual WorkspaceCanvas, ShapePanel, shared module, and workspace store in installed Chromium 1228. Only the harness supplied the role and initial ready state; no REST, Clerk session, membership, or database was mocked into a claimed live integration. A Vite-only in-memory transform exposed React Flow's instance for measurements, and the external harness exposed the store. No hook was written into repository source.
+- PASS: 24 DOM-dispatched drops: all six shapes at each of four viewports. Every drop added exactly one canonical node with the shared default size, type shape, correct shape, empty label, and neutral fill/text. `getViewport()` was identical before and after all 24 drops. The cursor targets, in rectangle/diamond/circle/pill/cylinder/hexagon order, were `(430,300)`, `(480,330)`, `(530,360)`, `(580,390)`, `(630,420)`, `(680,450)`. Measured centers matched these targets with the maximum absolute coordinate errors below (pixels):
+
+| Viewport x, y, zoom | Maximum center x error | Maximum center y error |
+| --- | ---: | ---: |
+| 0, 0, 1 | 0 | 0 |
+| 0, 0, 0.2 | 0.000030518 | 0.000015259 |
+| 0, 0, 2 | 0 | 0 |
+| 137, -83, 1.3 | 0.000030518 | 0.000030518 |
+
+- PASS: two additional native mouse drags, grabbing a rectangle off-center and dropping at `(950,200)` at zoom 1 and zoom 2. Both added exactly one node whose measured center was `(950,200)`.
+- PASS (programmatic ghost contract): intercepted `DataTransfer.setDragImage` during dragstart for all six shapes at zoom 1 and zoom 2. Each laid-out element was the shared width/height times zoom, with dashed borders and a hotspot of width/2, height/2. For example, rectangle footprints were 160×80 with hotspot 80,40 and 320×160 with hotspot 160,80. This verifies the image element and arguments, not the OS-rendered drag bitmap.
+- PASS: foreign text and file drops and an unknown shape added nothing and threw no page errors. Text's drop was not prevented. Switching the actual store to viewer removed the panel; custom-type dragover/drop was not prevented and added no node. Switching to editor restored the panel.
+- PASS: with the temporary in-memory React Flow hook, set viewport to `{ x: -200000, y: 0, zoom: 1 }` and drop circle at `(500,400)`. The existing toast showed `Node position x must be a finite number between -100000 and 100000`, and the canonical node count stayed unchanged.
+- PASS: 390×844 screenshot and DOM measurements. Shape pill: x=72, y=734, width=246, height=46; control pill: x=16, y=782, width=126, height=46. A 2px vertical gap, neither clipped, and scrolling element/client dimensions both 390×844. Screenshot visually inspected.
+- PASS: every item has its title and sr-only label; no draggable button. Searches found no raw hex, chat/blog imports, click handlers, or touch handlers in the new files. No page errors in the controlled canvas checks.
+- PASS: backend booted on temporary port 3008 and connected to the live 3dfolio database. `/health` and `/api/posts` returned 200. A separate regression render loaded the real Blog page/providers with the Clerk publishable key supplied through process environment, showed its heading and `No posts yet.`, and received a live posts API 200. The real Chat page/providers rendered its signed-out Continue gate. No database data was written.
+- PASS: `git diff --check`. Implementation scope is the three Design files plus this tracker. The pre-existing untracked S08 spec and preceding tracker updates were preserved. Temporary verification scripts, Playwright dependency, measurements, and screenshots are under the OS temp directory, outside the repo; no production dev hooks or permanent test files were added.
+- PENDING: real signed-in owner/editor and viewer windows, including a cross-window owner-to-viewer drag. Controlled role checks above exercise the components/store but do not establish live Clerk/membership behavior. No signed-in browser sessions were available.
+- PENDING: visual inspection of the native ghost bitmap in Chrome at zoom 1 and 2, and Firefox's native ghost behavior (Firefox is not installed). The native mouse drags and ghost contract checks above do not establish that visual result.
+- PENDING: two-account `/chat` DM round trip. The signed-out gate and boot/API checks do not replace it. No chat/server sources changed.
+
+**Deviations:** No implementation scope or behavior deviations. Browser checks use an external controlled harness, with the live-account, OS ghost, and DM limitations stated above for review. No commit, push, branch, or S09 work.
+
+**Review (Claude, 2026-11-04): No blocking findings.**
+
+- Scope: the diff is the three Design files plus this tracker. `WorkspaceCanvas.jsx` gains only the imports, the two `useCallback` handlers, the `onDragOver`/`onDrop` props, and `{canEdit && <ShapePanel />}`. Existing props, the node-type comment, and the viewport behavior are untouched.
+- Code matches the spec: `createShapeNode` rejects unknown shapes, uses the shared default size and neutral pair, and doesn't round. Both handlers bail out without `preventDefault` for viewers and foreign drags. The conversion goes through `screenToFlowPosition` once, with no manual rect offset. Items are `draggable` divs with a title and `sr-only` text. The six ghosts have literal radius classes and only inline width/height, and the zoom is read at drag start.
+- Re-ran root `npm run build`: passes, existing large-chunk warning only. The drag type appears only in `WorkspacePage-b0jE8n9M.js` (202.85 kB). The entry `index-rzCDkqDp.js` (577.75 kB) and the dashboard `Collaborate-B-L4rHX9.js` (20.23 kB) are unchanged from S07. `cd server && npm test`: 104/104. `git diff --check` is clean. No raw hex, chat/blog imports, or click/touch handlers in the new files.
+- Codex's measured centering (24 drops at four viewports, worst error 0.00003px) and the unchanged `getViewport()` are accepted.
+- Nit, not required: the panel is a child of `<ReactFlow>`, so a drop released on the panel itself bubbles to the canvas and adds a node underneath it. Escape still cancels a drag. S29 can make the panel refuse drops if it matters.
+- Live check (user, 2026-11-04): signed in as the owner on a local server and Vite (port 5174, process environment only) against the live `3dfolio` database, created a project, and dragged shapes onto the canvas. The ghost and the drops worked as specified. Not run: a real viewer window and Firefox.
+
+Approved — 2026-11-04
+
+### S09 — Node rendering
+
+**Implementer:** Codex
+
+**Changed:**
+
+- `src/collaborate/components/canvas/ShapeNode.jsx`: memoized, props-only renderer. Rectangle/pill/circle use CSS; diamond/hexagon/cylinder use the specified SVG geometry with stretched viewBoxes, non-scaling 1px strokes, and visible overflow. Labels use shape-specific inset layers, palette fill/text from data, newline preservation, wrapping, and clipping. Four shared handle ids always render and receive React Flow's derived `isConnectable` prop.
+- `src/collaborate/components/canvas/WorkspaceCanvas.jsx`: registered ShapeNode in the module-level nodeTypes map, updated the fallback comment, and added ConnectionMode.Loose. All S08 drag/drop handlers, panel gating, and other existing props are preserved.
+- `src/collaborate/collaborate.css`: added the two node-border tokens and scoped 8px handle rules, visible on hover only when connectable; reduced-motion removes the opacity transition.
+
+Rendering only: no new dispatches, persistence, sockets, resize/delete behavior, or label/color editing. The canvas remains local only until S13–S15. S08 stays Approved and uncommitted; its ShapePanel and shapeDrag files were not touched.
+
+**Spec correction (2026-11-04):** the original spec assumed Handle derives connectability automatically. The installed `@xyflow/react/dist/esm/index.mjs` defaults Handle's `isConnectable` to true; only NodeWrapper derives the node prop from nodesConnectable. A controlled viewer test exposed visible/connectable handles. The user authorized forwarding the node prop to every Handle, and Claude corrected `specs/09-node-rendering.md` during implementation. The final code follows that corrected spec and comments the reason. This is a spec correction, not a deviation.
+
+**Verified (2026-11-04):**
+
+- PASS: root `npm run build`, 4247 modules, existing large-chunk warning only. ShapeNode's cylinder geometry occurs only in `WorkspacePage-aHLkud94.js` (204,860 bytes). Entry `index-D0WXjAEy.js` is 577,748 bytes and dashboard `Collaborate-BUv40-kQ.js` is 20,227 bytes, both exactly the S08 sizes. Workspace CSS remains 15.87 kB; scoped Collaborate CSS is 1.63 kB. Tailwind utilities enter the existing global CSS as before; no config changed.
+- PASS: `cd server; npm test`: 104 passed, no failures/skips. No server source changed afterward.
+- PASS: temporary external Vite/Playwright harness rendered the actual WorkspaceCanvas and store in installed Chromium 1228. It supplied a controlled ready state/role and used in-memory Vite instrumentation to expose the React Flow instance; nothing was written into production source. Its node fixtures went through the real store's dispatch and shared applyOps. These component checks are not claimed as live Clerk/membership checks.
+- PASS: dropped every shape at its default size at zoom 1 and 2 (12 drops). Each rendered the expected CSS/SVG body without fallback rendering or missing-type/key/prop warnings. Rect sizes equaled width×zoom and height×zoom, and every measured center exactly matched its drop point (maximum x/y error 0px). Targets, in rectangle/diamond/circle/pill/cylinder/hexagon order, were `(250,350)`, `(630,350)`, `(1010,350)`, `(1390,350)`, `(1770,350)`, `(2150,350)`. Viewport values stayed identical before/after every drop.
+- PASS: dispatched all six shapes at 40×40, 400×60, 60×400, and 300×300 (24 nodes). DOM rects matched the supplied sizes; SVG viewBox, preserveAspectRatio, overflow, and vector-effect attributes match the spec. All SVG strokes computed to 1px, including zoom-2 checks on the wide diamond, hexagon, and cylinder. Inspected the full odd-size screenshot and the three zoom-2 screenshots: shapes stretch correctly, cylinder rim remains distinct, and pointed corners are unclipped.
+- PASS: 24 label/color fixtures cover all eight palette pairs with short labels, two lines separated by a newline, and 200-character unbroken labels. Computed fill and text colors match the exact shared palette pair. Newlines display on separate lines; long text wraps and exceeds the available layer height while the layer clips it. The label span has min-w-0 so long words can shrink and wrap in the flex layer. Cylinder label top is exactly 24% of node height. Inspected the palette/label screenshot.
+- PASS: every fixture retained four 8×8 handles with ids top/right/bottom/left at the midpoint of the corresponding bounding-box side. Owner handles have opacity 0 off-hover and 1 on-hover; switching the controlled role to viewer keeps all four DOM elements, removes connectable, and yields opacity 0 on-hover. For a 300×220 node at `(30,86)` the handle centers were `(180,86)`, `(330,196)`, `(180,306)`, `(30,196)`. Fill computed to rgb(157,92,255) and border to rgb(4,3,15). Reduced-motion computed transition duration to 0s.
+- PASS: click selection changes the CSS border and SVG stroke from rgba(255,255,255,0.1) to rgba(255,255,255,0.35); a pane click restores both. Ctrl-click selected a rectangle and diamond together and both displayed the selected border.
+- CHECKLIST MISMATCH: Shift-click did not retain both nodes; only the second remained selected. The installed React Flow defaults multiSelectionKeyCode to Control on Windows (Meta on macOS), and Shift is its selectionKeyCode for box selection. The spec also forbids changing other ReactFlow props. The existing keyboard configuration is preserved; see Q6 below. This does not affect rendering two selected nodes or the successful Ctrl-click check.
+- PASS: no hex literals or chat/blog imports in ShapeNode or WorkspaceCanvas; ShapeNode has no store import, event handler, resizer, toolbar, nodrag, or nopan. All 17 existing tokens compare unchanged with the pre-S09 snapshot, the total is now 19, and both new values exactly match 3-ui-context.md.
+- PASS: `npm run dev` in server booted on temporary port 3009 and connected to the live 3dfolio database. `/health` returned 200. A regression render of the real Blog page/providers showed its heading and `No posts yet.` using a live posts API 200; the real Chat page/providers rendered the signed-out Continue gate. Public Clerk configuration and API origin were process environment only. No application data or users were written.
+- PASS: no browser page exceptions or node-type/key/prop warnings. Existing router future-flag and Clerk development-key notices occurred in regression pages; the temporary harness's missing favicon returned 404. No new production warnings.
+- PASS: `git diff --check`. Snapshot comparisons confirm ShapePanel.jsx, shapeDrag.js, the S08 spec, and Claude's 3-ui-context.md are unchanged, and S08 drag/drop handlers are byte-for-byte unchanged. Implementation changes are only the three Design files plus this tracker. Claude's concurrent S09 spec correction is preserved. No temporary hook remains in repository source.
+- PENDING LIVE CHECKS: signed-in owner/viewer browser verification with real project membership, and a two-account `/chat` DM/typing/presence round trip. Controlled role checks and chat's signed-out gate do not establish those results. No signed-in sessions were available to this run.
+
+Verification scripts, fixtures, JSON measurements, and screenshots are outside the repo at the OS temp directory `codex-s09-verify`. Stopped only the temporary API/Vite processes created for this slice; existing ports 3000, 5173, and 5174 were left alone.
+
+**Deviations:** None in implementation; follows the corrected isConnectable spec. The Shift-click checklist mismatch and outstanding live checks are recorded above. No commit, push, branch, or S10 work.
+
+**Review (Claude, 2026-11-04): No blocking findings.**
+
+- Scope: `ShapeNode.jsx` is new, and `WorkspaceCanvas.jsx` and `collaborate.css` are edited, plus this tracker. Against S08's approved version, `WorkspaceCanvas.jsx` gains only the `ShapeNode` import, `nodeTypes = { shape: ShapeNode }` with the shortened comment, and `connectionMode={ConnectionMode.Loose}`. S08's files are unchanged.
+- Code matches the corrected spec: the per-shape CSS and SVG bodies with the exact geometry, `preserveAspectRatio="none"`, `overflow="visible"`, `non-scaling-stroke`, and the commented reason. Label layers use axis-relative insets. Fill and text colors come only from `data`, with no hex literals. All four handles always render from `HANDLE_IDS` and receive the node's `isConnectable`. The props-only component is wrapped in `memo`, with no store import. The CSS adds the two tokens with exact values, 8px handles visible only on hover when `connectable`, and a reduced-motion override.
+- The `min-w-0` on the label span is a sensible addition: without it a long unbroken word can't shrink inside the flex layer and wrap.
+- The Shift-click item was a spec error (Q6, resolved). Corrected in the spec. Codex's Ctrl-click check is the right one.
+- Re-ran root `npm run build`: passes, existing warning only. Entry `index-D0WXjAEy.js` 577.75 kB and dashboard `Collaborate-BUv40-kQ.js` 20.23 kB are unchanged from S08. Workspace `WorkspacePage-aHLkud94.js` is 204.86 kB (+2.0 kB). `cd server && npm test`: 104/104. `git diff --check` is clean.
+- Not run live: a signed-in owner and viewer. This slice changes rendering only (no auth, data, or socket paths), and Codex's controlled role checks cover the handle gating. The user can look at it on the running 5174 dev server before committing.
+
+Approved — 2026-11-04
+
 ### S12 — Edges
 
 **Carry-forward from S06:** S06 allows self-loops and parallel edges; decide how `LinkEdge` draws them, or add a rule to `canvasOps.js` through a spec change.
 
+### S29 — Mobile and accessibility
+
+**Carry-forward from S08:** the shape panel is HTML5 drag-only. Add touch and keyboard/click alternatives in S29; no such handlers were added in S08.
+
+### S29 — Hardening pass
+
+**Carry-forward from S08:** shapes are added only by mouse drag and drop (HTML5 drag events). Touch drop and a keyboard way to add a shape are not built. S29's mobile and accessibility items should decide both.
+
 ## Open Questions
 
+- **Q6. Multi-select key in the S09 checklist.** S09 asks for Shift-click, but installed React Flow uses Ctrl-click on Windows / Meta-click on macOS by default; Shift is box selection. S09 also says every other canvas prop stays unchanged. Rendering and Ctrl-click multi-selection pass. Claude should correct the checklist or explicitly spec a different multiSelectionKeyCode in a later slice; S09 did not change keyboard behavior. *Resolved 2026-11-04 (Claude): keep React Flow's defaults.* The checklist was wrong. Multi-select is Ctrl-click on Windows and Cmd-click on macOS, and Shift-drag is box select. The S09 spec is corrected, and S10's multi-select drag check uses the same keys.
 - **Q1. What happens to `/chat`?** *Resolved 2026-11-02, refined 2026-11-03: scheduled for deletion.* `/chat` is generic (a thousand apps have DMs) and doesn't set this app apart. Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), then post-launch slices remove it. **One exception the user named:** if `/chat` code proves useful for the collaborate route, keep that part (S23–S24 copy and adapt its patterns per invariant 9, so this is about server pieces like presence and the media upload path). Decide what survives when the removal slices are planned. S30 adds no navbar link for it.
 - **Q2. Which database do local test runs write to?** *Resolved 2026-11-01: the live database.* The user chose it, and `server/.env` holds the values Render uses. Slice verification must clean up its test data (projects, canvases, and later project messages) and never write `users` documents.
 - **Q3. Lane assignment.** Which agent takes server-lane vs client-lane slices, and whether slices run in parallel (separate git worktrees) or strictly in sequence. *Default: sequential, S01 → S30.*

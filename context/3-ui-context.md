@@ -29,6 +29,8 @@ Components use these tokens through Tailwind arbitrary values, e.g. `bg-[var(--c
 | Error | `--collab-error` | `#ff6166` |
 | Success / "you're editing" | `--collab-success` | `#62c073` |
 | Warning / "waiting" / idle countdown | `--collab-warning` | `#ff990a` |
+| Node border, at rest | `--collab-node-border` | `rgba(255, 255, 255, 0.1)` |
+| Node border, selected | `--collab-node-border-selected` | `rgba(255, 255, 255, 0.35)` |
 
 The page background is `radial-gradient(ellipse at 50% 0%, rgba(112, 66, 248, 0.12), transparent 60%), var(--collab-bg)`, the same as chat.
 
@@ -49,7 +51,7 @@ These are the 8 fill/text pairs. They're defined once in `canvasOps.js` and used
 | Green | `#0F2E18` | `#62C073` |
 | Teal | `#062822` | `#0AC7B4` |
 
-- Node border: `rgba(255,255,255,0.1)` at rest, `rgba(255,255,255,0.35)` when selected.
+- Node border: `--collab-node-border` at rest, `--collab-node-border-selected` when selected (tokens added in S09). Fill and label colors come from each node's `data`, so `ShapeNode` applies them as inline styles. That is the one place component code carries palette values, and they always originate in `canvasOps.js`.
 - Edges: stroke `rgba(255,255,255,0.4)`, width 1.5, brighter when selected, with a closed arrow marker.
 
 ### Cursor palette

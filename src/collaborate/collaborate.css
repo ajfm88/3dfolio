@@ -22,6 +22,8 @@
   --collab-error: #ff6166;
   --collab-success: #62c073;
   --collab-warning: #ff990a;
+  --collab-node-border: rgba(255, 255, 255, 0.1);
+  --collab-node-border-selected: rgba(255, 255, 255, 0.35);
 
   /* Native controls should match the workspace's dark surfaces. */
   color-scheme: dark;
@@ -53,6 +55,26 @@
 .collab-root .react-flow__attribution,
 .collab-root .react-flow__attribution a {
   color: var(--collab-faint);
+}
+
+/* Viewers need handle elements for edge anchors, even while the dots are hidden. */
+.collab-root .react-flow__node-shape .react-flow__handle {
+  --xy-handle-background-color: var(--collab-accent-2);
+  --xy-handle-border-color: var(--collab-bg);
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.collab-root .react-flow__node-shape:hover .react-flow__handle.connectable {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collab-root .react-flow__node-shape .react-flow__handle {
+    transition: none;
+  }
 }
 
 /* Gentle hover on the signed-out gate's logo tile. */

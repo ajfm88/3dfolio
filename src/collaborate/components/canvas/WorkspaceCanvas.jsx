@@ -21,6 +21,16 @@ const Flow = () => {
   const canEdit = useWorkspaceStore(selectCanEdit);
   const { screenToFlowPosition } = useReactFlow();
   const dispatch = useWorkspaceStore((s) => s.dispatch);
+  const commitNodePositions = useWorkspaceStore((s) => s.commitNodePositions);
+  const deleteElements = useWorkspaceStore((s) => s.deleteElements);
+
+  const onNodeDragStop = useCallback((_event, _node, nodes) => {
+    commitNodePositions(nodes);
+  }, [commitNodePositions]);
+
+  const onDelete = useCallback((elements) => {
+    deleteElements(elements);
+  }, [deleteElements]);
 
   const onDragOver = useCallback((event) => {
     if (!canEdit || !event.dataTransfer.types.includes(SHAPE_DRAG_TYPE)) return;
@@ -45,6 +55,8 @@ const Flow = () => {
       onEdgesChange={onEdgesChange}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onNodeDragStop={onNodeDragStop}
+      onDelete={onDelete}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       connectionMode={ConnectionMode.Loose}
@@ -53,7 +65,7 @@ const Flow = () => {
       maxZoom={2}
       nodesDraggable={canEdit}
       nodesConnectable={canEdit}
-      deleteKeyCode={canEdit ? "Backspace" : null}
+      deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
     >
       <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
       <CanvasControls />

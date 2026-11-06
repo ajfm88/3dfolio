@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase C: Canvas. S01–S07 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`. S08 and S09 approved 2026-11-04, awaiting one combined commit.
+- Phase C: Canvas. S01–S09 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`. S10 and S11 are approved and uncommitted.
 
 ## Current Goal
 
-- The user commits S08 + S09 together (user decision, 2026-11-04). Then S10 (move, resize, delete as ops), whose spec Claude writes next.
+- S11 (labels and colors) approved by Codex on 2026-11-05. S10 stays approved; both are uncommitted. The user handles commits. S12 needs its spec before implementation.
 
 ## Completed
 
@@ -19,6 +19,10 @@ Update this file after every meaningful implementation change. It records the **
 - S05: Projects dashboard (approved 2026-11-02, committed 2026-11-02 as `7ad4bbb`, together with S04).
 - S06: Shared canvas ops module (approved 2026-11-03, committed 2026-11-04 as `a7e9d6d`, together with S07).
 - S07: Canvas foundation (approved 2026-11-03, committed 2026-11-04 as `a7e9d6d`, together with S06).
+- S08: Shape panel + drop (approved 2026-11-04, committed as `7fb9533`, together with S09).
+- S09: Node rendering (approved 2026-11-04, committed as `7fb9533`, together with S08).
+- S10: Move, resize, delete as ops (approved 2026-11-05 by Codex, uncommitted).
+- S11: Labels and colors (approved 2026-11-05 by Codex, uncommitted).
 
 ## In Progress
 
@@ -26,8 +30,7 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Next Up
 
-- Commit S08 + S09 together.
-- Then S10 (move, resize, delete as ops). Specs are written by Claude just before each slice. See `specs/00-build-plan.md`.
+- The user handles the S10 and S11 commits. Then write the S12 (edges) spec against the current code; no S12 implementation has started.
 
 ## Slice Status
 
@@ -42,10 +45,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S05 | Projects dashboard | client | S03, S04 | ✓ | Committed | Codex | `7ad4bbb` |
 | S06 | Shared canvas ops module | server | S02 | ✓ | Committed | Grok | `a7e9d6d` |
 | S07 | Canvas foundation | client | S05, S06 | ✓ | Committed | Grok | `a7e9d6d` |
-| S08 | Shape panel + drop | client | S07 | ✓ | Approved | Codex | |
-| S09 | Node rendering | client | S08 | ✓ | Approved | Codex | |
-| S10 | Move, resize, delete as ops | client | S09 | | Todo | | |
-| S11 | Labels + colors | client | S10 | | Todo | | |
+| S08 | Shape panel + drop | client | S07 | ✓ | Committed | Codex | `7fb9533` |
+| S09 | Node rendering | client | S08 | ✓ | Committed | Codex | `7fb9533` |
+| S10 | Move, resize, delete as ops | client | S09 | ✓ | Approved | Grok | |
+| S11 | Labels + colors | client | S10 | ✓ | Approved | Grok | |
 | S12 | Edges | client | S11 | | Todo | | |
 | S13 | Workspace join / leave | both | S01, S06, S12 | | Todo | | |
 | S14 | Commit handler | server | S13 | | Todo | | |
@@ -548,6 +551,8 @@ The canvas remains local only and empty on every load until S13/S15. Fallback bo
 
 Approved — 2026-11-04
 
+Committed — 2026-11-05 as `7fb9533`, together with S09.
+
 ### S09 — Node rendering
 
 **Implementer:** Codex
@@ -593,6 +598,98 @@ Verification scripts, fixtures, JSON measurements, and screenshots are outside t
 - Not run live: a signed-in owner and viewer. This slice changes rendering only (no auth, data, or socket paths), and Codex's controlled role checks cover the handle gating. The user can look at it on the running 5174 dev server before committing.
 
 Approved — 2026-11-04
+
+Committed — 2026-11-05 as `7fb9533`, together with S08.
+
+### S10 — Move, resize, delete as ops
+
+**Implementer:** Grok
+
+**Changed:**
+
+- `src/collaborate/store/useWorkspaceStore.js`: drag, resize, and delete go through one `dispatch`. `commitNodePositions` sends one `node.update` per node whose position changed. `commitNodeResize` sends one update with position, width, and height. `deleteElements` removes nodes first and skips an `edge.remove` when `node.remove` already drops that edge, using the stored endpoints rather than the callback's. A viewer, a failed `applyOps`, or a missing resize target restores `rfNodes` and `rfEdges` from the canonical canvas and leaves `version` alone. `toDisplayNodes` keeps `measured` only while it still matches the canonical size, and replaces it when it does not, so a rejected size cannot stay on screen. The dimensions change NodeResizer emits after `onResizeEnd` (`resizing: false`, no `setAttributes`) is rewritten to the canonical size with `setAttributes: true`. `onNodesChange` still ignores `remove`.
+- `src/collaborate/components/canvas/WorkspaceCanvas.jsx`: `onNodeDragStop` commits the third argument, which is every node that gesture moved, including a selection drag. There is no `onSelectionDragStop`. `onDelete` commits the validated batch. Editors get Backspace and Delete; viewers get `deleteKeyCode={null}`. Drop handling, loose connection mode, zoom limits, and the other React Flow props are unchanged.
+- `src/collaborate/components/canvas/ShapeNode.jsx`: a selected editable node shows `NodeResizer` with the shared 40 and 2000 limits, `keepAspectRatio={false}`, and the collaborate handle and line classes. `onResizeEnd` commits that gesture. The resizer sits after the body and before the four connection handles, which still receive `isConnectable`.
+- `src/collaborate/collaborate.css`: under `.collab-root .react-flow__node-shape`, handles are 8px circles in the selected-node border color with a 1px background-colored border, and lines are dashed in that same color. Border width is left to React Flow so a line stays one pixel on one side. No new tokens and no global `.react-flow__resize-control` override.
+
+The canvas stays local. Nothing is saved, broadcast, or undone. No new files, dependencies, or server changes.
+
+**Verified (2026-11-05):**
+
+- PASS: root `npm run build`, 4247 modules, existing large-chunk warning only. Entry `index-BQVAGZLu.js` is 577.75 kB and dashboard `Collaborate-DMHB7IDR.js` is 20.23 kB, the same displayed sizes as S09. Their hashes changed because they name the new lazy chunks. Workspace `WorkspacePage-D6o3PbDq.js` is 208.10 kB (S09 was 204.86 kB). The added weight is NodeResizer plus the gesture commits. Collaborate CSS `Collaborate-Dkj5MLae.css` is 1.96 kB (S09 was 1.63 kB) because `collaborate.css` is imported by the route shell; the resize rules live there. Workspace CSS stays 15.87 kB. `collab-resize-handle` appears in the workspace JS and the Collaborate CSS chunk only, not in the entry.
+- PASS: `cd server && npm test`: 104 passed, no failures or skips. No server source changed.
+- PASS: `git diff --check`. The implementation diff is the four files above plus this tracker. `context/specs/10-move-resize-delete.md` was already untracked and was not edited. No production hook (`window.__flow` or similar) remains under `src`.
+- PASS: external temporary Vite/Playwright harness on port 5191 rendered the real WorkspaceCanvas and store in Chromium 1228. The harness supplied the role and ready state. An in-memory Vite transform exposed the React Flow instance for viewport control, and the harness wrapped `dispatch` and `toast.error`. Nothing was written into the repo. These are controlled component checks, not live Clerk membership checks.
+- PASS: single drag at zoom 1 (`dx` 90, `dy` 40), zoom 2 (`dx` 80, `dy` -30), and viewport `{137, -83, 1.3}` (`dx` 70, `dy` 55). During the drag, canonical state did not change and `rfNodes` did. Release dispatched one `node.update` whose patch key is `position`. Display matched canonical afterward, the node stayed selected, and a later `node.add` left it in place. `version` stayed 7. Installed React Flow starts the drag only after the pointer moves more than 1px and then anchors to that later point, so the committed point is about 1–2 screen pixels short of the full pointer travel (zoom 1 ended at 308,219 rather than 310,220; zoom 2 at 259.5,165.5 rather than 260,165). The store does not round; it stores the position React Flow reports, including fractions. A click with no movement dispatched nothing.
+- PASS: Ctrl-click selected three different shapes and one drag dispatched three position updates. Shift-drag box selection did the same. Relative offsets stayed 280px apart. No second commit came from a selection callback.
+- PASS: all six shapes resized from the bottom-right and top-left handles at zoom 1 and zoom 2. During the gesture only the display changed. Release dispatched one update with `position`, `width`, and `height`. The opposite corner stayed within 1.25px. A bottom-right rectangle move of 36 by 22 landed on 196×102. A top-left move of 28 by 18 landed on position (208,178) and 132×62. Circles became non-square. A later add did not reset the geometry. A 40×40 circle dragged inward stayed 40×40 with no dispatch. A small node at zoom 0.3 dragged outward clamped to 2000×2000 in one update. Clicking a handle without moving dispatched nothing.
+- PASS: the initial add was the only dispatch across measurement, pane click, Ctrl-clicks, pane pan, wheel zoom, and Fit to screen.
+- PASS: Backspace and Delete each removed one selected node. Delete removed a three-node selection in one dispatch of three `node.remove` ops. An empty selection dispatched nothing.
+- PASS: cascade fixture. Deleting node A together with edges AB and BC, including untrusted callback endpoints, dispatched `node.remove A` and `edge.remove BC` only. B and C remained and no edges remained. An edge-only delete of BC, then a delete of both B and C, each succeeded with no `Edge not found` toast.
+- PASS: a 50-node move and a 50-node delete each succeeded. A 51-node move and a 51-node delete each made one rejected dispatch, toasted `Too many changes at once`, changed nothing canonical, restored the display, and left `version` at 7. The 51 nodes were seeded in batches of at most 50.
+- PASS: an out-of-range position (`x` 100050) and an out-of-range resize (`x` 100001, 90×70) were rejected with the shared position error. The following `resizing: false` dimensions change could not put 90×70 or `resizing: true` back. Selection survived and the display returned to 160×80 at (12,18), including `measured`. A real drag of a node at `x` 99940 past the position limit was rejected the same way and the display snapped back.
+- PASS (controlled roles): a viewer had no `.collab-resize-handle`. Dragging and both delete keys dispatched nothing. Direct `commitNodePositions`, `commitNodeResize`, and `deleteElements` returned false, left the canonical node at (220,200) 160×80, and cleared the attempted display geometry. Editor and owner each committed a position and could move it back. This sets `role` on the store. It does not sign in or load a membership.
+- PASS: a native mouse drag from the rectangle in the shape panel dropped one rectangle whose measured center was exactly (500,300). The selected border computed to `rgba(255, 255, 255, 0.35)`. The connection handle on hover was 8px at opacity 1. The resize handle was 8×8, background `rgba(255, 255, 255, 0.35)`, border `1px solid rgb(4, 3, 15)`, and the line was dashed at 1px.
+- PASS: screenshot of six shapes at odd sizes, all selected. Dashed resize outlines and corner handles sit on the box. The diamond point, hexagon corners, and cylinder rim are not cut off. The three SVG nodes computed `overflow: visible` and `preserveAspectRatio="none"`. The narrow rectangle's label stacks one letter per line because that fixture is 40px wide. No page errors. The only console warning was the harness favicon 404.
+- PASS: `npm run dev` equivalent, `node src/index.js`, on temporary port 3010. Log lines were `Server is up and running on PORT: 3010` and `MongoDB connected` to `3dfolio`. No Mongoose warning. Clerk's development-instance telemetry line appeared on the authenticated requests. `/health` and `/api/posts` returned 200. The posts payload had 0 posts.
+- PASS: temporary Vite on port 5192, with the public Clerk key and `VITE_API_URL` supplied only to that process. `/blog` showed the heading "Notes on code, design, and building for the web.", "Recent Posts", and "No posts yet." `/chat` showed the signed-out gate: heading "ajfm88 Chat" and the Continue button. No page errors. Ports 3000, 5173, and 5174 were not used.
+- PASS: two-account chat at the socket and message API, using two already-synced users. Sessions were created for this run and revoked afterward. Both sockets appeared in `getOnlineUsers`. A `typing` emit was delivered to the other account with `isTyping: true`. `POST /api/messages/send/:id` returned 201 and the other socket received `newMessage` with that text. The message was then deleted. Counts of `users`, `projects`, `canvases`, `projectmessages`, and `messages` were unchanged. No `users` document was written. This is not a signed-in browser walkthrough of the chat UI; the signed-out gate above does not, by itself, prove delivery. The socket round trip does.
+
+**Deviations:** None in implementation. Drag commits the position React Flow reports after its 1px drag threshold, so the pointer and the stored point can differ by about 1–2 screen pixels. Coordinates are not rounded. Controlled role checks are not live membership checks. No commit, push, branch, or S11 work.
+
+**Review (Codex, 2026-11-05): No blocking findings.**
+
+- Implementation scope matches the four allowed collaborate files plus this tracker. The existing untracked S10 spec is preserved. Drawing geometry, drop handling, lazy routing, shared operation semantics, dependencies, and server code are unchanged.
+- Drag-stop uses the full third callback argument and dispatches one deduplicated batch of changed positions. Resize uses final callback geometry, shared size limits, and selected/editable controls. Deletion filters cascaded edges using canonical endpoints, dispatches once, and ignores React Flow's remove notifications. Both delete keys are gated by editability.
+- Independently exercised the actual workspace store through Vite's SSR module loader, without repository test files or live database writes. Passed: display-only dragging, fractional final positions, rejected resize followed by the final dimensions notification, measurement restoration, preserved selection, 50/51-node move and delete boundaries, cascade filtering, duplicate ids, untrusted callback endpoints, viewer action guards, and unchanged version. Confirmed the installed resizer calls onResizeEnd before its final dimensions notification.
+- Re-ran root `npm run build`: passes with the existing large-chunk warning only. Entry 577.75 kB, dashboard 20.23 kB, workspace 208.10 kB; scoped Collaborate CSS 1.96 kB. Re-ran server `npm test`: 104 passed, zero failures/skips. `git diff --check` passes. No production debug hooks, console logging, raw hex literals, or chat/blog imports in the changed JavaScript files.
+- Grok's browser/visual and API/socket regression results above are implementation evidence, not checks independently repeated during this review. Real signed-in owner/viewer workspace checks and a signed-in chat UI walkthrough remain unverified; controlled roles and socket delivery cover narrower paths. These limits do not block this local canvas slice, which changes no authentication, membership, server, or chat code.
+
+Approved — 2026-11-05. No implementation changes requested. No commit, push, branch, or S11 work.
+
+### S11 — Labels and colors
+
+**Implementer:** Grok
+
+**Changed** (on top of the approved, uncommitted S10 baseline):
+
+- `src/collaborate/store/useWorkspaceStore.js`: imports `NODE_COLORS`. `setNodeLabel` and `setNodeColor` recheck `selectCanEdit`. A viewer restores the display, returns false, and shows no toast. A missing node returns false with no dispatch and no toast. An unchanged label, or a color whose fill and text already equal the named pair, returns true with no dispatch. Anything else dispatches exactly one `node.update`. The label patch is only `data.label`, and empty strings, spaces, and newlines are kept. The color patch is only `data.color` and `data.textColor` from the shared pair. An unknown or non-string palette name returns false. A non-string label or a label past 200 characters still reaches `applyOps`, toasts the shared error, and leaves the accepted canvas and version unchanged. S10 geometry and deletion stay.
+- `src/collaborate/components/canvas/ShapeNode.jsx`: the node owns only whether the editor is open. A capture-phase double-click on the body or label opens it and stops native zoom. Handles, resize controls, the color toolbar, and the open textarea do not start or reset a session. A viewer does not stop the event, so double-click still zooms. Losing edit permission closes the editor without saving. A selection change does not. While editing, the toolbar and resizer are hidden, the same `LABEL_LAYERS` stay mounted even for an empty label, and the four handles remain with `isConnectable={false}`.
+- `src/collaborate/components/canvas/NodeLabelEditor.jsx` (new): uncontrolled textarea, `maxLength={NODE_LABEL_MAX}`, accessible name "Node label", and `nodrag nopan nowheel nokey`. A finished ref is set before commit or close, so Enter's following blur cannot dispatch twice and Escape's following blur cannot turn a cancel into a save. Composition (`isComposing` or keyCode 229) does not commit. Shift+Enter inserts a newline. Enter and blur commit once. Escape discards. Enter and Escape return focus to `.react-flow__node` with `preventScroll: true`. Blur leaves focus where the browser put it. Unmount discards the draft and does not dispatch.
+- `src/collaborate/components/canvas/ColorToolbar.jsx` (new): `NodeToolbar` at `Position.Top`, offset 12, with no `isVisible` prop. Eight buttons in `NODE_COLORS` order. Fill and the active border are inline `pair.fill` and `pair.text`. The group is named "Node colors". Each button is `aria-pressed` and labelled `"<name> node color"`. The toolbar carries `nokey` and stops pointer, mouse, click, and key events so Delete, Backspace, and arrows do not reach the canvas. Enter and Space still activate the focused button once.
+- `src/collaborate/collaborate.css` and `src/collaborate/components/canvas/WorkspaceCanvas.jsx`: unchanged by S11. Their uncommitted diffs are the approved S10 resize rules and gesture wiring. Existing utilities were enough. No new tokens.
+- `context/3-ui-context.md`: unchanged by S11. The working tree already had the spec author's one-line ColorToolbar clarification. Left as found.
+
+The canvas stays local. Nothing is saved, broadcast, or undone. No new dependencies or server changes. Version stays client-unchanged.
+
+**Verified (2026-11-05):**
+
+- PASS: root `npm run build`, 4249 modules, existing large-chunk warning only (7.20s). Measured afterward: entry `index-9HKzmLV0.js` is 577,748 bytes (577.75 kB) and dashboard `Collaborate-C8cJ_ShB.js` is 20,227 bytes (20.23 kB), the same displayed sizes as S10. The hashes differ because the lazy chunk names changed. Workspace `WorkspacePage-i9XVhMV-.js` is 213,229 bytes (213.23 kB; Vite gzip 69.28 kB), 5.13 kB above S10's 208.10 kB. Collaborate CSS `Collaborate-Dkj5MLae.css` is 1,963 bytes (1.96 kB) and the same hash as S10, because S11 added no CSS. Workspace CSS `WorkspacePage-BnuhLJ6X.css` stays 15.87 kB. `collab-label-editor`, `collab-color-toolbar`, `setNodeLabel`, and `setNodeColor` occur in the workspace chunk only.
+- PASS: `cd server; npm test`: 104 passed, 0 failed, 0 skipped (274ms on the closing run). No server source changed.
+- PASS: `git diff --check` (CRLF warnings only, exit 0). No `window.__flow` and no `console.log` under `src/collaborate`. No palette hex literals in `ColorToolbar.jsx`, `NodeLabelEditor.jsx`, or `ShapeNode.jsx`.
+- PASS: external temporary Vite/Playwright harness in StrictMode on `127.0.0.1:5193` rendered the real WorkspaceCanvas and store in Chromium 1228. An in-memory Vite transform exposed the React Flow instance. The harness wrapped `dispatch` and `toast.error`. Nothing was written into the repo. Roles were set on the store. These are controlled component checks, not live Clerk membership checks.
+- PASS: double-click on all six shapes, empty and labeled, at zoom 1, zoom 2, and a panned viewport `{x:-50, y:35, zoom:1}`: 18 empty opens and 18 labeled opens, plus body clicks outside the label on the inset shapes. Opening the editor dispatched nothing and left geometry and the viewport unchanged. A viewer, seeded as owner and then demoted, still zoomed on double-click and showed no textarea, toolbar, or resize handles.
+- PASS: Enter commits once, restores node focus without scrolling, and the following blur does not dispatch again. A pane click and Tab each commit once and leave focus where that gesture put it. Escape discards, including when a click follows. Closing an unchanged draft dispatches nothing. Empty, whitespace, and newline labels round-trip. Shift+Enter stays open and does not save. A paste stops at 200 characters. Direct invalid labels toast `Node label must be 200 characters or fewer` and `Node label must be text` and leave version 7. HTML is stored as literal text. A 200-character label wraps inside the node; the label layer's overflow is hidden.
+- PASS: IME composition Enter, `compositionend`, keyCode 229, and Escape during composition do not save. A later plain Enter saves once (`AB`).
+- PASS: keys, clipboard, mouse selection, and wheel inside the textarea do not pan, zoom, move, or delete the node.
+- PASS: unmounting the workspace while a dirty editor is open (`Hello!LEAK`) does not commit. Demoting to viewer, removing the node, and resetting the workspace each discard the draft with no commit. Promoting back to owner does not reopen that draft. Direct viewer calls and missing-id calls to `setNodeLabel` and `setNodeColor` return false, leave the canvas unchanged, and show no toast.
+- PASS: all eight palette pairs on a labeled rectangle and a labeled diamond. A changed pair dispatches one update whose patch is only `data.color` and `data.textColor`. Computed body fill and label color match the pair. `aria-pressed` matches. Edges, selection, version, and the label stay. Choosing the already active pair dispatches nothing. A Neutral fill with Blue text has zero pressed swatches, and choosing Neutral repairs both fields in one op. A custom `#112233` / `#445566` pair presses no swatch, and choosing Green sets both fields. An unknown name, a non-string, and a missing id return false with no extra dispatch and no toast. A color change does not overwrite a label edited in the same session.
+- PASS: the toolbar is a portaled glass pill inside `.react-flow__renderer`, hidden unless exactly one node is selected, because `isVisible` is not passed. Swatches stay about 20px at zoom 0.5, 1, and 2 and after a pan. The focus outline uses `--collab-accent`. Delete, Backspace, and arrows do nothing while a swatch is focused. After focus returns to the canvas, Delete removes only the selected node. Enter and Space on a swatch call `setNodeColor` once. The active swatch and Space on it dispatch nothing. While editing, the editing node keeps four handles and none are `connectable`. Hovered connection handles fade to opacity 1 after the existing 150ms transition.
+- PASS: S10 regression on the same harness. Measurement, pan, wheel, and Fit to screen add no label or color op. Single drags at zoom 1 (`+80,+40`), zoom 2 (`+40,+24`), and zoom 1.3 panned (`+36,+22`). Ctrl multi-drag of three nodes by `(48,36)`. Top-left resize `+28,+18`. Backspace and Delete each send one `node.remove`. A rejected resize (`x` 100001, 90×70) followed by `resizing: false` leaves the canonical 160×80, restores `measured`, and keeps selection and version 7. A native drop from the rectangle tool adds one rectangle. This run did not repeat S10's 51-op, 2000px max, or cascade fixtures.
+- PASS: inspected the eight palette screenshots and the multiline and 200-character shots. Neutral through Teal each show that pair's fill and "CSS" text color, with one active ring on that pair's swatch. The multiline shot shows "one" over "two", centered, with the editor closed and the toolbar and resize handles visible. The 200-character shot is wrapped rows of Y painted inside the dashed border.
+- PASS: temporary API on port 3010 and Vite on port 5194. Boot logged `Server is up and running on PORT: 3010` and `MongoDB connected to 3dfolio`. `/health` and `/api/posts` returned 200. The posts payload had 0 posts. `/blog` showed "Notes on code, design, and building for the web.", "Recent Posts", and "No posts yet." `/chat` showed the signed-out gate: "ajfm88 Chat" and Continue. No page errors. No projects, canvases, messages, or users were written, so there was nothing to clean up. Ports 3000, 5173, and 5174 were not used. The harness and both temporary processes were stopped afterward.
+- The signed-out `/chat` gate and the public posts read are not a socket or message-API round trip and not a signed-in chat walkthrough. S11 changes no server, chat, or blog code. S10's two-account socket check remains the last delivery evidence.
+
+**Deviations:** None in implementation. A pane click deselects through React Flow; the label op does not rewrite selection, and Enter leaves the node selected. Drag commits the position React Flow reports after its 1px threshold, which is the approved S10 behavior. The harness warning that edge type "link" is missing belongs to S12. Controlled role checks are not live membership checks.
+
+**Review (Codex, 2026-11-05): No blocking findings.**
+
+- Reviewed against the S11 spec and the approved S10 working-tree baseline. The two new components and narrow node-data actions match the allowed scope. S10's geometry/deletion actions, resize CSS, and WorkspaceCanvas wiring are preserved. The supplied specs and UI-context clarification are unchanged by implementation.
+- Re-ran root `npm run build`: passes, existing large-chunk warning only. Entry 577.75 kB, dashboard 20.23 kB, workspace 213.23 kB; Collaborate CSS remains 1.96 kB with the S10 hash. The global Tailwind utility stylesheet grows from 60.29 to 60.97 kB for the new utility classes; no stylesheet/configuration changes were made for S11. Server `npm test`: 104 passed, zero failures/skips. `git diff --check` passes. No debug hooks, console logging, raw palette literals, or chat/blog imports in the three changed/new node UI components.
+- Independently ran a temporary in-memory Vite/Playwright harness with the actual WorkspaceCanvas, components, and store under StrictMode on port 5195. Passed: native double-click opens a focused/text-selected editor without zoom; draft changes stay local; Enter commits once with the exact label-only patch and restores node focus; Escape followed by blur cancels; pane blur commits once; palette patches contain only both color fields; active reselect is a no-op; Delete/Backspace/arrows on a focused swatch do not affect the canvas; a draft survives an unrelated color action; permission loss discards and regrant does not reopen; composition Enter does not submit; invalid labels/palette names reject without accepted-state changes; version stays 7. No page errors. Closed the review browser/server; no repository harness files or live database writes.
+- The remaining all-shape, palette screenshot, clipboard, and S10 regression evidence is Grok's recorded verification, not independently repeated in full during review. Live authenticated membership checks and a signed-in chat UI walkthrough remain unverified; the review harness uses controlled roles. No authentication, membership, server, blog, or chat code changes in S11, so those limits do not block this slice.
+
+Approved — 2026-11-05. No implementation changes requested. S10 remains Approved. No commit, push, branch, or S12 work.
 
 ### S12 — Edges
 

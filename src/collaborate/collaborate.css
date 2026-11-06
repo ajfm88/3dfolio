@@ -77,6 +77,23 @@
   }
 }
 
+/* Resize chrome stays on the shape node. Positioning, cursors, and which
+   border side is 1px come from React Flow; these rules only change size,
+   color, and the outline style. */
+.collab-root .react-flow__node-shape .collab-resize-handle {
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  background-color: var(--collab-node-border-selected);
+  border: 1px solid var(--collab-bg);
+}
+
+.collab-root .react-flow__node-shape .collab-resize-line {
+  border-color: var(--collab-node-border-selected);
+  border-style: dashed;
+}
+
 /* Gentle hover on the signed-out gate's logo tile. */
 @keyframes collab-float-y {
   0%,

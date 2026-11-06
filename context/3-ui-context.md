@@ -51,7 +51,7 @@ These are the 8 fill/text pairs. They're defined once in `canvasOps.js` and used
 | Green | `#0F2E18` | `#62C073` |
 | Teal | `#062822` | `#0AC7B4` |
 
-- Node border: `--collab-node-border` at rest, `--collab-node-border-selected` when selected (tokens added in S09). Fill and label colors come from each node's `data`, so `ShapeNode` applies them as inline styles. That is the one place component code carries palette values, and they always originate in `canvasOps.js`.
+- Node border: `--collab-node-border` at rest, `--collab-node-border-selected` when selected (tokens added in S09). Fill and label colors come from each node's `data`, so `ShapeNode` applies them as inline styles. S11's `ColorToolbar` also uses the shared `NODE_COLORS` pairs for swatch fills and active borders. These inline palette styles always originate in `canvasOps.js`; component code contains no palette literals.
 - Edges: stroke `rgba(255,255,255,0.4)`, width 1.5, brighter when selected, with a closed arrow marker.
 
 ### Cursor palette

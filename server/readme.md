@@ -101,6 +101,7 @@ server/
 │   │   ├── imagekit.js               # Lazily built ImageKit client and chat media upload
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
+│   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
 │   │   └── socket.js                 # Shared http.Server + Socket.io, auth, feature registration
 │   ├── shared/
 │   │   └── canvasOps.js              # Pure canvas op semantics shared by the server and the client
@@ -128,14 +129,17 @@ server/
 │   │   ├── message.route.js          # /api/messages routes
 │   │   └── project.route.js          # /api/projects routes
 │   ├── sockets/
-│   │   └── chat.socket.js            # Chat presence, typing, and disconnect handlers
+│   │   ├── chat.socket.js            # Chat presence, typing, and disconnect handlers
+│   │   └── workspace.socket.js       # Workspace join, leave, and disconnect cleanup
 │   ├── webhooks/
 │   │   └── clerk.webhook.js          # Clerk to MongoDB user sync and cascade deletes
 │   └── index.js                      # Express app entry point
 ├── test/
 │   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
 │   ├── models.test.js                # Project and Canvas schema validation without a database
-│   └── canvasOps.test.js             # Canvas op validation, atomic apply, and normalization
+│   ├── canvasOps.test.js             # Canvas op validation, atomic apply, and normalization
+│   ├── workspaceRooms.test.js        # Room registry and serial queue, with no database
+│   └── workspace.socket.test.js      # Join, leave, and cancellation, with models stubbed
 ├── .env                              # Environment variables
 ├── .env.example
 ├── package.json
@@ -281,7 +285,33 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 
 | Event    | Payload                    | Description                               |
 | -------- | -------------------------- | ----------------------------------------- |
-| `typing` | `{ receiverId, isTyping }` | Relayed to the recipient, never persisted |
+| `typing`          | `{ receiverId, isTyping }` | Relayed to the recipient, never persisted |
+| `workspace:join`  | `{ projectId, tabId }`     | Acked. Joins `project:<projectId>` and returns the saved snapshot |
+| `workspace:leave` | `{ projectId }`            | Leaves that project room. No acknowledgement |
+
+`workspace:join` ignores a call that has no acknowledgement function. `projectId` is a 24-character hex ObjectId and `tabId` is a UUID v4; both are matched case-insensitively and stored lowercase. Any other field on the payload is ignored. The server uses the authenticated socket user, never a user id or role in the payload.
+
+A successful acknowledgement looks like this:
+
+```json
+{
+  "ok": true,
+  "project": { "_id": "…", "name": "Design", "description": "" },
+  "role": "owner",
+  "canvas": { "nodes": [], "edges": [], "version": 0 },
+  "participants": [],
+  "turn": null,
+  "serverNow": 1760000000000
+}
+```
+
+Failures carry only `ok` and `message`. `"Project not found"` covers a bad id, a missing project, and a caller who cannot read it. `"Invalid workspace request"` covers a malformed payload or tab id. `"Workspace request superseded"` covers a join cancelled by a newer join, leave, or disconnect. `"Unable to open workspace"` covers an unexpected database or adapter failure; the server logs the cause and does not return it.
+
+Each join checks membership with the same scoped project query as REST, including when the room is already cached. The caller's `fullName` and `img` come from the synced user document. The first join of a project upserts a Canvas with insert-only defaults, normalizes `nodes` and `edges` in memory, and keeps the stored `version`. Joining does not rewrite an existing graph or save later edits. A duplicate-key race reads the canvas that won the unique index.
+
+The room registry is in-memory and single-process. A restart drops it; the client reconnects, joins again, and loads the stored snapshot. That reload replaces edits that existed only in the open tab. Editing stays local until S15; this event does not save or broadcast canvas changes.
+
+`tabId` comes from the tab's `sessionStorage` so a reconnect in the same tab repeats an id. Connections are still keyed by socket id, so two tabs remain two connections even when a duplicated tab copied the same id. One socket is in one project room at a time, separate from its per-user chat room. Leave and disconnect remove that socket. The room is discarded when it has no sockets and no join still in progress.
 
 ### Server to Client
 
@@ -291,7 +321,7 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 | `typing`         | `{ userId, isTyping }`     | Sent to the recipient's room only         |
 | `newMessage`     | The saved message document | Sent to the recipient's room on send      |
 
-Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog.
+Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog. Workspace join acknowledges on the same event instead of emitting a second one.
 
 ## Request & Response Examples
 
@@ -561,7 +591,7 @@ The owner isn't stored in `members`; ownership takes priority when resolving a r
 Index: { project: 1 } (unique)
 ```
 
-Canvas content is validated field by field by the shared canvas ops module (S06), not the schema; a snapshot is created lazily on first workspace join (S13).
+Canvas content is validated field by field by the shared canvas ops module (S06), not the schema. The first workspace join creates an empty snapshot if one does not exist. Join normalizes the loaded graph in memory and does not write that normalized graph back. Edits made after the snapshot loads stay on that client until S15 saves them. A reconnect before then loads the stored snapshot again and drops those local edits.
 
 ## Validation Rules
 

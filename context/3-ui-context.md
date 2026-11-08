@@ -31,6 +31,8 @@ Components use these tokens through Tailwind arbitrary values, e.g. `bg-[var(--c
 | Warning / "waiting" / idle countdown | `--collab-warning` | `#ff990a` |
 | Node border, at rest | `--collab-node-border` | `rgba(255, 255, 255, 0.1)` |
 | Node border, selected | `--collab-node-border-selected` | `rgba(255, 255, 255, 0.35)` |
+| Edge stroke (S12) | `--collab-edge` | `rgba(255, 255, 255, 0.4)` |
+| Edge stroke, selected (S12) | `--collab-edge-selected` | `rgba(255, 255, 255, 0.8)` |
 
 The page background is `radial-gradient(ellipse at 50% 0%, rgba(112, 66, 248, 0.12), transparent 60%), var(--collab-bg)`, the same as chat.
 
@@ -52,7 +54,7 @@ These are the 8 fill/text pairs. They're defined once in `canvasOps.js` and used
 | Teal | `#062822` | `#0AC7B4` |
 
 - Node border: `--collab-node-border` at rest, `--collab-node-border-selected` when selected (tokens added in S09). Fill and label colors come from each node's `data`, so `ShapeNode` applies them as inline styles. S11's `ColorToolbar` also uses the shared `NODE_COLORS` pairs for swatch fills and active borders. These inline palette styles always originate in `canvasOps.js`; component code contains no palette literals.
-- Edges: stroke `rgba(255,255,255,0.4)`, width 1.5, brighter when selected, with a closed arrow marker.
+- Edges (S12): width 1.5 using `--collab-edge`, brighter with `--collab-edge-selected` when selected, with a closed arrow marker added only to display edges. Smooth-step routing for different-node edges; self-loops use an exterior curved path. Parallel edges may overlap. Labels are small elevated midpoint pills, with an isolated inline textarea while editing. S12 adds the two edge tokens to `collaborate.css`; they are specified here before implementation.
 
 ### Cursor palette
 

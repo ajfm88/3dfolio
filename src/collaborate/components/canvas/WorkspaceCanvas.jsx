@@ -1,17 +1,19 @@
 import { useCallback } from "react";
-import { Background, BackgroundVariant, ConnectionMode, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
+import { Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { selectCanEdit, useWorkspaceStore } from "../../store/useWorkspaceStore";
 import CanvasControls from "./CanvasControls";
+import LinkEdge from "./LinkEdge";
 import ShapePanel from "./ShapePanel";
 import ShapeNode from "./ShapeNode";
 import { createShapeNode, SHAPE_DRAG_TYPE } from "../../lib/shapeDrag";
 
 // React Flow re-creates every node when these objects change identity, so they
-// live at module scope. LinkEdge (S12) registers here too.
+// live at module scope.
 const nodeTypes = { shape: ShapeNode };
-const edgeTypes = {};
+const edgeTypes = { link: LinkEdge };
+const connectionLineStyle = { stroke: "var(--collab-edge)", strokeWidth: 1.5 };
 
 const Flow = () => {
   const rfNodes = useWorkspaceStore((s) => s.rfNodes);
@@ -23,6 +25,11 @@ const Flow = () => {
   const dispatch = useWorkspaceStore((s) => s.dispatch);
   const commitNodePositions = useWorkspaceStore((s) => s.commitNodePositions);
   const deleteElements = useWorkspaceStore((s) => s.deleteElements);
+  const connectNodes = useWorkspaceStore((s) => s.connectNodes);
+
+  const onConnect = useCallback((connection) => {
+    connectNodes(connection);
+  }, [connectNodes]);
 
   const onNodeDragStop = useCallback((_event, _node, nodes) => {
     commitNodePositions(nodes);
@@ -57,9 +64,12 @@ const Flow = () => {
       onDrop={onDrop}
       onNodeDragStop={onNodeDragStop}
       onDelete={onDelete}
+      onConnect={onConnect}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       connectionMode={ConnectionMode.Loose}
+      connectionLineType={ConnectionLineType.SmoothStep}
+      connectionLineStyle={connectionLineStyle}
       colorMode="dark"
       minZoom={0.2}
       maxZoom={2}

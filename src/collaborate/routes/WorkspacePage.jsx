@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import WorkspaceCanvas from "../components/canvas/WorkspaceCanvas";
 import WorkspaceNavbar from "../components/workspace/WorkspaceNavbar";
+import { useSessionStore } from "../store/useSessionStore";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 
 // Same spinner as CollaborateLoader. It stays local so the dashboard module
@@ -33,15 +34,15 @@ const NotFoundCard = () => (
   </div>
 );
 
-const ErrorCard = ({ projectId }) => {
-  const loadWorkspace = useWorkspaceStore((s) => s.loadWorkspace);
+const ErrorCard = () => {
+  const retryWorkspace = useWorkspaceStore((s) => s.retryWorkspace);
 
   return (
     <div className={cardFrame}>
       <div className={cardClass}>
         <h1 className="text-2xl font-bold">We couldn't open this project</h1>
         <p className="mt-3 text-sm text-[var(--collab-muted)]">Check your connection and try again.</p>
-        <button type="button" onClick={() => loadWorkspace(projectId)} className={actionClass}>
+        <button type="button" onClick={() => retryWorkspace()} className={actionClass}>
           Try again
         </button>
       </div>
@@ -51,18 +52,17 @@ const ErrorCard = ({ projectId }) => {
 
 const WorkspacePage = () => {
   const { projectId } = useParams();
+  const socket = useSessionStore((s) => s.socket);
   const status = useWorkspaceStore((s) => s.status);
-  const loadWorkspace = useWorkspaceStore((s) => s.loadWorkspace);
-  const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
+  const bindWorkspace = useWorkspaceStore((s) => s.bindWorkspace);
 
   useEffect(() => {
-    loadWorkspace(projectId);
-    return () => resetWorkspace();
-  }, [projectId, loadWorkspace, resetWorkspace]);
+    return bindWorkspace(socket, projectId);
+  }, [socket, projectId, bindWorkspace]);
 
   if (status === "idle" || status === "loading") return <WorkspaceLoader />;
   if (status === "notFound") return <NotFoundCard />;
-  if (status === "error") return <ErrorCard projectId={projectId} />;
+  if (status === "error") return <ErrorCard />;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">

@@ -1,13 +1,13 @@
-import { applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
+import { MarkerType, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import { toast } from "react-toastify";
 import { create } from "zustand";
 
-import { applyOps, NODE_COLORS } from "@shared/canvasOps.js";
-import { axiosInstance } from "../lib/axios";
+import { applyOps, NODE_COLORS, createEdgeId, normalizeCanvas } from "@shared/canvasOps.js";
+import { getTabId } from "../lib/tabId";
 
-// StrictMode and fast project switches can overlap. Only the latest load may
-// write state, and reset bumps the counter so an in-flight response cannot land.
-let loadRequest = 0;
+// The route effect owns one binding at a time. A late ack is ignored unless it
+// still matches this object, the socket id captured at emit, and its attempt.
+let activeBinding = null;
 
 function emptyWorkspace(status) {
   return {
@@ -67,6 +67,9 @@ function toDisplayEdges(edges, previous) {
       type: edge.type,
       data: { ...edge.data },
       selected: prior?.selected ?? false,
+      // The arrow is chrome. React Flow resolves it while drawing and the
+      // canonical edge never receives it, so a saved op cannot grow a marker.
+      markerEnd: { type: MarkerType.ArrowClosed, color: "var(--collab-edge)" },
     };
   });
 }
@@ -75,6 +78,128 @@ const DISPLAY_NODE_CHANGES = new Set(["select", "position", "dimensions"]);
 
 function isRecord(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+const JOIN_ROLES = new Set(["owner", "editor", "viewer"]);
+
+function canonicalProjectId(projectId) {
+  return typeof projectId === "string" ? projectId.toLowerCase() : "";
+}
+
+function classifyJoin(ack, projectId) {
+  if (!isRecord(ack) || ack.ok !== true) {
+    const message = isRecord(ack) && typeof ack.message === "string" ? ack.message : "";
+    return { ok: false, notFound: message === "Project not found", message };
+  }
+
+  const receivedId = isRecord(ack.project) ? String(ack.project._id).toLowerCase() : "";
+  const version = isRecord(ack.canvas) ? ack.canvas.version : undefined;
+  const valid = receivedId === projectId
+    && JOIN_ROLES.has(ack.role)
+    && isRecord(ack.canvas)
+    && Array.isArray(ack.canvas.nodes)
+    && Array.isArray(ack.canvas.edges)
+    && Number.isInteger(version)
+    && version >= 0
+    && Array.isArray(ack.participants)
+    && ack.participants.length === 0
+    && ack.turn === null
+    && Number.isFinite(ack.serverNow);
+  if (!valid) return { ok: false, notFound: false, message: "" };
+
+  // Display builders only see a normalized snapshot. The join is not an edit.
+  const normalized = normalizeCanvas(ack.canvas);
+  return {
+    ok: true,
+    project: {
+      _id: receivedId,
+      name: ack.project.name,
+      description: ack.project.description,
+    },
+    role: ack.role,
+    canvas: { nodes: normalized.nodes, edges: normalized.edges, version },
+  };
+}
+
+function stillCurrent(binding, attempt, socket, connectionId) {
+  return activeBinding === binding
+    && !binding.disposed
+    && binding.attempt === attempt
+    && socket.connected
+    && socket.id === connectionId;
+}
+
+function leaveIfCurrent(binding, attempt, socket, connectionId, projectId) {
+  if (!stillCurrent(binding, attempt, socket, connectionId) || !projectId) return;
+  socket.emit("workspace:leave", { projectId });
+}
+
+function installSnapshot(set, project, role, canvas) {
+  // Empty previous selection: a loaded snapshot starts unselected, and it
+  // replaces whatever this client had changed locally.
+  set({
+    status: "ready",
+    project,
+    role,
+    canvas,
+    rfNodes: toDisplayNodes(canvas.nodes, []),
+    rfEdges: toDisplayEdges(canvas.edges, []),
+  });
+}
+
+function startJoin(set, binding, force) {
+  const socket = binding.socket;
+  if (!socket?.connected || activeBinding !== binding || binding.disposed) return;
+  const connectionId = socket.id;
+  if (!force && binding.inFlight?.connectionId === connectionId) return;
+
+  const attempt = ++binding.attempt;
+  const projectId = binding.projectId;
+  binding.inFlight = { attempt, connectionId };
+  set(emptyWorkspace("loading"));
+
+  const finish = () => {
+    if (binding.inFlight?.attempt === attempt) binding.inFlight = null;
+  };
+
+  socket.timeout(10000).emitWithAck("workspace:join", {
+    projectId,
+    tabId: getTabId(),
+  }).then((ack) => {
+    if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    const result = classifyJoin(ack, projectId);
+    if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    if (result.ok) {
+      installSnapshot(set, result.project, result.role, result.canvas);
+      return;
+    }
+    if (result.message) toast.error(result.message);
+    leaveIfCurrent(binding, attempt, socket, connectionId, projectId);
+    if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    set(emptyWorkspace(result.notFound ? "notFound" : "error"));
+  }).catch(() => {
+    if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    leaveIfCurrent(binding, attempt, socket, connectionId, projectId);
+    if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    set(emptyWorkspace("error"));
+  }).finally(finish);
+}
+
+function disposeBinding(set, binding) {
+  if (!binding || binding.disposed) return;
+  const owns = activeBinding === binding;
+  binding.disposed = true;
+  binding.attempt += 1;
+  binding.inFlight = null;
+  binding.unlisten?.();
+  binding.unlisten = null;
+  // A disposer from an older route must not leave or clear the binding that replaced it.
+  if (!owns) return;
+  activeBinding = null;
+  if (binding.socket?.connected && binding.projectId) {
+    binding.socket.emit("workspace:leave", { projectId: binding.projectId });
+  }
+  set(emptyWorkspace("idle"));
 }
 
 function restoreDisplay(set, get) {
@@ -107,30 +232,64 @@ function settleResizeEnd(change, nodes) {
 export const useWorkspaceStore = create((set, get) => ({
   ...emptyWorkspace("idle"),
 
-  loadWorkspace: async (projectId) => {
-    const request = ++loadRequest;
-    // The store outlives the route, so the previous project's canvas is cleared
-    // before this request can resolve.
+  // Socket listeners live here so the page never emits. The disposer is the
+  // effect cleanup: it drops only the listeners this binding registered.
+  bindWorkspace: (socket, projectId) => {
+    // Retire the previous binding while it still owns its socket. Doing this
+    // after the swap makes its disposer skip the leave, so a connected socket
+    // keeps the old project room.
+    if (activeBinding && !activeBinding.disposed) disposeBinding(set, activeBinding);
+
+    const binding = {
+      socket: socket ?? null,
+      projectId: canonicalProjectId(projectId),
+      attempt: 0,
+      inFlight: null,
+      disposed: false,
+      unlisten: null,
+    };
+    activeBinding = binding;
     set(emptyWorkspace("loading"));
-    try {
-      const res = await axiosInstance.get(`/projects/${projectId}`);
-      if (request !== loadRequest) return;
-      // The stored canvas arrives with workspace:join in S13. Until then every
-      // open starts empty, and nothing here is saved or sent.
-      set({
-        ...emptyWorkspace("ready"),
-        project: res.data.project,
-        role: res.data.role,
-      });
-    } catch (error) {
-      if (request !== loadRequest) return;
-      set(emptyWorkspace(error.response?.status === 404 ? "notFound" : "error"));
+
+    if (socket) {
+      const onConnect = () => {
+        if (activeBinding !== binding || binding.disposed) return;
+        startJoin(set, binding, false);
+      };
+      const onDisconnect = () => {
+        if (activeBinding !== binding || binding.disposed) return;
+        // Drop role and the canvas together so a disconnected client cannot edit stale content.
+        binding.attempt += 1;
+        binding.inFlight = null;
+        set(emptyWorkspace("loading"));
+      };
+      socket.on("connect", onConnect);
+      socket.on("disconnect", onDisconnect);
+      binding.unlisten = () => {
+        socket.off("connect", onConnect);
+        socket.off("disconnect", onDisconnect);
+      };
+      if (socket.connected) startJoin(set, binding, false);
     }
+
+    return () => disposeBinding(set, binding);
+  },
+
+  retryWorkspace: () => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed) return;
+    if (!binding.socket?.connected) {
+      binding.attempt += 1;
+      binding.inFlight = null;
+      set(emptyWorkspace("loading"));
+      return;
+    }
+    startJoin(set, binding, true);
   },
 
   resetWorkspace: () => {
-    loadRequest += 1;
-    set(emptyWorkspace("idle"));
+    if (activeBinding) disposeBinding(set, activeBinding);
+    else set(emptyWorkspace("idle"));
   },
 
   dispatch: (ops) => {
@@ -289,6 +448,74 @@ export const useWorkspaceStore = create((set, get) => ({
     if (label === current.data?.label) return true;
 
     return get().dispatch([{ type: "node.update", id, patch: { data: { label } } }]);
+  },
+
+  // A fresh id on every call keeps parallel edges apart. applyOps still rejects
+  // a missing node or a handle it does not know, and a viewer never gets that far.
+  connectNodes: (connection) => {
+    if (!selectCanEdit(get())) {
+      restoreDisplay(set, get);
+      return false;
+    }
+    if (!isRecord(connection)) return false;
+
+    return get().dispatch([{
+      type: "edge.add",
+      edge: {
+        id: createEdgeId(),
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle ?? null,
+        targetHandle: connection.targetHandle ?? null,
+        type: "link",
+        data: { label: "" },
+      },
+    }]);
+  },
+
+  // The draft lives in the editor. An unchanged label is not an op, and a
+  // missing edge is left missing. applyOps rejects a non-string or a label
+  // past the shared limit without touching the accepted canvas.
+  setEdgeLabel: (id, label) => {
+    if (!selectCanEdit(get())) {
+      restoreDisplay(set, get);
+      return false;
+    }
+
+    const current = get().canvas.edges.find((edge) => edge.id === id);
+    if (!current) return false;
+    if (label === current.data?.label) return true;
+
+    return get().dispatch([{ type: "edge.update", id, patch: { data: { label } } }]);
+  },
+
+  // The label sits in a portal outside the edge wrapper, so it cannot use the
+  // wrapper's click. This mirrors that click: Ctrl/Cmd adds, and a plain click
+  // selects this edge and clears the rest. Nothing here is an op.
+  selectEdge: (id, additive) => {
+    const state = get();
+    const edge = state.rfEdges.find((item) => item.id === id);
+    if (!edge) return false;
+
+    if (additive) {
+      get().onEdgesChange([{ type: "select", id, selected: !edge.selected }]);
+      return true;
+    }
+
+    const nodeChanges = state.rfNodes
+      .filter((node) => node.selected)
+      .map((node) => ({ type: "select", id: node.id, selected: false }));
+    if (nodeChanges.length > 0) get().onNodesChange(nodeChanges);
+
+    const edgeChanges = [];
+    for (const item of state.rfEdges) {
+      const selected = item.id === id;
+      if (Boolean(item.selected) !== selected) {
+        edgeChanges.push({ type: "select", id: item.id, selected });
+      }
+    }
+    if (edgeChanges.length > 0) get().onEdgesChange(edgeChanges);
+    return true;
   },
 
   // Both fields are compared. A fixture can carry a matching fill with a

@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase C: Canvas. S01–S09 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`. S10 and S11 are approved and uncommitted.
+- Phase D: Server-authoritative sync. S01–S11 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`. S12 and S13 are approved and uncommitted.
 
 ## Current Goal
 
-- S11 (labels and colors) approved by Codex on 2026-11-05. S10 stays approved; both are uncommitted. The user handles commits. S12 needs its spec before implementation.
+- S13 (workspace join / leave) approved by Codex on 2026-11-06 after rechecking both cleanup fixes. S12 stays Approved. Both are uncommitted. Today's work stops here; no S14 planning or implementation.
 
 ## Completed
 
@@ -21,16 +21,18 @@ Update this file after every meaningful implementation change. It records the **
 - S07: Canvas foundation (approved 2026-11-03, committed 2026-11-04 as `a7e9d6d`, together with S06).
 - S08: Shape panel + drop (approved 2026-11-04, committed as `7fb9533`, together with S09).
 - S09: Node rendering (approved 2026-11-04, committed as `7fb9533`, together with S08).
-- S10: Move, resize, delete as ops (approved 2026-11-05 by Codex, uncommitted).
-- S11: Labels and colors (approved 2026-11-05 by Codex, uncommitted).
+- S10: Move, resize, delete as ops (approved 2026-11-05 by Codex, committed together with S11 as `050c1a8`).
+- S11: Labels and colors (approved 2026-11-05 by Codex, committed together with S10 as `050c1a8`).
+- S12: Edges (approved 2026-11-06 by Codex, uncommitted).
+- S13: Workspace join / leave (approved 2026-11-06 by Codex after cleanup corrections, uncommitted).
 
 ## In Progress
 
-- None.
+- None. HEAD remains `050c1a8`; S12 and S13 are approved in the working tree.
 
 ## Next Up
 
-- The user handles the S10 and S11 commits. Then write the S12 (edges) spec against the current code; no S12 implementation has started.
+- The user handles commits for S12 and S13. Stop for today. S14 remains unstarted and unspecced; no further planning or implementation in this session.
 
 ## Slice Status
 
@@ -47,10 +49,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S07 | Canvas foundation | client | S05, S06 | ✓ | Committed | Grok | `a7e9d6d` |
 | S08 | Shape panel + drop | client | S07 | ✓ | Committed | Codex | `7fb9533` |
 | S09 | Node rendering | client | S08 | ✓ | Committed | Codex | `7fb9533` |
-| S10 | Move, resize, delete as ops | client | S09 | ✓ | Approved | Grok | |
-| S11 | Labels + colors | client | S10 | ✓ | Approved | Grok | |
-| S12 | Edges | client | S11 | | Todo | | |
-| S13 | Workspace join / leave | both | S01, S06, S12 | | Todo | | |
+| S10 | Move, resize, delete as ops | client | S09 | ✓ | Committed | Grok | `050c1a8` |
+| S11 | Labels + colors | client | S10 | ✓ | Committed | Grok | `050c1a8` |
+| S12 | Edges | client | S11 | ✓ | Approved | Grok | |
+| S13 | Workspace join / leave | both | S01, S06, S12 | ✓ | Approved | Grok | |
 | S14 | Commit handler | server | S13 | | Todo | | |
 | S15 | Client sync wiring | client | S14 | | Todo | | |
 | S16 | Drag / resize previews | both | S15 | | Todo | | |
@@ -693,7 +695,123 @@ Approved — 2026-11-05. No implementation changes requested. S10 remains Approv
 
 ### S12 — Edges
 
-**Carry-forward from S06:** S06 allows self-loops and parallel edges; decide how `LinkEdge` draws them, or add a rule to `canvasOps.js` through a spec change.
+**Implementer:** Grok
+
+**Changed** (on top of `050c1a8`; the supplied spec and UI-context edits were already in the tree and were not rewritten):
+
+- `src/collaborate/store/useWorkspaceStore.js`: `connectNodes` dispatches one `edge.add` with a fresh `createEdgeId()`, the two handles normalized with `?? null`, type `link`, and an empty label. It does not spread the connection object. `setEdgeLabel` dispatches one `edge.update` whose patch is only `data.label`, skips an unchanged label, and leaves a missing edge missing. A viewer restores the display and returns false with no toast. `selectEdge` is display-only: the label portal is not inside the edge wrapper, so a plain click selects that edge and clears the other selection, and Ctrl/Cmd flips it, through the existing `onNodesChange` / `onEdgesChange` select path. `toDisplayEdges` adds `markerEnd: { type: ArrowClosed, color: "var(--collab-edge)" }` on the display edge only. S10 geometry and deletion are unchanged. Version is still not bumped.
+- `src/collaborate/components/canvas/LinkEdge.jsx` (new): smooth-step between different nodes, using the label point `getSmoothStepPath` returns. A self-loop uses `selfLoopGeometry` and the live node box from `useInternalNode`. `BaseEdge` gets the resolved marker URL and `interactionWidth={20}`. No second hit path. Double-click is capture-phase on the path group and the pill. A viewer does not stop it. The editor does not reset on a second double-click. Empty labels draw no pill.
+- `src/collaborate/components/canvas/EdgeLabelEditor.jsx` (new): same commit rules as the node editor. `maxLength` is `EDGE_LABEL_MAX` (100). Enter and blur save once. Escape discards. Shift+Enter inserts a newline. Composition does not commit. Enter and Escape return focus to the edge wrapper with `preventScroll`. A finished ref plus an `isConnected` blur guard stop a removed field from saving, including under StrictMode.
+- `src/collaborate/lib/edgePath.js` (new): render-only. Different sides walk the shorter exterior of the box expanded by 36px, with a 16px fillet. The same side, including coincident anchors, is an outward cubic. Null or non-finite input does not throw or emit `NaN`.
+- `src/collaborate/components/canvas/WorkspaceCanvas.jsx`: module-level `edgeTypes = { link: LinkEdge }`, `onConnect` calls `connectNodes`, and the drag preview is a smooth step at 1.5px in `--collab-edge`. Loose mode, delete keys, drag/drop, and the other canvas props stay.
+- `src/collaborate/collaborate.css`: `--collab-edge` and `--collab-edge-selected` on `.collab-root, .collab-portal`, and the React Flow stroke variables for the edge, the selected edge, and the connection line. Width is 1.5. The arrow keeps the resting token.
+
+`ShapeNode.jsx`, `NodeLabelEditor.jsx`, `ColorToolbar.jsx`, `server/src/shared/canvasOps.js`, and the server are unchanged. No new dependency. The canvas is still local: nothing is saved, broadcast, or undone.
+
+**Verified (2026-11-06):**
+
+- PASS: root `npm run build`, 4252 modules, existing large-chunk warning only (10.53s). Entry `index-CwkP3kRZ.js` is 577,748 bytes (577.75 kB) and dashboard `Collaborate-B5cWnSZr.js` is 20,227 bytes (20.23 kB), the same displayed sizes as S11. Workspace `WorkspacePage-4UIw_C-l.js` is 221,156 bytes (221.16 kB; gzip 71.79 kB), up from S11's 213,229 bytes. Collaborate CSS `Collaborate-CJGlWSl_.css` is 2,255 bytes (2.26 kB), up from 1,963 bytes. Workspace CSS `WorkspacePage-BnuhLJ6X.css` stays 15,869 bytes (15.87 kB) and the same hash. Global `index-BvxZxvMy.css` is 61,125 bytes (61.13 kB). `collab-edge-editor`, `connectNodes`, `setEdgeLabel`, and `Edge label` occur in the workspace chunk only, not in the entry, dashboard, chat, or blog chunks.
+- PASS: `cd server; npm test`: 104 passed, 0 failed, 0 skipped. No server source changed.
+- PASS: `git diff --check` (CRLF warnings only, exit 0). No production `window.__flow` or `console.log` in the edge files. No chat or blog imports.
+- PASS: an external temporary Vite/Playwright harness in StrictMode on `127.0.0.1:5196` rendered the real WorkspaceCanvas and store in installed Google Chrome. An in-memory transform exposed `setViewport`. The harness wrapped `dispatch` and `toast.error`. Nothing was written into the repo. Roles were set on the store. These are controlled component checks, not live Clerk membership checks.
+- PASS: all 16 handle pairs, both directions. Zoom 1 and a panned viewport `{x:-50, y:35, zoom:1}` used a rectangle and a diamond at the original spacing. Zoom 2 used the same shapes closer together so every handle stayed inside the 1280px viewport. Each completion dispatched one `edge.add` with a fresh id, the right handles, type `link`, and `data.label ""`. Stored edges had no `markerEnd`, `style`, or `selected`. Version stayed 7. An abandoned drag dispatched nothing. During a node drag the path changed and the only content op was `node.update`.
+- PASS: viewer and non-record `connectNodes` return false with no toast and no op. A missing endpoint and a bad handle toast and leave the edge count and version 7. Null and undefined handles are stored as null. Three parallel right-to-left edges keep different ids. Seeding 600 edges and connecting once more toasts the 600 limit, leaves 600 edges, and leaves version 7. Demoting to viewer during a drag, before mouseup, creates nothing.
+- PASS: resting stroke computed to `rgba(255, 255, 255, 0.4)` at 1.5px. The interaction path's `stroke-width` is 20. An empty label draws no pill. The closed arrow element is present. A selected edge's computed stroke differs from an unselected one. The multiline pill shows `hello` over `world` with `white-space: pre-wrap`. Canonical edges still have no marker or style. No missing-link-edge warning and no page error. The only console error was a 404 with no URL, the harness favicon.
+- PASS: six distinct-side self-loops, a same-side loop, and a null-handle loop produced finite paths. Their label anchors sat at least 20px outside the node box. The same-side loop followed a move and a resize with no edge op. It could be labelled and deleted. A native drag from top to right on one node created one self-loop. A drag from a handle back to itself created nothing. A separate geometry script checked 12 side pairs, a coincident-anchor clearance of 48, and a finite null-input path.
+- PASS: double-click on the path opens the editor once, selects the edge, and does not change the viewport transform. Enter commits one `edge.update` of `data.label` only and returns focus to the edge. An unchanged blur does not dispatch. Shift+Enter plus Tab stores a multiline label. Escape discards, and the following blur does not save. Empty text removes the pill. A paste stops at 100. Direct 101-character and non-string labels toast and leave version 7. A missing id returns false. IME Enter (`isComposing`, keyCode 229, `compositionend`) does not commit. Backspace, arrows, Ctrl+Z, and Ctrl+C stay in the editor and do not delete the edge. Wheel and ArrowUp over the editor do not change the viewport.
+- PASS: demoting to viewer closes the editor without saving, and promoting back does not reopen it. A viewer double-click does not open an editor. Unmount with a dirty draft does not save. Deleting the edge or its node while the draft is dirty dispatches no `edge.update`. `resetWorkspace` drops the draft and dispatches nothing.
+- PASS: Delete and Backspace each remove one selected edge and leave both nodes, one `edge.remove` each. Deleting a node with an incident edge dispatches only `node.remove` and the edge is gone. A mixed selection of node A and edge B-C dispatches `node.remove:a,edge.remove:bc` once; the edge that touched A is cascaded and not repeated. A viewer keyboard Delete and a direct `deleteElements` do nothing and show no toast. A path click selects the edge and dispatches no op.
+- PASS: parallel edges share one path `d` and keep different ids. That overlap is the specified limitation. In the selected-edge screenshot the two strokes occupy the same pixels, so only one line is visible; the computed selected stroke is still the brighter token, and the pill belongs to the selected edge.
+- PASS: regressions on the same harness. Top-left resize commits a larger size and a smaller position in one `node.update`. A `resizing: false` dimensions change of 12×12 settles the display back to the canonical 40×40 and dispatches nothing. All six shapes render, CSS for rectangle/pill/circle and SVG for the other three, four handles each. A synthetic hexagon drop adds one `n_` node. Ctrl multi-drag commits both nodes in one batch. Node-label Enter, Escape, and pane blur still end on `Blurred`. The Blue swatch sets `#10233D` / `#52A8FF` and keeps the label. Delete while the Red swatch is focused removes nothing.
+- PASS: inspected `css-svg.png` (rectangle to hexagon, light arrow, no pill), `selected-label.png` (`hello` / `world` on the pill, arrow into the hexagon), and `self-loop.png` (exterior curves and arrows, labels outside the box). Eight loops on one node crowd their pills together. That is the fixture, not a lane layout.
+- PASS: temporary API on port 3010. Boot logged `Server is up and running on PORT: 3010` and `MongoDB connected to 3dfolio`. No Mongoose deprecation line. `/health` returned `{ ok: true }`. `GET /api/posts` returned 200 with `posts` length 0. No project, canvas, message, or user was written.
+- PASS, with a limit: temporary app Vite on port 5197. `VITE_API_URL` for that process was `http://127.0.0.1:3010` (no `/api` suffix). The public Clerk key was supplied from `CLERK_PUBLISHABLE_KEY` and was not printed. `/blog` showed "Notes on code, design, and building for the web.", the category links, and Sign in. `/chat` showed the signed-out gate: "ajfm88 Chat" and Continue. No message was sent. The blog's `/posts` requests from origin `127.0.0.1:5197` were blocked by CORS because `CLIENT_URL` has no local origin, so the browser did not render "No posts yet." The direct `GET /api/posts` read is the empty-list evidence. This is not a signed-in walkthrough and not a socket round trip. S10 recorded the last two-account delivery check. S12 changes no server, chat, or blog code.
+
+**Deviations:** None in implementation. Parallel edges overlap on purpose. React Flow still refuses a drag that starts and ends on the same handle; two different handles on one node connect. Drag commits the position React Flow reports after its 1px threshold, which is the approved S10 behavior. Controlled role checks are not live membership checks. The temporary blog origin is not in `CLIENT_URL`, so the in-browser post list was not verified. No commit, push, branch, or S13 work.
+
+**S06 carry-forward:** closed. Shared validation is unchanged. Self-loops draw outside the node. Parallel edges keep their own ids and may overlap.
+
+**Review (Codex, 2026-11-06): No blocking findings.**
+
+- Reviewed the tracked diff and all three new implementation files against `context/specs/12-edges.md` and baseline `050c1a8`. Scope matches the allowed files. S10 geometry/deletion, S11 node UI, shared validation, server code, dependencies, and supplied planning documents are preserved. Arrows stay display-only; edge mutations use the shared operation pipeline and current-state role gate.
+- Independently re-ran root `npm run build`: passes, 4252 modules, existing large-chunk warning only. Entry 577.75 kB, dashboard 20.23 kB, workspace 221.16 kB, Collaborate CSS 2.26 kB, workspace CSS 15.87 kB. Server `npm test`: 104 passed, zero failures/skips. `git diff --check` passes with line-ending notices only.
+- Independently ran an external in-memory Vite/Playwright harness under StrictMode on port 5198 with the actual WorkspaceCanvas and store. Passed: native path and label double-click open without zoom; draft stays local; Enter sends one exact label-only op and restores edge focus; Escape cancels; pane blur commits once; permission loss discards and regrant stays closed; IME Enter does not submit; deleting an edited edge causes no stale save; text Backspace is isolated and canvas Delete removes only the edge. No browser page exceptions. The only console error was the temporary harness favicon 404.
+- Independently checked store no-ops, missing-edge handling, invalid endpoint/handle/over-limit-label rejection, parallel fresh ids, display/canonical marker separation, viewer create/label/delete guards, single-op node cascade, and unchanged version. Sampled 64 self-loop geometries (all 16 side pairs at 40x40, 160x80, 2000x40, and 40x2000): finite nonzero paths, with sampled points outside node interiors. These controlled role checks are not live Clerk membership checks. The external review script is in the OS temp directory as `review12.mjs`; no harness files or instrumentation were added to the repository, and the review browser/server were closed.
+- Grok's all-handle native connection matrix, screenshots, remaining regression checks, and configured API boot are recorded implementation evidence, not independently repeated in full. Signed-in membership/chat walkthroughs and the in-browser blog post list remain unverified as described above. S12 changes no authentication, server, chat, or blog code; these limits do not block this local canvas slice. Parallel overlap is the specified limitation.
+
+Approved — 2026-11-06. No implementation changes requested. No commit, push, branch, or S13 work.
+
+### S13 — Workspace join and leave
+
+**Spec (Codex, 2026-11-06):** `context/specs/13-workspace-join-leave.md`. Baseline is the approved, uncommitted S12 tree on HEAD `050c1a8`. Codex reviews this slice.
+
+**Scope:** server room registry and rejection-safe serial queues, membership-checked lazy snapshot loading, join/leave/disconnecting handlers, stable tab identity, store-owned client join/rejoin/retry cleanup, and focused registry/socket race tests. `context/2-architecture.md` records the lifecycle and response clarifications. Socket identity, existing DM handlers, shared canvas rules, and S12 canvas UI remain unchanged.
+
+**Staged behavior:** S13 loads the saved snapshot. Edits stay on this client until S15. Reconnect loads that saved snapshot again and replaces the local edits. No commit/sync events, remote ops, previews, participant broadcasts, turn state, chat, or durable edit saves were added.
+
+**S13-only files.** The starting tree already had uncommitted S12 and the supplied planning docs. Those are not S13 work: `context/2-architecture.md`, `context/3-ui-context.md`, `context/specs/12-edges.md`, `context/specs/13-workspace-join-leave.md`, `src/collaborate/collaborate.css`, `src/collaborate/components/canvas/WorkspaceCanvas.jsx`, `EdgeLabelEditor.jsx`, `LinkEdge.jsx`, and `src/collaborate/lib/edgePath.js`. `useWorkspaceStore.js` contains both the S12 actions and the S13 socket lifecycle.
+
+S13 added `server/src/lib/workspaceRooms.js`, `server/src/sockets/workspace.socket.js`, `server/test/workspaceRooms.test.js`, `server/test/workspace.socket.test.js`, and `src/collaborate/lib/tabId.js`. S13 edited `server/src/lib/socket.js` (import and `registerWorkspaceHandlers` immediately after `registerChatHandlers`), `server/src/lib/safeHandler.js` (comment only; wrapper unchanged), `server/readme.md`, `src/collaborate/store/useWorkspaceStore.js`, `src/collaborate/routes/WorkspacePage.jsx`, and this tracker. `git diff --stat` on the tracked S13 files before this note was 362 insertions and 52 deletions across those six tracked paths. `useWorkspaceStore.js` is the large one because the S12 action diff is in the same file.
+
+**Verified:**
+
+- Registry and queue: `node --test --test-concurrency=1` from `server/`. 126 tests, 126 pass, 0 fail, duration 302.6589 ms. That is the previous 104 plus 22 S13 tests: 3 queue, 6 registry, 13 socket. Covered order, isolation, poison recovery, shared loader, independent projects, failed-init retry, socket idempotence, two tabs for one user, lease protection, cancelled acquisition, and stale release. These are source tests with stubs. They are not live Clerk membership.
+- Socket protocol, same run: malformed payload, bad id before bad tab, outsider / missing project / unreadable role never upsert and return only `Project not found`, trusted identity, success shape, normalization, cached join rechecks membership, one lazy canvas, 11000 versus other write errors, at-most-once ack, and the lifecycle races (leave A during join A, join B beating join A, strict-mode join/leave/join, disconnect during init, lease held across `socket.join`, adapter failure, denied replacement, two users).
+- `node --check` passed for `workspaceRooms.js`, `workspace.socket.js`, `socket.js`, and `safeHandler.js`.
+- `git diff --check` passed. Git printed the usual LF-to-CRLF notices only.
+- Client build on disk: Vite 7.3.5, 4253 modules. Entry `index-BSVFRPG9.js` 577,748 bytes, gzip 181,009. Dashboard `Collaborate-CYyRUzav.js` 20,227 bytes, gzip 6,014. Workspace `WorkspacePage-C5GI_fQg.js` 224,302 bytes, gzip 72,854 (S12 was 221,156 / gzip 71,790). Workspace CSS `WorkspacePage-BnuhLJ6X.css` 15,869 bytes, same hash as S12. Collaborate CSS `Collaborate-CJGlWSl_.css` 2,255 bytes. Global `index-BvxZxvMy.css` 61,125 bytes, gzip 11,676. The existing large-chunk warning is unchanged. No new dependency.
+- Browser/store, temporary Vite on port 5198, system Chrome headless, StrictMode, fake socket, no Clerk session: 33 checks, 0 failures. Seeded node "Saved" and labelled self-loop "goes" render with stored version 4, a display arrow marker, no canonical marker, fresh selection, and no `/projects` REST call. Local connect, label, move, resize, rename, Blue (`#10233D`), and delete succeed, leave version 4, and emit no `canvas:*` events. Disconnect clears role and content and refuses edits. Reconnect restores the saved snapshot over those local edits. Viewer has no resize controls and cannot connect. Missing access shows "It may have been deleted, or you don't have access." Generic failure, malformed success, and timeout show Try again. Retry keeps the latest ack. A late ack for project A cannot replace project B. Socket replacement ignores the old ack and does not buffer a leave while disconnected. Route exit emits one new leave; a second cleanup emits none. Sign-out emits no leave while disconnected and clears the role. Reload reuses `collab:tabId`; an invalid stored id is replaced and then reused. This is a harness, not a signed-in browser session.
+- `getTabId` was also checked in Node with a fresh module per case: reuse, invalid replacement, uppercase canonicalization, and a storage throw that stays stable.
+- Configured API, temporary server on port 3010 only, database name `3dfolio`, host redacted. Boot line: `Server is up and running on PORT: 3010` and `MongoDB connected: [host] / 3dfolio`. `GET /health` returned `{ ok: true }`. Two already-synced accounts, Clerk Backend API sessions created for this run and revoked afterward. No User document was written. No chat message was stored.
+- Live owner join of a project with no canvas created one canvas, version 0, empty nodes and edges, role `owner`, `participants: []`, `turn: null`. A second socket for the same account saw version 0 and the canvas count stayed 1.
+- Live seeded canvas version 7, label `Fixture`, edge label `saved-edge`. The stored document also had a dangling edge. Both sockets received one edge and version 7. The stored document still had 2 edges and version 7. Room connections were 2 and members 1. Leave dropped one connection. Disconnecting the last socket evicted the room.
+- A bad project id returned `{ ok: false, message: "Project not found" }` even with a bad tab id. A valid id with a bad tab returned `Invalid workspace request`. The second account joining a project it does not belong to got only `ok` and `message: "Project not found"`, and that project still had no canvas.
+- The temporary server was stopped and started again. Rejoin returned version 7, `Fixture`, `saved-edge`, and one edge.
+- `GET /api/posts` on that server returned 200, `{ posts: [], hasMore: false }`. No local origin is in `CLIENT_URL`, so this was a direct read, not the blog page.
+- Chat on that same temporary server: two owner sockets produced `getOnlineUsers` with length 1 (one user, two sockets). A `typing` emit from the owner was delivered to the second account with `isTyping: true`. Nothing was written to `messages`. This is not the production deployment and not the chat UI.
+
+**Cleanup:** fixture projects `6aee5fb7342e1f019b2d2cdd` (seeded), `6aee5fb7342e1f019b2d2cde` (lazy), and `6aee5fb7342e1f019b2d2cdf` (closed). The first delete looked in `canvases`. This Mongoose model uses the collection `canvas`, so those two documents were still there. A follow-up delete removed both. Afterward: 0 projects named `S13`, 0 matching canvas documents, 0 documents left in `canvas`, 0 `projectmessages`. Both sessions revoked.
+
+**Deviations:** `registerWorkspaceHandlers` takes optional registry and deps arguments so tests can inject a finder. Named ESM exports cannot be stubbed with `mock.method`. `socket.js` calls it as `registerWorkspaceHandlers(io, socket)`. Each room gets its own `writeQueue` and S13 does not use it. The client binds in `useEffect`. Sign-out removes every socket listener before `disconnect`, so the workspace disconnect listener does not run; the route cleanup runs after paint and does not emit `workspace:leave` once the socket is already disconnected. The harness measured that gap.
+
+**Limitations:** Local edits are not saved or broadcast. A reconnect replaces them with the server snapshot until S15. The registry is one process's memory. Role and socket unit tests are controlled stubs. The browser pass is a fake socket. The live pass is authenticated sockets to a temporary server, not a signed-in walkthrough of `/collaborate` or `/chat`. The blog page was not opened from a local origin.
+
+**End of day, 2026-11-06:** S12 is Approved and uncommitted. S13 is ready for Codex. HEAD is `050c1a8`. No commit, push, or branch. No S14 work was started. Temporary Vite on 5198 and the API on 3010 were closed. Harnesses under Temp were removed.
+
+**Review (Codex, 2026-11-06): Changes requested.**
+
+Independently re-ran root `npm run build` (4253 modules; existing large-chunk warning only; workspace 224.30 kB, entry 577.75 kB), all 126 server tests (zero failures/skips), `node --check` on the four affected server modules, and `git diff --check`. All passed. Reviewed the S13 source, server tests, lifecycle specification, and narrow changes to registration/page code. Existing passing tests do not cover the two failure cases below.
+
+1. **P2 — Roll back a partially completed adapter join.** `server/src/sockets/workspace.socket.js:186` sets `adapterJoined` only after awaiting `socket.join`. If the adapter adds the project room and then throws/rejects, the flag remains false and finally skips rollback. Independently reproduced with the actual handler, stubbed model reads, and a fake adapter that adds the room before rejecting: ack was Unable to open workspace and the registry was evicted, but the socket still belonged to `project:<id>`. With no activeProjectId, later leave/disconnect registry logic cannot repair that failed join's adapter membership. Ensure every attempted join that fails/cancels cleans up possible partial adapter membership while preserving the per-user room. Extend the existing adapter-failure test to add the room before throwing and assert both registry and adapter cleanup, plus a successful subsequent join.
+
+2. **P2 — Dispose the previous client binding before replacing it.** `src/collaborate/store/useWorkspaceStore.js:246` overwrites activeBinding without disposing its previous owner. Binding a new still-connected socket before calling the old disposer leaves two old listeners registered and sends no leave on the old socket. Calling the old disposer afterward removes its listeners but returns at the ownership guard without leaving its old subscription. Independently reproduced against the real store loaded through Vite SSR with two connected fake sockets: two old listeners before the old disposer, zero afterward, but zero workspace:leave emits on the old socket in both cases. An older pending join can therefore finish server-side while its ack is ignored client-side. Retire the old binding while it still owns its resources before installing the new one, or provide equivalent socket-specific cleanup. Verify live-socket replacement and same-socket/same-project replacement before old cleanup; later/double old disposers must not reset or leave the new binding. Disconnected old sockets must still emit no buffered leave.
+
+The reproduction script was external (`review13-boundaries.mjs` in the OS temp directory), made no live database reads/writes or external messages, and closed its Vite server. Its dependency-scan shutdown notice was harness teardown, not a production build failure. No application/test files were edited during review. Grok's browser harness and authenticated socket integration remain implementation evidence and were not independently repeated. S12 remains Approved. S13 is not approved; stop here for today with these findings recorded. No commit, push, branch, or S14 work.
+
+**Fixes (Grok, 2026-11-06), ready for review again.**
+
+1. Partial adapter join. `runJoin` marks the project-room attempt before `await socket.join`. If that call adds `project:<id>` and then rejects, `finally` still calls `socket.leave` for that room. The per-user room is not named. The existing adapter-failure test now adds the room before throwing. It asserts `joinedBeforeError`, registry eviction, a leave for the project room, the per-user room still present, and a later join that succeeds and subscribes again.
+
+2. Binding replacement. `bindWorkspace` disposes the active binding before installing the next one, while the old binding still owns its socket. A connected socket emits `workspace:leave` for its project and drops its named listeners. A later or second call of the old disposer sees `disposed` and does not reset the store or leave the new socket. A disconnected old socket still emits nothing.
+
+**Regression for these fixes:**
+
+- Server `npm test`: 126 pass, 0 fail, duration 306.9545 ms. The socket count stays 13; the adapter test was extended, not added.
+- `node --check` passed for `workspaceRooms.js`, `workspace.socket.js`, `socket.js`, and `safeHandler.js`.
+- `git diff --check` passed. Git printed the usual LF-to-CRLF notices only.
+- Root `npm run build`: Vite 7.3.5, 4253 modules, 7.59s, existing large-chunk warning only. Entry `index-B1ZU_nZ3.js` 577,748 bytes, gzip 181,017. Workspace `WorkspacePage-BYBP_-5_.js` 224,329 bytes, gzip 72,862. Workspace CSS `WorkspacePage-BnuhLJ6X.css` 15,869 bytes, same hash as before this fix.
+- Client binding check, Vite SSR of the real store, fake sockets, temp script removed afterward: a new connected socket bound before the old disposer leaves the old project once, drops both old listeners, ignores the old ack, and stays loading. Calling that old disposer twice adds no leave and does not reset the new binding. Rebinding the same connected socket to the same project leaves once, keeps one connect listener and one disconnect listener, starts a second join, and the first disposer does not leave again or reset. The second disposer then leaves once and returns to idle; a further call does not leave. An old socket set disconnected before replacement, and a socket that was never connected, emit no `workspace:leave`. The dependency-scan notice on SSR shutdown is harness teardown.
+
+S12 is still Approved and uncommitted. HEAD is `050c1a8`. No commit, push, or branch. No S14 work. The earlier live API and browser harness results still stand; this pass did not repeat them. Local edits remain unsaved until S15.
+
+**Re-review (Codex, 2026-11-06): Approved.**
+
+- Both prior findings are resolved. The adapter attempt is marked before awaiting join, so a rejection after subscription enters project-room rollback. The extended server regression actually adds the room before throwing, then verifies registry eviction, project-room removal, per-user-room preservation, and a successful later join. The client retires the previous binding while it still owns its resources, before installing its replacement.
+- Independently ran the actual store through Vite SSR with connected/disconnected fake sockets. Passed: replacement before old disposal removes both old listeners and emits exactly one leave only when connected; stale acknowledgements cannot replace current state; a later/double old disposer cannot reset/leave the new binding; same-socket/same-project replacement retains exactly one listener pair and the newer ack; disconnected replacements emit no buffered join/leave. This was a controlled store check, not a signed-in browser walkthrough. The external script `review13-recheck.mjs` in the OS temp directory added no repository instrumentation, made no live database calls, and closed its Vite server.
+- Independently re-ran all 126 server tests: zero failures/skips, including the strengthened adapter regression. The root production build passes (4253 modules; existing large-chunk warning only); workspace `WorkspacePage-BYBP_-5_.js` is 224,329 bytes, gzip 72,862. Entry remains 577,748 bytes; workspace CSS remains 15,869 bytes. Syntax checks on the four affected server modules and `git diff --check` pass (line-ending notices only).
+- No further implementation changes requested. The earlier review and Grok's recorded integration evidence remain applicable; live sockets and full signed-in browser flows were not repeated for these narrow corrections. S12 remains Approved. Local edits still do not persist until S15. No application/test changes were made during re-review.
+
+Approved — 2026-11-06. End of day: S12 and S13 approved and uncommitted, HEAD `050c1a8`; no commit, push, branch, or S14 planning/implementation. Stop here as requested.
 
 ### S29 — Mobile and accessibility
 

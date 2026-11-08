@@ -24,6 +24,8 @@
   --collab-warning: #ff990a;
   --collab-node-border: rgba(255, 255, 255, 0.1);
   --collab-node-border-selected: rgba(255, 255, 255, 0.35);
+  --collab-edge: rgba(255, 255, 255, 0.4);
+  --collab-edge-selected: rgba(255, 255, 255, 0.8);
 
   /* Native controls should match the workspace's dark surfaces. */
   color-scheme: dark;
@@ -50,6 +52,13 @@
   --xy-background-color: var(--collab-bg);
   --xy-background-pattern-color: var(--collab-grid);
   --xy-attribution-background-color: var(--collab-panel);
+  /* The library paints the path, the drag preview, and its marker fallback
+     from these. Selected edges brighten; the arrow keeps the resting token. */
+  --xy-edge-stroke: var(--collab-edge);
+  --xy-edge-stroke-selected: var(--collab-edge-selected);
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: var(--collab-edge);
+  --xy-connectionline-stroke-width: 1.5;
 }
 
 .collab-root .react-flow__attribution,

@@ -204,6 +204,16 @@ All workspace events carry `projectId`. Every tab sends a `tabId` (a UUID kept i
 | `workspace:role` | `{ projectId, role }` | S27 |
 | `workspace:removed` | `{ projectId, reason: "removed" \| "deleted" }` | S27 |
 
+### Workspace lifecycle foundation (S13)
+
+The S13 spec is `specs/13-workspace-join-leave.md`. These details define that slice; they are not a claim that it has been implemented:
+
+- A socket has one active workspace room at a time, separate from its existing per-user room. A different-project join replaces the previous workspace. Every join, even to a cached room, resolves membership from the database. The join response's project is the whitelisted summary `{ _id, name, description }`; participants are `[]` and turn is `null` until later slices.
+- Registry connections are keyed by socket id, with `{ userId, tabId }`; members are keyed by userId with trusted role/fullName/img. Concurrent room loads are shared. Short-lived acquisition leases protect pending joins; rooms with neither connections nor pending joins are evicted. Initialization failures are retryable. Per-room serial write queues exist for S14 but do not save edits in S13.
+- Per-socket lifecycle ordering and intent invalidation prevent late joins after leave, disconnect, or route replacement. Leave is project-scoped: stale leave A cannot cancel current project B. Client attempts also track route/binding, socket object, connection id, and request generation before accepting an ack.
+- Missing/non-member/invalid-project joins return `{ ok: false, message: "Project not found" }` with no resource data. Malformed requests, superseded attempts, and operational failures use the other messages defined in the S13 spec without extending the wire shape. Project not found shows the access-denied card; operational failures/timeouts show retry. Obsolete requests never overwrite current state or show errors.
+- Joins normalize the loaded snapshot in memory and preserve its stored version; they do not repair existing canvas content or save local edits. Reconnect reloads the snapshot and replaces local-only edits. Saving and broadcasting edits arrive in S14–S15. Before then, disconnect hides the canvas and clears role while automatic reconnect/rejoin runs. No presence broadcast, turn enforcement, or ConnectionBanner is added by S13.
+
 ### Commit pipeline, server
 
 Each room has a serial queue, so commits apply strictly in order even though Socket.io runs handlers concurrently.

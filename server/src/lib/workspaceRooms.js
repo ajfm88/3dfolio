@@ -97,6 +97,25 @@ export function createWorkspaceRegistry() {
     return rooms.get(projectId)?.room ?? null;
   }
 
+  // Keeps an existing room alive across the last socket leaving. It does not
+  // load or create a room: a commit for a project this process has not joined
+  // must not open a second cache. The caller releases on every path, and a
+  // double release is ignored so a late finally cannot drive pending negative.
+  function retain(projectId) {
+    const entry = rooms.get(projectId);
+    if (!entry?.room) return null;
+
+    entry.pending += 1;
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      entry.pending -= 1;
+      evictIfIdle(projectId, entry);
+    };
+    return { room: entry.room, release };
+  }
+
   function addConnection(projectId, socketId, info) {
     const room = getRoom(projectId);
     if (!room || typeof socketId !== "string" || socketId.length === 0) return false;
@@ -126,7 +145,7 @@ export function createWorkspaceRegistry() {
     return true;
   }
 
-  return { acquire, getRoom, addConnection, removeConnection };
+  return { acquire, retain, getRoom, addConnection, removeConnection };
 }
 
 export const workspaceRegistry = createWorkspaceRegistry();

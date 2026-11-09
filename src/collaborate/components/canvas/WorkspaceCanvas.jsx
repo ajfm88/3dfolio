@@ -26,6 +26,7 @@ const Flow = () => {
   const commitNodePositions = useWorkspaceStore((s) => s.commitNodePositions);
   const deleteElements = useWorkspaceStore((s) => s.deleteElements);
   const connectNodes = useWorkspaceStore((s) => s.connectNodes);
+  const onNodeDrag = useWorkspaceStore((s) => s.onNodeDrag);
 
   const onConnect = useCallback((connection) => {
     connectNodes(connection);
@@ -63,6 +64,7 @@ const Flow = () => {
       onDragOver={onDragOver}
       onDrop={onDrop}
       onNodeDragStop={onNodeDragStop}
+      onNodeDrag={onNodeDrag}
       onDelete={onDelete}
       onConnect={onConnect}
       nodeTypes={nodeTypes}

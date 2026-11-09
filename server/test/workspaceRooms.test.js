@@ -219,4 +219,30 @@ describe("createWorkspaceRegistry", { concurrency: false }, () => {
     registry.removeConnection("p1", "socket-next");
     assert.equal(registry.getRoom("p1"), null);
   });
+
+  it("retains an existing room without loading and evicts only after release", async () => {
+    const registry = createWorkspaceRegistry();
+    assert.equal(registry.retain("missing"), null);
+
+    const created = await registry.acquire("p1", async () => canvas(6));
+    registry.addConnection("p1", "socket-a", member("user-1"));
+    created.release();
+
+    let loaded = 0;
+    const held = registry.retain("p1");
+    assert.equal(held.room.canvas.version, 6);
+    registry.removeConnection("p1", "socket-a");
+    assert.equal(registry.getRoom("p1"), held.room);
+    await registry.acquire("p1", async () => {
+      loaded += 1;
+      return canvas(0);
+    }).then((extra) => extra.release());
+    assert.equal(loaded, 0);
+    assert.equal(registry.getRoom("p1"), held.room);
+
+    held.release();
+    held.release();
+    assert.equal(registry.getRoom("p1"), null);
+    assert.equal(registry.retain("p1"), null);
+  });
 });

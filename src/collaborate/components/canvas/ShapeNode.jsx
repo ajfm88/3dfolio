@@ -62,10 +62,14 @@ function isEditSurface(target) {
 const ShapeNode = ({ id, data, selected, isConnectable }) => {
   const canEdit = useWorkspaceStore(selectCanEdit);
   const commitNodeResize = useWorkspaceStore((s) => s.commitNodeResize);
+  const onNodeResize = useWorkspaceStore((s) => s.onNodeResize);
   const [editing, setEditing] = useState(false);
   const onResizeEnd = useCallback((_event, params) => {
     commitNodeResize(id, params);
   }, [commitNodeResize, id]);
+  const onResize = useCallback((_event, params) => {
+    onNodeResize(id, params);
+  }, [onNodeResize, id]);
   const closeEditor = useCallback(() => setEditing(false), []);
 
   // Losing edit permission drops the draft. Restoring it must not reopen the
@@ -113,6 +117,7 @@ const ShapeNode = ({ id, data, selected, isConnectable }) => {
         handleClassName="collab-resize-handle"
         lineClassName="collab-resize-line"
         onResizeEnd={onResizeEnd}
+        onResize={onResize}
       />
       {/* Handle defaults isConnectable to true and does not read nodesConnectable
           itself, so each handle needs React Flow's derived node prop. */}

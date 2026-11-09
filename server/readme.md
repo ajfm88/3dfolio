@@ -288,6 +288,9 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 | `typing`          | `{ receiverId, isTyping }` | Relayed to the recipient, never persisted |
 | `workspace:join`  | `{ projectId, tabId }`     | Acked. Joins `project:<projectId>` and returns the saved snapshot |
 | `workspace:leave` | `{ projectId }`            | Leaves that project room. No acknowledgement |
+| `canvas:commit`   | `{ projectId, baseVersion, ops }` | Acked. Saves one batch when this connection may edit |
+| `canvas:sync`     | `{ projectId }`            | Acked. Returns the current saved canvas for any joined role |
+| `canvas:preview`  | `{ projectId, nodes: [{ id, position, width?, height? }] }` | Volatile, no ack. Emitted at most every 50ms during drag/resize. Sent only by a joined editor/owner. Nodes are 1–50; `width` and `height` are both present or both absent. |
 
 `workspace:join` ignores a call that has no acknowledgement function. `projectId` is a 24-character hex ObjectId and `tabId` is a UUID v4; both are matched case-insensitively and stored lowercase. Any other field on the payload is ignored. The server uses the authenticated socket user, never a user id or role in the payload.
 
@@ -309,9 +312,29 @@ Failures carry only `ok` and `message`. `"Project not found"` covers a bad id, a
 
 Each join checks membership with the same scoped project query as REST, including when the room is already cached. The caller's `fullName` and `img` come from the synced user document. The first join of a project upserts a Canvas with insert-only defaults, normalizes `nodes` and `edges` in memory, and keeps the stored `version`. Joining does not rewrite an existing graph or save later edits. A duplicate-key race reads the canvas that won the unique index.
 
-The room registry is in-memory and single-process. A restart drops it; the client reconnects, joins again, and loads the stored snapshot. That reload replaces edits that existed only in the open tab. Editing stays local until S15; this event does not save or broadcast canvas changes.
+The room registry is in-memory and single-process. A restart drops it; the client reconnects, joins again, and loads the stored snapshot. Joining itself does not save edits. After a join, the open tab sends each accepted gesture as `canvas:commit` and applies `canvas:ops` from other sockets, including the same user's other tabs. The confirmed version moves only when a commit is acknowledged or a snapshot is installed. Unsent edits are discarded on disconnect, route exit, sign-out, or recovery. A reject, a timeout, a version gap, or a remote edit that arrives while local work is queued replaces that optimistic graph with the server snapshot and does not replay it. A timeout still reads `canvas:sync` because the save may have landed. Until turn enforcement, two editors can commit at once; the loser resyncs instead of merging.
 
-`tabId` comes from the tab's `sessionStorage` so a reconnect in the same tab repeats an id. Connections are still keyed by socket id, so two tabs remain two connections even when a duplicated tab copied the same id. One socket is in one project room at a time, separate from its per-user chat room. Leave and disconnect remove that socket. The room is discarded when it has no sockets and no join still in progress.
+`canvas:commit` and `canvas:sync` ignore a call that has no acknowledgement function. `projectId` is the same 24-character hex id as join, matched without case and stored lowercase. Any other field on the envelope is ignored, including a user id, role, or `updatedBy`. `baseVersion` has to be a nonnegative integer below `Number.MAX_SAFE_INTEGER`. `ops` has to be an array of 1 to 50 entries. The shared canvas module checks each operation and is the only place that strips fields. A batch is never truncated or partly applied.
+
+Both events require a connected socket whose finished join is still current. An in-flight join is not enough, and neither event creates a room or a canvas. A newer join, a leave for that same project, or a disconnect drops that authority immediately, even when removal of the registry connection is still queued. A leave for a different project does not. Before a save or a snapshot, the handler reads membership again with the same scoped project query as REST and refreshes the cached role. A viewer may sync and may not commit. Until turn enforcement arrives in a later slice, an owner or editor connection may commit. `canWrite` is that check. It accepts only the connection object stored on the room.
+
+One room has one write queue. Commits and syncs for that project run in order. Two projects do not wait on each other. A queued commit or sync that loses its join, because of leave, disconnect, or a newer join, makes no write. The caller hears `"Workspace request superseded"` when that socket is still connected. A save that has already been sent to the database is not cancelled. If it matches, the room cache moves forward and `canvas:ops` is broadcast even when the sender has gone. That sender gets a success acknowledgement only when the same socket is still the joined connection.
+
+A successful commit acknowledges `{ "ok": true, "version": 5 }` and does not return the graph. The broadcast goes to `project:<projectId>` except the sending socket, so that user's other tabs receive it. It is not volatile, it is not sent on the per-user chat room, and it is not a global emit:
+
+```json
+{ "projectId": "…", "version": 5, "ops": [], "by": "<authenticated user id>" }
+```
+
+`ops` in that event are the normalized operations, and `by` is the authenticated user. The conditional update matches `project` and `version`, sets `nodes`, `edges`, and `updatedBy` from that user, and increments `version`. Nothing is upserted. The cache changes only after `acknowledged` is true and exactly one document matched.
+
+`"Canvas version mismatch"` includes the current `{ nodes, edges, version }` when the sender is still allowed to edit and the base version is stale, or when the conditional update matches nothing and a reload finds the saved canvas. `"You cannot edit this canvas"` is a joined viewer, with no canvas attached. `applyOps` failures use that module's message and include the unchanged canvas for the same still-authorized sender. `"Project not found"` covers a bad id, a socket that is not joined, a missing member, and a missing canvas on reload. `"Invalid canvas request"` covers a malformed envelope. `"Unable to save canvas"` and `"Unable to sync canvas"` cover database and other operational failures. Those responses are `{ "ok": false, "message" }` only. The server logs the cause and does not return it.
+
+A write that throws, or that comes back without an acknowledgement, does not advance the cache and does not broadcast. The room then reloads the saved canvas before a later commit or sync can succeed. A reload that fails stays closed rather than serving the cache from before the uncertain write. Sync normally returns that cache without writing. It does not increment the version, broadcast, or create a canvas. A snapshot is a copy of the whitelisted fields.
+
+The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews and turns are not part of this protocol yet.
+
+`tabId` comes from the tab's `sessionStorage` so a reconnect in the same tab repeats an id. Connections are still keyed by socket id, so two tabs remain two connections even when a duplicated tab copied the same id. One socket is in one project room at a time, separate from its per-user chat room. Leave and disconnect remove that socket. The room is discarded when it has no sockets, no join still in progress, and no commit or sync still holding it. A held save keeps the same cache and queue, so a join that arrives during that save waits for it and then reads the saved version.
 
 ### Server to Client
 
@@ -320,6 +343,8 @@ The room registry is in-memory and single-process. A restart drops it; the clien
 | `getOnlineUsers` | `string[]` of user ids     | Broadcast on every connect and disconnect |
 | `typing`         | `{ userId, isTyping }`     | Sent to the recipient's room only         |
 | `newMessage`     | The saved message document | Sent to the recipient's room on send      |
+| `canvas:ops`     | `{ projectId, version, ops, by }` | After a saved commit, to the project room except the sender |
+| `canvas:preview` | `{ projectId, by, nodes }` | Volatile relay of a drag/resize sample. `by` is the authenticated Mongo userId. Sent to the project room except the sender. Overlay expires 3s after last sample; a canonical position/size update clears it immediately. Turn-holding is still S20. |
 
 Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog. Workspace join acknowledges on the same event instead of emitting a second one.
 
@@ -591,7 +616,7 @@ The owner isn't stored in `members`; ownership takes priority when resolving a r
 Index: { project: 1 } (unique)
 ```
 
-Canvas content is validated field by field by the shared canvas ops module (S06), not the schema. The first workspace join creates an empty snapshot if one does not exist. Join normalizes the loaded graph in memory and does not write that normalized graph back. Edits made after the snapshot loads stay on that client until S15 saves them. A reconnect before then loads the stored snapshot again and drops those local edits.
+Canvas content is validated field by field by the shared canvas ops module (S06), not the schema. The first workspace join creates an empty snapshot if one does not exist. Join normalizes the loaded graph in memory and does not write that normalized graph back. Edits made after the snapshot loads are committed by the client (S15) through `canvas:commit`. A reconnect loads the stored snapshot again and drops anything that was still unsent.
 
 ## Validation Rules
 

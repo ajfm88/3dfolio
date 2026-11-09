@@ -4,16 +4,39 @@ import { create } from "zustand";
 
 import { applyOps, NODE_COLORS, createEdgeId, normalizeCanvas } from "@shared/canvasOps.js";
 import { getTabId } from "../lib/tabId";
+import { createSyncController, createSyncState, invalidateSession } from "../lib/workspaceSync.js";
+import { throttle } from "../lib/throttle.js";
+import { createPreviewOverlayController } from "../lib/canvasPreview.js";
 
 // The route effect owns one binding at a time. A late ack is ignored unless it
 // still matches this object, the socket id captured at emit, and its attempt.
 let activeBinding = null;
+
+const syncDeps = {
+  get: () => emptyWorkspace("idle"),
+  set: () => {},
+  toast,
+  toDisplayNodes: (nodes, previous) => {
+    const display = toDisplayNodes(nodes, previous);
+    const binding = activeBinding;
+    if (binding && binding.previewController) {
+      return binding.previewController.applyOverlays(display);
+    }
+    return display;
+  },
+  toDisplayEdges,
+  emptyWorkspace,
+  isActive: (binding) => activeBinding === binding && !binding.disposed,
+  rejoin: (binding) => startJoin(syncDeps.set, binding, true),
+};
+const sync = createSyncController(syncDeps);
 
 function emptyWorkspace(status) {
   return {
     status,
     project: null,
     role: null,
+    syncStatus: "idle",
     canvas: { nodes: [], edges: [], version: 0 },
     rfNodes: [],
     rfEdges: [],
@@ -21,7 +44,19 @@ function emptyWorkspace(status) {
 }
 
 // From S20 this also means holding the turn. One helper keeps that change in one place.
-export const selectCanEdit = (s) => s.role === "owner" || s.role === "editor";
+// Recovery and a disconnected binding refuse even when the role is still editor.
+// The socket is read at call time so sign-out can remove listeners, and therefore
+// skip the disconnect handler, without leaving a dispatch path open.
+export const selectCanEdit = (state) => {
+  if (state.status !== "ready" || state.syncStatus === "syncing") return false;
+  if (state.role !== "owner" && state.role !== "editor") return false;
+  const binding = activeBinding;
+  if (!binding || binding.disposed || binding.sync?.recovering) return false;
+  const socket = binding.socket;
+  if (!socket?.connected) return false;
+  if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
+  return true;
+};
 
 // React Flow owns selected and measured. A rebuild that dropped them would
 // deselect nodes and force a re-measure on every edit. The canonical object
@@ -99,7 +134,7 @@ function classifyJoin(ack, projectId) {
     && isRecord(ack.canvas)
     && Array.isArray(ack.canvas.nodes)
     && Array.isArray(ack.canvas.edges)
-    && Number.isInteger(version)
+    && Number.isSafeInteger(version)
     && version >= 0
     && Array.isArray(ack.participants)
     && ack.participants.length === 0
@@ -134,24 +169,15 @@ function leaveIfCurrent(binding, attempt, socket, connectionId, projectId) {
   socket.emit("workspace:leave", { projectId });
 }
 
-function installSnapshot(set, project, role, canvas) {
-  // Empty previous selection: a loaded snapshot starts unselected, and it
-  // replaces whatever this client had changed locally.
-  set({
-    status: "ready",
-    project,
-    role,
-    canvas,
-    rfNodes: toDisplayNodes(canvas.nodes, []),
-    rfEdges: toDisplayEdges(canvas.edges, []),
-  });
-}
-
 function startJoin(set, binding, force) {
   const socket = binding.socket;
   if (!socket?.connected || activeBinding !== binding || binding.disposed) return;
   const connectionId = socket.id;
   if (!force && binding.inFlight?.connectionId === connectionId) return;
+
+  const keepDenial = Boolean(binding.sync?.denialRejoin);
+  invalidateSession(binding.sync, { keepDenial });
+  binding.sync.joinedConnectionId = connectionId;
 
   const attempt = ++binding.attempt;
   const projectId = binding.projectId;
@@ -170,15 +196,23 @@ function startJoin(set, binding, force) {
     const result = classifyJoin(ack, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     if (result.ok) {
-      installSnapshot(set, result.project, result.role, result.canvas);
+      sync.onJoined(binding, {
+        project: result.project,
+        role: result.role,
+        canvas: result.canvas,
+      });
       return;
     }
+    binding.sync.denialRejoin = false;
+    binding.sync.toastRecovery = false;
     if (result.message) toast.error(result.message);
     leaveIfCurrent(binding, attempt, socket, connectionId, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     set(emptyWorkspace(result.notFound ? "notFound" : "error"));
   }).catch(() => {
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    binding.sync.denialRejoin = false;
+    binding.sync.toastRecovery = false;
     leaveIfCurrent(binding, attempt, socket, connectionId, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     set(emptyWorkspace("error"));
@@ -191,6 +225,9 @@ function disposeBinding(set, binding) {
   binding.disposed = true;
   binding.attempt += 1;
   binding.inFlight = null;
+  if (binding.sync) invalidateSession(binding.sync);
+  if (binding.previewThrottle) binding.previewThrottle.cancel();
+  if (binding.previewController) binding.previewController.clearAllOverlays();
   binding.unlisten?.();
   binding.unlisten = null;
   // A disposer from an older route must not leave or clear the binding that replaced it.
@@ -229,7 +266,10 @@ function settleResizeEnd(change, nodes) {
   };
 }
 
-export const useWorkspaceStore = create((set, get) => ({
+export const useWorkspaceStore = create((set, get) => {
+  syncDeps.get = get;
+  syncDeps.set = set;
+  return {
   ...emptyWorkspace("idle"),
 
   // Socket listeners live here so the page never emits. The disposer is the
@@ -240,6 +280,8 @@ export const useWorkspaceStore = create((set, get) => ({
     // keeps the old project room.
     if (activeBinding && !activeBinding.disposed) disposeBinding(set, activeBinding);
 
+    const previewController = createPreviewOverlayController();
+
     const binding = {
       socket: socket ?? null,
       projectId: canonicalProjectId(projectId),
@@ -247,8 +289,19 @@ export const useWorkspaceStore = create((set, get) => ({
       inFlight: null,
       disposed: false,
       unlisten: null,
+      sync: createSyncState(),
+      previewThrottle: throttle(({ projectId, nodes }) => {
+        const currentBinding = activeBinding;
+        if (!currentBinding || currentBinding.disposed) return;
+        if (!currentBinding.socket?.connected) return;
+        if (currentBinding.socket.id !== currentBinding.sync?.joinedConnectionId) return;
+        currentBinding.socket.volatile.emit("canvas:preview", { projectId, nodes });
+      }, 50),
+      previewController,
     };
     activeBinding = binding;
+    syncDeps.get = get;
+    syncDeps.set = set;
     set(emptyWorkspace("loading"));
 
     if (socket) {
@@ -258,16 +311,50 @@ export const useWorkspaceStore = create((set, get) => ({
       };
       const onDisconnect = () => {
         if (activeBinding !== binding || binding.disposed) return;
-        // Drop role and the canvas together so a disconnected client cannot edit stale content.
+        // Drop role, queued edits, and the canvas together. A reconnect joins
+        // again and installs whatever the server saved. Unsent work is not replayed.
         binding.attempt += 1;
         binding.inFlight = null;
+        invalidateSession(binding.sync);
+        binding.sync.joinedConnectionId = null;
+        binding.previewController.clearAllOverlays();
+        binding.previewThrottle.cancel();
         set(emptyWorkspace("loading"));
+      };
+      const onOps = (payload) => {
+        if (activeBinding !== binding || binding.disposed) return;
+        sync.onRemote(binding, payload);
+      };
+      const onPreview = (payload) => {
+        if (activeBinding !== binding || binding.disposed) return;
+        const state = get();
+        if (state.status !== "ready" || state.syncStatus === "syncing") return;
+        if (!isRecord(payload) || typeof payload.projectId !== "string") return;
+        const received = payload.projectId.toLowerCase();
+        if (received !== binding.projectId) return;
+        if (!Array.isArray(payload.nodes)) return;
+
+        const result = binding.previewController.receivePreview(payload, () => state.canvas.nodes);
+        if (!result.ok) return;
+
+        const previousCanonical = state.canvas.nodes;
+        set((current) => ({
+          rfNodes: binding.previewController.applyOverlays(
+            toDisplayNodes(current.canvas.nodes, current.rfNodes)
+          ),
+        }));
+
+        binding.previewController.onCanonicalNodesChange(previousCanonical, state.canvas.nodes);
       };
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
+      socket.on("canvas:ops", onOps);
+      socket.on("canvas:preview", onPreview);
       binding.unlisten = () => {
         socket.off("connect", onConnect);
         socket.off("disconnect", onDisconnect);
+        socket.off("canvas:ops", onOps);
+        socket.off("canvas:preview", onPreview);
       };
       if (socket.connected) startJoin(set, binding, false);
     }
@@ -281,6 +368,7 @@ export const useWorkspaceStore = create((set, get) => ({
     if (!binding.socket?.connected) {
       binding.attempt += 1;
       binding.inFlight = null;
+      invalidateSession(binding.sync);
       set(emptyWorkspace("loading"));
       return;
     }
@@ -302,6 +390,7 @@ export const useWorkspaceStore = create((set, get) => ({
       return false;
     }
 
+    const previousCanonicalNodes = state.canvas.nodes;
     const result = applyOps(state.canvas, ops);
     if (!result.ok) {
       toast.error(result.error);
@@ -309,23 +398,30 @@ export const useWorkspaceStore = create((set, get) => ({
       return false;
     }
 
-    // version stays as it is. S15 sets it from commit acks.
+    // version stays at the last confirmed server version. The normalized ops
+    // queue behind the single in-flight commit and are not applied twice.
     const canvas = {
       nodes: result.canvas.nodes,
       edges: result.canvas.edges,
       version: state.canvas.version,
     };
+    const binding = activeBinding;
     set({
       canvas,
       rfNodes: toDisplayNodes(canvas.nodes, state.rfNodes),
       rfEdges: toDisplayEdges(canvas.edges, state.rfEdges),
     });
+    if (binding && binding.previewController) {
+      binding.previewController.onCanonicalNodesChange(previousCanonicalNodes, canvas.nodes);
+    }
+    sync.enqueue(activeBinding, result.ops);
     return true;
   },
 
   // onNodeDragStop's third argument is every node that gesture moved.
   // Selection drags use the same callback, so there is no second commit.
   commitNodePositions: (nodes) => {
+    get().cancelPreviewThrottle();
     if (!selectCanEdit(get())) {
       restoreDisplay(set, get);
       return false;
@@ -355,6 +451,7 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   commitNodeResize: (id, params) => {
+    get().cancelPreviewThrottle();
     if (!selectCanEdit(get())) {
       restoreDisplay(set, get);
       return false;
@@ -558,4 +655,52 @@ export const useWorkspaceStore = create((set, get) => ({
     if (kept.length === 0) return;
     set((state) => ({ rfEdges: applyEdgeChanges(kept, state.rfEdges) }));
   },
-}));
+
+  onNodeDrag: (nodes) => {
+    const state = get();
+    if (!selectCanEdit(state)) return;
+    const binding = activeBinding;
+    if (!binding || binding.disposed || !binding.socket?.connected) return;
+    if (binding.socket.id !== binding.sync?.joinedConnectionId) return;
+
+    const canonicalById = new Map(state.canvas.nodes.map((n) => [n.id, n]));
+    const previewNodes = [];
+    for (const node of nodes) {
+      if (!node || typeof node.id !== "string") continue;
+      const canonical = canonicalById.get(node.id);
+      if (!canonical) continue;
+      const position = node.position;
+      if (!position || typeof position.x !== "number" || typeof position.y !== "number") continue;
+      previewNodes.push({ id: node.id, position: { x: position.x, y: position.y } });
+    }
+    if (previewNodes.length === 0 || previewNodes.length > 50) return;
+
+    binding.previewThrottle({ projectId: binding.projectId, nodes: previewNodes });
+  },
+
+  onNodeResize: (id, params) => {
+    const state = get();
+    if (!selectCanEdit(state)) return;
+    const binding = activeBinding;
+    if (!binding || binding.disposed || !binding.socket?.connected) return;
+    if (binding.socket.id !== binding.sync?.joinedConnectionId) return;
+
+    const canonical = state.canvas.nodes.find((n) => n.id === id);
+    if (!canonical) return;
+    if (!params || typeof params.x !== "number" || typeof params.y !== "number" ||
+        typeof params.width !== "number" || typeof params.height !== "number") return;
+
+    binding.previewThrottle({
+      projectId: binding.projectId,
+      nodes: [{ id, position: { x: params.x, y: params.y }, width: params.width, height: params.height }],
+    });
+  },
+
+  cancelPreviewThrottle: () => {
+    const binding = activeBinding;
+    if (binding && binding.previewThrottle) {
+      binding.previewThrottle.cancel();
+    }
+  },
+};
+});

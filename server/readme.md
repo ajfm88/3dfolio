@@ -291,6 +291,8 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 | `canvas:commit`   | `{ projectId, baseVersion, ops }` | Acked. Saves one batch when this connection may edit |
 | `canvas:sync`     | `{ projectId }`            | Acked. Returns the current saved canvas for any joined role |
 | `canvas:preview`  | `{ projectId, nodes: [{ id, position, width?, height? }] }` | Volatile, no ack. Emitted at most every 50ms during drag/resize. Sent only by a joined editor/owner. Nodes are 1–50; `width` and `height` are both present or both absent. |
+| `cursor:move`     | `{ projectId, x, y }` | Volatile, no ack. Sent by any joined member (owner, editor, viewer). Position is in canvas flow coordinates. Throttled at 50ms. |
+| `cursor:leave`    | `{ projectId }` | Volatile, no ack. Sent when the local cursor leaves the canvas wrapper. |
 
 `workspace:join` ignores a call that has no acknowledgement function. `projectId` is a 24-character hex ObjectId and `tabId` is a UUID v4; both are matched case-insensitively and stored lowercase. Any other field on the payload is ignored. The server uses the authenticated socket user, never a user id or role in the payload.
 
@@ -302,11 +304,15 @@ A successful acknowledgement looks like this:
   "project": { "_id": "…", "name": "Design", "description": "" },
   "role": "owner",
   "canvas": { "nodes": [], "edges": [], "version": 0 },
-  "participants": [],
+  "participants": [
+    { "userId": "…", "fullName": "Ada", "img": "", "role": "editor" }
+  ],
   "turn": null,
   "serverNow": 1760000000000
 }
 ```
+
+S13 acked `"participants": []`. S17 replaces that empty list with every user who currently has a socket in the project: owner, editor, and viewer, including the joiner. Tabs of the same user are one row. `userId` is the Mongo id, sorted lexicographically. `fullName` and `img` come from the user document read during that join, and an empty profile field is `""`. The row has no email, Clerk id, tab id, or socket id. The list lives only in this process. A restart clears it, and the next join builds it again. It is not the global chat presence map.
 
 Failures carry only `ok` and `message`. `"Project not found"` covers a bad id, a missing project, and a caller who cannot read it. `"Invalid workspace request"` covers a malformed payload or tab id. `"Workspace request superseded"` covers a join cancelled by a newer join, leave, or disconnect. `"Unable to open workspace"` covers an unexpected database or adapter failure; the server logs the cause and does not return it.
 
@@ -332,7 +338,7 @@ A successful commit acknowledges `{ "ok": true, "version": 5 }` and does not ret
 
 A write that throws, or that comes back without an acknowledgement, does not advance the cache and does not broadcast. The room then reloads the saved canvas before a later commit or sync can succeed. A reload that fails stays closed rather than serving the cache from before the uncertain write. Sync normally returns that cache without writing. It does not increment the version, broadcast, or create a canvas. A snapshot is a copy of the whitelisted fields.
 
-The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews and turns are not part of this protocol yet.
+The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews and turns are not part of this protocol yet. Cursor events are ephemeral and do not touch the database; they are relayed only to connected sockets in the project room.
 
 `tabId` comes from the tab's `sessionStorage` so a reconnect in the same tab repeats an id. Connections are still keyed by socket id, so two tabs remain two connections even when a duplicated tab copied the same id. One socket is in one project room at a time, separate from its per-user chat room. Leave and disconnect remove that socket. The room is discarded when it has no sockets, no join still in progress, and no commit or sync still holding it. A held save keeps the same cache and queue, so a join that arrives during that save waits for it and then reads the saved version.
 
@@ -345,8 +351,11 @@ The queue and the refresh flag live in this process. A restart loads the saved c
 | `newMessage`     | The saved message document | Sent to the recipient's room on send      |
 | `canvas:ops`     | `{ projectId, version, ops, by }` | After a saved commit, to the project room except the sender |
 | `canvas:preview` | `{ projectId, by, nodes }` | Volatile relay of a drag/resize sample. `by` is the authenticated Mongo userId. Sent to the project room except the sender. Overlay expires 3s after last sample; a canonical position/size update clears it immediately. Turn-holding is still S20. |
+| `cursor:move`    | `{ projectId, userId, x, y }` | Volatile relay of a remote cursor position. `userId` is the authenticated Mongo userId. Relayed with `socket.to(room).volatile.emit`, so every other socket in the project room receives it and the sender does not. One latest position per user; other tabs of the same user replace it. Viewers also emit. |
+| `cursor:leave`   | `{ projectId, userId }` | Volatile relay. Sent when a remote cursor leaves the canvas. The UI removes that user's cursor immediately. |
+| `presence:update` | `{ projectId, participants }` | Full roster after a join attaches or a socket is removed. Not volatile, no ack, and not written to the database. Sent with `io.to` to `project:<projectId>` only, including sockets still in that room. The user drops off when their last tab leaves or disconnects. |
 
-Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog. Workspace join acknowledges on the same event instead of emitting a second one.
+Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. That map is global chat presence. Workspace participants are a separate project-room roster and are not derived from it. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog. Workspace join acknowledges on the same event instead of emitting a second one.
 
 ## Request & Response Examples
 

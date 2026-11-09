@@ -2,11 +2,14 @@ export function throttle(fn, wait, clock = defaultClock) {
   let timerId = null;
   let lastArgs = null;
   let lastCallTime = 0;
+  let hasInvoked = false;
 
   function invoke() {
     const args = lastArgs;
     lastArgs = null;
     timerId = null;
+    lastCallTime = clock.now();
+    hasInvoked = true;
     fn(...args);
   }
 
@@ -14,10 +17,12 @@ export function throttle(fn, wait, clock = defaultClock) {
     const now = clock.now();
     lastArgs = args;
 
-    if (!timerId) {
-      const timeSinceLastCall = now - lastCallTime;
+    if (timerId === null) {
+      const timeSinceLastCall = hasInvoked ? now - lastCallTime : Infinity;
       if (timeSinceLastCall >= wait) {
         lastCallTime = now;
+        hasInvoked = true;
+        lastArgs = null;
         fn(...args);
         return;
       }

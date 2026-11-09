@@ -3,6 +3,7 @@ import User from "../models/user.model.js";
 import * as projectAccess from "../lib/projectAccess.js";
 import { safeHandler } from "../lib/safeHandler.js";
 import { applyOps, MAX_OPS_PER_COMMIT, normalizeCanvas, ID_PATTERN, POSITION_MAX, NODE_SIZE_MIN, NODE_SIZE_MAX } from "../shared/canvasOps.js";
+import { can } from "../lib/projectAccess.js";
 import { createSerialQueue, workspaceRegistry } from "../lib/workspaceRooms.js";
 
 // REST uses the same sentence for a bad id, a missing project, and a non-member.
@@ -251,9 +252,28 @@ function replyOnce(socket, ack) {
   };
 }
 
-async function detach(registry, socket, state, projectId, socketId) {
-  registry.removeConnection(projectId, socketId);
+// The roster is taken after the registry change and sent before adapter leave.
+// A disconnecting socket is already not connected, so this goes through io
+// rather than the socket. A throw in a listener must not skip the leave or
+// roll back a join that has already been acknowledged.
+function publishPresence(io, registry, projectId) {
+  const participants = registry.getParticipants(projectId).map((person) => ({
+    userId: person.userId,
+    fullName: person.fullName,
+    img: person.img,
+    role: person.role,
+  }));
+  try {
+    io.to(roomName(projectId)).emit("presence:update", { projectId, participants });
+  } catch (error) {
+    logHandler("presence:update", error);
+  }
+}
+
+async function detach(io, registry, socket, state, projectId, socketId) {
+  const removed = registry.removeConnection(projectId, socketId);
   if (state.activeProjectId === projectId) state.activeProjectId = null;
+  if (removed) publishPresence(io, registry, projectId);
   if (socket.connected) await socket.leave(roomName(projectId));
 }
 
@@ -272,7 +292,7 @@ function memberProfile(profile) {
   };
 }
 
-async function runJoin(socket, registry, deps, state, generation, projectId, tabId, userId, reply) {
+async function runJoin(io, socket, registry, deps, state, generation, projectId, tabId, userId, reply) {
   const socketId = socket.id;
   let handle = null;
   let adapterJoined = false;
@@ -281,10 +301,13 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
   const stale = () => !isCurrent(state, generation) || !socket.connected || socket.id !== socketId;
 
   const rollback = async () => {
-    registry.removeConnection(projectId, socketId);
+    const removed = registry.removeConnection(projectId, socketId);
     if (state.activeProjectId === projectId) state.activeProjectId = null;
     if (state.joinedGeneration === generation) state.joinedGeneration = null;
     attached = false;
+    // Entering the adapter room is not a connection. Announce only the socket
+    // that was actually stored, and never a different member of the room.
+    if (removed) publishPresence(io, registry, projectId);
     if (adapterJoined && socket.connected) {
       adapterJoined = false;
       await socket.leave(roomName(projectId));
@@ -299,7 +322,7 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
 
     // A failed replacement must not leave the previous project joined.
     if (state.activeProjectId && state.activeProjectId !== projectId) {
-      await detach(registry, socket, state, state.activeProjectId, socket.id);
+      await detach(io, registry, socket, state, state.activeProjectId, socket.id);
       if (stale()) {
         reply(SUPERSEDED);
         return;
@@ -314,7 +337,7 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
     const role = deps.roleOf(project, userId);
     if (!project || !role) {
       if (isCurrent(state, generation) && state.activeProjectId) {
-        await detach(registry, socket, state, state.activeProjectId, socket.id);
+        await detach(io, registry, socket, state, state.activeProjectId, socket.id);
       }
       reply(PROJECT_NOT_FOUND);
       return;
@@ -327,7 +350,7 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
     }
     if (!profile) {
       if (isCurrent(state, generation) && state.activeProjectId) {
-        await detach(registry, socket, state, state.activeProjectId, socket.id);
+        await detach(io, registry, socket, state, state.activeProjectId, socket.id);
       }
       reply(PROJECT_NOT_FOUND);
       return;
@@ -378,15 +401,17 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
       // can be inside this queue and already have cleared the previous one.
       state.joinedGeneration = generation;
 
+      const participants = registry.getParticipants(projectId);
       reply({
         ok: true,
         project: projectSummary(project),
         role,
         canvas,
-        participants: [],
+        participants,
         turn: null,
         serverNow: Date.now(),
       });
+      publishPresence(io, registry, projectId);
       attached = false;
       adapterJoined = false;
       return "ok";
@@ -397,7 +422,7 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
     if (isCurrent(state, generation) && socket.connected && socket.id === socketId) {
       if (state.activeProjectId) {
         try {
-          await detach(registry, socket, state, state.activeProjectId, socket.id);
+          await detach(io, registry, socket, state, state.activeProjectId, socket.id);
         } catch (detachError) {
           console.error("Error in socket handler (workspace:join):", detachError.message);
         }
@@ -416,7 +441,7 @@ async function runJoin(socket, registry, deps, state, generation, projectId, tab
   }
 }
 
-function onJoin(socket, registry, deps, payload, ack) {
+function onJoin(io, socket, registry, deps, payload, ack) {
   if (typeof ack !== "function") return undefined;
 
   const reply = replyOnce(socket, ack);
@@ -451,11 +476,11 @@ function onJoin(socket, registry, deps, payload, ack) {
   state.joinedGeneration = null;
 
   return state.queue(() => (
-    runJoin(socket, registry, deps, state, generation, projectId, tabId, userId, reply)
+    runJoin(io, socket, registry, deps, state, generation, projectId, tabId, userId, reply)
   ));
 }
 
-function onLeave(socket, registry, payload) {
+function onLeave(io, socket, registry, payload) {
   if (!isRecord(payload)) return undefined;
   if (typeof payload.projectId !== "string" || !OBJECT_ID.test(payload.projectId)) return undefined;
 
@@ -470,7 +495,7 @@ function onLeave(socket, registry, payload) {
 
   return state.queue(async () => {
     if (state.activeProjectId !== projectId) return;
-    await detach(registry, socket, state, projectId, socket.id);
+    await detach(io, registry, socket, state, projectId, socket.id);
   });
 }
 
@@ -779,7 +804,7 @@ function onSync(socket, registry, deps, payload, ack) {
   ));
 }
 
-function onDisconnecting(socket, registry) {
+function onDisconnecting(io, socket, registry) {
   const state = getLifecycle(socket);
   state.generation += 1;
   state.intent = null;
@@ -787,7 +812,9 @@ function onDisconnecting(socket, registry) {
   const projectId = state.activeProjectId;
   const socketId = socket.id;
   state.activeProjectId = null;
-  if (projectId) registry.removeConnection(projectId, socketId);
+  if (!projectId) return;
+  const removed = registry.removeConnection(projectId, socketId);
+  if (removed) publishPresence(io, registry, projectId);
 }
 
 // Validation constants for preview
@@ -863,16 +890,85 @@ async function onPreview(io, socket, registry, deps, payload, ack) {
   }
 }
 
+function validCursorMove(payload) {
+  if (!isRecord(payload)) return null;
+  const projectId = typeof payload.projectId === "string" ? payload.projectId.toLowerCase() : "";
+  if (!OBJECT_ID.test(projectId)) return null;
+  const x = payload.x;
+  const y = payload.y;
+  if (typeof x !== "number" || !Number.isFinite(x) || Math.abs(x) > POSITION_MAX) return null;
+  if (typeof y !== "number" || !Number.isFinite(y) || Math.abs(y) > POSITION_MAX) return null;
+  return { projectId, x, y };
+}
+
+function validCursorLeave(payload) {
+  if (!isRecord(payload)) return null;
+  const projectId = typeof payload.projectId === "string" ? payload.projectId.toLowerCase() : "";
+  if (!OBJECT_ID.test(projectId)) return null;
+  return { projectId };
+}
+
+function authorizeCursor(socket, registry, projectId, userId) {
+  const joined = joinedConnection(socket, registry, projectId, userId);
+  if (!joined) return null;
+  const member = joined.room.members?.get(userId);
+  if (!member) return null;
+  if (can(member.role, "chat") !== true) return null;
+  return { room: joined.room, connection: joined.connection, state: joined.state };
+}
+
+function onCursorMove(io, socket, registry, deps, payload) {
+  const validated = validCursorMove(payload);
+  if (!validated) return;
+
+  const userId = readUserId(socket);
+  if (!userId) return;
+
+  const authorized = authorizeCursor(socket, registry, validated.projectId, userId);
+  if (!authorized) return;
+
+  try {
+    socket.to(roomName(validated.projectId)).volatile.emit("cursor:move", {
+      projectId: validated.projectId,
+      userId,
+      x: validated.x,
+      y: validated.y,
+    });
+  } catch (error) {
+    logHandler("cursor:move", error);
+  }
+}
+
+function onCursorLeave(io, socket, registry, deps, payload) {
+  const validated = validCursorLeave(payload);
+  if (!validated) return;
+
+  const userId = readUserId(socket);
+  if (!userId) return;
+
+  const authorized = authorizeCursor(socket, registry, validated.projectId, userId);
+  if (!authorized) return;
+
+  try {
+    socket.to(roomName(validated.projectId)).volatile.emit("cursor:leave", {
+      projectId: validated.projectId,
+      userId,
+    });
+  } catch (error) {
+    logHandler("cursor:leave", error);
+  }
+}
+
 export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRegistry, deps = defaultDeps) {
   // Touch the lifecycle so the queue exists before the first event.
   getLifecycle(socket);
 
   socket.on("workspace:join", safeHandler("workspace:join", (payload, ack) => (
-    onJoin(socket, roomRegistry, deps, payload, ack)
+    onJoin(io, socket, roomRegistry, deps, payload, ack)
   )));
 
   socket.on("workspace:leave", safeHandler("workspace:leave", (payload) => (
-    onLeave(socket, roomRegistry, payload)
+    onLeave(io, socket, roomRegistry, payload)
   )));
 
   socket.on("canvas:commit", safeHandler("canvas:commit", (payload, ack) => (
@@ -887,9 +983,17 @@ export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRe
     onPreview(io, socket, roomRegistry, deps, payload)
   )));
 
+  socket.on("cursor:move", safeHandler("cursor:move", (payload) => (
+    onCursorMove(io, socket, roomRegistry, deps, payload)
+  )));
+
+  socket.on("cursor:leave", safeHandler("cursor:leave", (payload) => (
+    onCursorLeave(io, socket, roomRegistry, deps, payload)
+  )));
+
   // disconnecting drops the registry entry. Socket.io removes adapter rooms itself,
   // including this socket's project room, and the per-user chat room stays.
   socket.on("disconnecting", safeHandler("disconnecting", () => {
-    onDisconnecting(socket, roomRegistry);
+    onDisconnecting(io, socket, roomRegistry);
   }));
 }

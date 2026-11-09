@@ -113,6 +113,23 @@ function createSocket(userId, socketId = "socket-1") {
   return socket;
 }
 
+function createIo() {
+  const emits = [];
+  return {
+    emits,
+    to(room) {
+      return {
+        emit(event, payload) {
+          emits.push({ room, event, payload, volatile: false, global: false });
+        },
+      };
+    },
+    emit(event, payload) {
+      emits.push({ room: null, event, payload, volatile: false, global: true });
+    },
+  };
+}
+
 function ackCapture() {
   const calls = [];
   const ack = (body) => { calls.push(body); };
@@ -161,7 +178,8 @@ describe("workspace socket", { concurrency: false }, () => {
 
   function attach(socket, calls, registry) {
     const rooms = registry ?? createWorkspaceRegistry();
-    registerWorkspaceHandlers({}, socket, rooms, {
+    if (!calls.io) calls.io = createIo();
+    registerWorkspaceHandlers(calls.io, socket, rooms, {
       findProjectForMember: calls.findProjectForMember,
       roleOf: projectAccess.roleOf,
     });
@@ -257,7 +275,14 @@ describe("workspace socket", { concurrency: false }, () => {
     assert.deepEqual(Object.keys(body.project).sort(), ["_id", "description", "name"]);
     assert.equal(body.project._id, projectId);
     assert.equal(body.role, "owner");
-    assert.deepEqual(body.participants, []);
+    assert.deepEqual(body.participants, [{
+      userId,
+      fullName: "Ada",
+      img: "https://cdn.example/a.png",
+      role: "owner",
+    }]);
+    assert.equal(JSON.stringify(body.participants).includes("hidden@"), false);
+    assert.equal(JSON.stringify(body.participants).includes("clerk"), false);
     assert.equal(body.turn, null);
     assert.equal(Number.isFinite(body.serverNow), true);
     assert.equal(body.canvas.version, 7);
@@ -641,5 +666,204 @@ describe("workspace socket", { concurrency: false }, () => {
     assert.equal(registry.getRoom(projectId), null);
     assert.equal(socketB.leaves.includes(userB), false);
     assert.equal(socketB.rooms.has(userB), true);
+  });
+
+  function presenceEmits(calls) {
+    return calls.io.emits.filter((entry) => entry.event === "presence:update");
+  }
+
+  it("acks the joiner in a non-volatile project roster and does not query again to publish it", async () => {
+    const userId = id();
+    const projectId = id();
+    const calls = stub({
+      project: projectDoc(projectId, userId, "viewer"),
+      profile: { fullName: "Ada", img: "", email: "hidden@example.com", clerkId: "clerk" },
+      canvasResult: canvasDoc(2),
+    });
+    const socket = createSocket(userId);
+    attach(socket, calls);
+    const ack = ackCapture();
+    const beforeUser = calls.user;
+    const beforeUpdate = calls.update.length;
+
+    await socket.handler("workspace:join")({ projectId, tabId: TAB }, ack);
+
+    assert.equal(ack.calls[0].role, "viewer");
+    assert.deepEqual(ack.calls[0].participants, [{
+      userId,
+      fullName: "Ada",
+      img: "",
+      role: "viewer",
+    }]);
+    assert.equal(calls.user, beforeUser + 1);
+    assert.equal(calls.update.length, beforeUpdate + 1);
+    const presence = presenceEmits(calls);
+    assert.equal(presence.length, 1);
+    assert.equal(presence[0].room, `project:${projectId}`);
+    assert.equal(presence[0].volatile, false);
+    assert.equal(presence[0].global, false);
+    assert.deepEqual(Object.keys(presence[0].payload).sort(), ["participants", "projectId"]);
+    assert.deepEqual(presence[0].payload.participants, ack.calls[0].participants);
+    assert.equal(JSON.stringify(presence[0].payload).includes("hidden@"), false);
+    assert.equal(JSON.stringify(presence[0].payload).includes("clerk"), false);
+    assert.equal(calls.io.emits.some((entry) => entry.global), false);
+  });
+
+  it("keeps one user across tabs and publishes departure only for the last tab", async () => {
+    const userId = id();
+    const projectId = id();
+    const calls = stub({
+      project: projectDoc(projectId, userId, "editor"),
+      profile: { fullName: "Ada", img: "https://cdn.example/a.png" },
+      canvasResult: canvasDoc(1),
+    });
+    const registry = createWorkspaceRegistry();
+    const first = createSocket(userId, "tab-1");
+    const second = createSocket(userId, "tab-2");
+    attach(first, calls, registry);
+    attach(second, calls, registry);
+    const secondTab = "123e4567-e89b-41d3-a456-426614174001";
+
+    await first.handler("workspace:join")({ projectId, tabId: TAB }, ackCapture());
+    assert.equal(calls.update.length, 1);
+    await second.handler("workspace:join")({ projectId, tabId: secondTab }, ackCapture());
+    assert.equal(calls.update.length, 1);
+    assert.equal(calls.user, 2);
+    let presence = presenceEmits(calls);
+    assert.equal(presence.length, 2);
+    assert.deepEqual(presence[1].payload.participants.map((person) => person.userId), [userId]);
+
+    const order = [];
+    const originalLeave = first.leave.bind(first);
+    first.leave = async (room) => {
+      order.push(`leave:${room}`);
+      return originalLeave(room);
+    };
+    const realTo = calls.io.to.bind(calls.io);
+    calls.io.to = (room) => {
+      const operator = realTo(room);
+      const emit = operator.emit.bind(operator);
+      operator.emit = (event, payload) => {
+        if (event === "presence:update") order.push(`presence:${payload.participants.length}`);
+        return emit(event, payload);
+      };
+      return operator;
+    };
+
+    const beforeLeave = presenceEmits(calls).length;
+    await first.handler("workspace:leave")({ projectId: id() });
+    assert.equal(presenceEmits(calls).length, beforeLeave);
+    await first.handler("workspace:leave")({ projectId });
+    presence = presenceEmits(calls);
+    assert.equal(presence.at(-1).payload.participants.length, 1);
+    assert.deepEqual(order, [`presence:1`, `leave:project:${projectId}`]);
+    assert.equal(registry.getParticipants(projectId).length, 1);
+
+    second.connected = false;
+    await second.handler("disconnecting")();
+    presence = presenceEmits(calls);
+    assert.deepEqual(presence.at(-1).payload, { projectId, participants: [] });
+    assert.equal(registry.getRoom(projectId), null);
+    assert.equal(calls.user, 2);
+    assert.equal(calls.update.length, 1);
+  });
+
+  it("refreshes a same-project rejoin and notifies both rooms when the project changes", async () => {
+    const userId = id();
+    const projectA = id();
+    const projectB = id();
+    const profile = { fullName: "Ada", img: "" };
+    const calls = stub({
+      project: null,
+      profile,
+      canvasResult: canvasDoc(1),
+      findImpl: (requested) => Promise.resolve(projectDoc(requested, userId, requested === projectA ? "owner" : "editor")),
+    });
+    const socket = createSocket(userId);
+    const registry = attach(socket, calls);
+
+    await socket.handler("workspace:join")({ projectId: projectA, tabId: TAB }, ackCapture());
+    profile.fullName = "Ada Lovelace";
+    const rejoined = ackCapture();
+    await socket.handler("workspace:join")({ projectId: projectA, tabId: TAB }, rejoined);
+    assert.equal(rejoined.calls[0].participants[0].fullName, "Ada Lovelace");
+    assert.equal(rejoined.calls[0].participants[0].role, "owner");
+    assert.equal(registry.getRoom(projectA).members.get(userId).fullName, "Ada Lovelace");
+
+    const switched = ackCapture();
+    await socket.handler("workspace:join")({ projectId: projectB, tabId: TAB }, switched);
+    assert.equal(switched.calls[0].ok, true);
+    assert.deepEqual(switched.calls[0].participants, [{
+      userId,
+      fullName: "Ada Lovelace",
+      img: "",
+      role: "editor",
+    }]);
+    const presence = presenceEmits(calls);
+    const rooms = presence.map((entry) => entry.room);
+    assert.equal(rooms.filter((room) => room === `project:${projectA}`).length >= 1, true);
+    assert.equal(presence.some((entry) => entry.room === `project:${projectA}` && entry.payload.participants.length === 0), true);
+    assert.equal(presence.some((entry) => entry.room === `project:${projectB}` && entry.payload.participants.length === 1), true);
+    assert.equal(registry.getRoom(projectA), null);
+    assert.equal(registry.getParticipants(projectB)[0].role, "editor");
+  });
+
+  it("does not announce a join that never attaches", async () => {
+    const userId = id();
+    const insider = id();
+    const projectId = id();
+    const calls = stub({
+      project: null,
+      profile: { fullName: "Ada", img: "" },
+      canvasResult: canvasDoc(1),
+      findImpl: (requested, requester) => Promise.resolve(
+        requester === insider ? projectDoc(requested, insider, "owner") : null,
+      ),
+    });
+    const registry = createWorkspaceRegistry();
+    const member = createSocket(insider, "member");
+    const outsider = createSocket(userId, "outsider");
+    attach(member, calls, registry);
+    attach(outsider, calls, registry);
+    await member.handler("workspace:join")({ projectId, tabId: TAB }, ackCapture());
+    const before = presenceEmits(calls).length;
+
+    const denied = ackCapture();
+    await outsider.handler("workspace:join")({ projectId, tabId: TAB }, denied);
+    assert.deepEqual(denied.calls, [{ ok: false, message: "Project not found" }]);
+    assert.equal(presenceEmits(calls).length, before);
+    assert.deepEqual(registry.getParticipants(projectId).map((person) => person.userId), [insider]);
+
+    const gate = defer();
+    calls.findProjectForMember = () => gate.promise;
+    const pendingSocket = createSocket(insider, "pending");
+    attach(pendingSocket, calls, registry);
+    const pendingAck = ackCapture();
+    const pending = pendingSocket.handler("workspace:join")({ projectId, tabId: "123e4567-e89b-41d3-a456-426614174002" }, pendingAck);
+    await settle();
+    const leaving = pendingSocket.handler("workspace:leave")({ projectId });
+    gate.resolve(projectDoc(projectId, insider, "editor"));
+    await pending;
+    await leaving;
+    assert.deepEqual(pendingAck.calls, [{ ok: false, message: "Workspace request superseded" }]);
+    assert.equal(presenceEmits(calls).length, before);
+    assert.deepEqual(registry.getParticipants(projectId).map((person) => person.userId), [insider]);
+
+    pendingSocket.joinError = new Error("adapter down");
+    const original = console.error;
+    console.error = () => {};
+    try {
+      const failed = ackCapture();
+      calls.findProjectForMember = (requested, requester) => Promise.resolve(
+        projectDoc(requested, requester, "editor"),
+      );
+      await pendingSocket.handler("workspace:join")({ projectId, tabId: TAB }, failed);
+      assert.deepEqual(failed.calls, [{ ok: false, message: "Unable to open workspace" }]);
+      assert.equal(presenceEmits(calls).length, before);
+      assert.equal(registry.getParticipants(projectId).some((person) => person.userId === insider), true);
+      assert.equal(registry.getRoom(projectId).connections.has(pendingSocket.id), false);
+    } finally {
+      console.error = original;
+    }
   });
 });

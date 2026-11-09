@@ -145,7 +145,38 @@ export function createWorkspaceRegistry() {
     return true;
   }
 
-  return { acquire, retain, getRoom, addConnection, removeConnection };
+  // One row per connected user. A second tab refreshes the cached profile but
+  // must not add a second person, and a member left in the map with no socket
+  // is not announced. Callers get plain copies so a broadcast cannot edit the
+  // room.
+  function getParticipants(projectId) {
+    const room = getRoom(projectId);
+    if (!room || room.connections.size === 0) return [];
+
+    const seen = new Set();
+    const participants = [];
+    for (const connection of room.connections.values()) {
+      const rawId = connection?.userId;
+      if (typeof rawId !== "string" || rawId.length === 0) continue;
+      const userId = rawId.toLowerCase();
+      if (seen.has(userId)) continue;
+      const member = room.members.get(rawId) ?? room.members.get(userId);
+      if (!member) continue;
+      if (member.role !== "owner" && member.role !== "editor" && member.role !== "viewer") continue;
+      seen.add(userId);
+      participants.push({
+        userId,
+        fullName: typeof member.fullName === "string" ? member.fullName : "",
+        img: typeof member.img === "string" ? member.img : "",
+        role: member.role,
+      });
+    }
+
+    participants.sort((a, b) => (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
+    return participants;
+  }
+
+  return { acquire, retain, getRoom, addConnection, removeConnection, getParticipants };
 }
 
 export const workspaceRegistry = createWorkspaceRegistry();

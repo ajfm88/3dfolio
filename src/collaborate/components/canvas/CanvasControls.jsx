@@ -8,7 +8,7 @@ const CanvasControls = () => {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-1 rounded-full border border-[var(--collab-border)] bg-[var(--collab-glass)] p-1 backdrop-blur">
+    <div data-collab-chrome className="absolute bottom-4 left-4 z-10 flex items-center gap-1 rounded-full border border-[var(--collab-border)] bg-[var(--collab-glass)] p-1 backdrop-blur">
       <button type="button" aria-label="Zoom in" onClick={() => zoomIn({ duration: 200 })} className={buttonClass}>
         <Plus className="h-5 w-5" />
       </button>

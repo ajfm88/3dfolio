@@ -245,4 +245,74 @@ describe("createWorkspaceRegistry", { concurrency: false }, () => {
     assert.equal(registry.getRoom("p1"), null);
     assert.equal(registry.retain("p1"), null);
   });
+
+  it("snapshots connected users once, in order, as fresh copies", async () => {
+    const registry = createWorkspaceRegistry();
+    assert.deepEqual(registry.getParticipants("missing"), []);
+
+    const handle = await registry.acquire("p1", async () => canvas(1));
+    const ada = "64b0000000000000000000aa";
+    const grace = "64b0000000000000000000bb";
+    registry.addConnection("p1", "tab-a", {
+      userId: ada,
+      tabId: "tab-1",
+      role: "owner",
+      fullName: "Ada",
+      img: "https://cdn.example/a.png",
+      email: "hidden@example.com",
+    });
+    registry.addConnection("p1", "tab-a2", {
+      userId: ada,
+      tabId: "tab-2",
+      role: "editor",
+      fullName: "Ada Lovelace",
+      img: "",
+    });
+    registry.addConnection("p1", "tab-g", {
+      userId: grace,
+      tabId: "tab-3",
+      role: "viewer",
+      fullName: undefined,
+      img: null,
+    });
+    registry.getRoom("p1").members.set("64b0000000000000000000ff", {
+      role: "owner",
+      fullName: "Ghost",
+      img: "",
+    });
+    registry.addConnection("p1", "tab-bad", {
+      userId: "64b0000000000000000000cc",
+      tabId: "tab-4",
+      role: "admin",
+      fullName: "Nope",
+      img: "",
+    });
+
+    const first = registry.getParticipants("p1");
+    assert.deepEqual(first, [
+      { userId: ada, fullName: "Ada Lovelace", img: "", role: "editor" },
+      { userId: grace, fullName: "", img: "", role: "viewer" },
+    ]);
+    assert.equal(JSON.stringify(first).includes("hidden@"), false);
+    assert.equal(JSON.stringify(first).includes("Ghost"), false);
+    assert.equal(JSON.stringify(first).includes("Nope"), false);
+
+    first[0].fullName = "Hacked";
+    first.push({ userId: "64b0000000000000000000dd", fullName: "Extra", img: "", role: "owner" });
+    const second = registry.getParticipants("p1");
+    assert.notEqual(first[0], second[0]);
+    assert.equal(second[0].fullName, "Ada Lovelace");
+    assert.equal(second.length, 2);
+    assert.equal(registry.getRoom("p1").members.get(ada).fullName, "Ada Lovelace");
+
+    assert.equal(registry.removeConnection("p1", "tab-a"), true);
+    assert.deepEqual(registry.getParticipants("p1").map((person) => person.userId), [ada, grace]);
+    assert.equal(registry.removeConnection("p1", "tab-a2"), true);
+    assert.deepEqual(registry.getParticipants("p1").map((person) => person.userId), [grace]);
+    assert.equal(registry.removeConnection("p1", "tab-g"), true);
+    assert.equal(registry.removeConnection("p1", "tab-bad"), true);
+    assert.deepEqual(registry.getParticipants("p1"), []);
+    handle.release();
+    assert.deepEqual(registry.getParticipants("p1"), []);
+  });
 });

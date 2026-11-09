@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -7,10 +7,10 @@ import CanvasControls from "./CanvasControls";
 import LinkEdge from "./LinkEdge";
 import ShapePanel from "./ShapePanel";
 import ShapeNode from "./ShapeNode";
+import { PresenceCursors } from "./PresenceCursors";
+import { createCursorPointerHandlers } from "../../lib/cursorPresence";
 import { createShapeNode, SHAPE_DRAG_TYPE } from "../../lib/shapeDrag";
 
-// React Flow re-creates every node when these objects change identity, so they
-// live at module scope.
 const nodeTypes = { shape: ShapeNode };
 const edgeTypes = { link: LinkEdge };
 const connectionLineStyle = { stroke: "var(--collab-edge)", strokeWidth: 1.5 };
@@ -27,6 +27,10 @@ const Flow = () => {
   const deleteElements = useWorkspaceStore((s) => s.deleteElements);
   const connectNodes = useWorkspaceStore((s) => s.connectNodes);
   const onNodeDrag = useWorkspaceStore((s) => s.onNodeDrag);
+  const moveCursor = useWorkspaceStore((s) => s.moveCursor);
+  const leaveCursor = useWorkspaceStore((s) => s.leaveCursor);
+
+  const wrapperRef = useRef(null);
 
   const onConnect = useCallback((connection) => {
     connectNodes(connection);
@@ -55,45 +59,57 @@ const Flow = () => {
     if (node) dispatch([{ type: "node.add", node }]);
   }, [canEdit, screenToFlowPosition, dispatch]);
 
+  const pointer = useMemo(() => createCursorPointerHandlers({
+    screenToFlowPosition,
+    moveCursor,
+    leaveCursor,
+    getWrapper: () => wrapperRef.current,
+  }), [screenToFlowPosition, moveCursor, leaveCursor]);
+
   return (
-    <ReactFlow
-      nodes={rfNodes}
-      edges={rfEdges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onNodeDragStop={onNodeDragStop}
-      onNodeDrag={onNodeDrag}
-      onDelete={onDelete}
-      onConnect={onConnect}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      connectionMode={ConnectionMode.Loose}
-      connectionLineType={ConnectionLineType.SmoothStep}
-      connectionLineStyle={connectionLineStyle}
-      colorMode="dark"
-      minZoom={0.2}
-      maxZoom={2}
-      nodesDraggable={canEdit}
-      nodesConnectable={canEdit}
-      deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
+    <div
+      ref={wrapperRef}
+      className="absolute inset-0"
+      onPointerMove={pointer.onPointerMove}
+      onPointerLeave={pointer.onPointerLeave}
+      onPointerCancel={pointer.onPointerCancel}
     >
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-      <CanvasControls />
-      {canEdit && <ShapePanel />}
-    </ReactFlow>
+      <ReactFlow
+        nodes={rfNodes}
+        edges={rfEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onNodeDragStop={onNodeDragStop}
+        onNodeDrag={onNodeDrag}
+        onDelete={onDelete}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionMode={ConnectionMode.Loose}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineStyle={connectionLineStyle}
+        colorMode="dark"
+        minZoom={0.2}
+        maxZoom={2}
+        nodesDraggable={canEdit}
+        nodesConnectable={canEdit}
+        deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        <CanvasControls />
+        {canEdit && <ShapePanel />}
+        <PresenceCursors />
+      </ReactFlow>
+    </div>
   );
 };
 
-// React Flow sizes itself to its parent. The main area's height comes from the
-// flex column, so the canvas is pinned to that box instead of growing the page.
 const WorkspaceCanvas = () => (
-  <div className="absolute inset-0">
-    <ReactFlowProvider>
-      <Flow />
-    </ReactFlowProvider>
-  </div>
+  <ReactFlowProvider>
+    <Flow />
+  </ReactFlowProvider>
 );
 
 export default WorkspaceCanvas;

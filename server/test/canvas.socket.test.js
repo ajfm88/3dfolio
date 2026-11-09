@@ -103,8 +103,12 @@ function createSocket(userId, socketId = "socket-1") {
 
 function createIo() {
   const emits = [];
+  // Join broadcasts presence on the same io. Commit and preview assertions
+  // keep counting only those events.
+  const presence = [];
   const io = {
     emits,
+    presence,
     to(room) {
       const call = { room, except: [], volatile: false };
       const operator = {
@@ -113,13 +117,15 @@ function createIo() {
           return operator;
         },
         emit(event, payload) {
-          emits.push({
+          const record = {
             room: call.room,
             except: [...call.except],
             event,
             payload,
             volatile: call.volatile,
-          });
+          };
+          if (event === "presence:update") presence.push(record);
+          else emits.push(record);
         },
         get volatile() {
           call.volatile = true;
@@ -1145,8 +1151,10 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
     function createIo() {
       const emits = [];
+      const presence = [];
       const io = {
         emits,
+        presence,
         to(room) {
           const call = { room, except: [], volatile: false };
           const operator = {
@@ -1155,13 +1163,15 @@ describe("canvas commit and sync", { concurrency: false }, () => {
               return operator;
             },
             emit(event, payload) {
-              emits.push({
+              const record = {
                 room: call.room,
                 except: [...call.except],
                 event,
                 payload,
                 volatile: call.volatile,
-              });
+              };
+              if (event === "presence:update") presence.push(record);
+              else emits.push(record);
             },
             get volatile() {
               call.volatile = true;

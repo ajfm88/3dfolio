@@ -7,6 +7,15 @@ import { getTabId } from "../lib/tabId";
 import { createSyncController, createSyncState, invalidateSession } from "../lib/workspaceSync.js";
 import { throttle } from "../lib/throttle.js";
 import { createPreviewOverlayController } from "../lib/canvasPreview.js";
+import { normalizeParticipants } from "../lib/participants.js";
+import {
+  canonicalUserId,
+  createCursorExpiryController,
+  validateCursorMove,
+  validateInboundCursorLeave,
+  validateInboundCursorMove,
+} from "../lib/cursorPresence.js";
+import { useSessionStore } from "./useSessionStore.js";
 
 // The route effect owns one binding at a time. A late ack is ignored unless it
 // still matches this object, the socket id captured at emit, and its attempt.
@@ -40,6 +49,8 @@ function emptyWorkspace(status) {
     canvas: { nodes: [], edges: [], version: 0 },
     rfNodes: [],
     rfEdges: [],
+    participants: [],
+    cursors: {},
   };
 }
 
@@ -129,6 +140,7 @@ function classifyJoin(ack, projectId) {
 
   const receivedId = isRecord(ack.project) ? String(ack.project._id).toLowerCase() : "";
   const version = isRecord(ack.canvas) ? ack.canvas.version : undefined;
+  const participants = normalizeParticipants(ack.participants);
   const valid = receivedId === projectId
     && JOIN_ROLES.has(ack.role)
     && isRecord(ack.canvas)
@@ -136,8 +148,7 @@ function classifyJoin(ack, projectId) {
     && Array.isArray(ack.canvas.edges)
     && Number.isSafeInteger(version)
     && version >= 0
-    && Array.isArray(ack.participants)
-    && ack.participants.length === 0
+    && participants !== null
     && ack.turn === null
     && Number.isFinite(ack.serverNow);
   if (!valid) return { ok: false, notFound: false, message: "" };
@@ -153,6 +164,7 @@ function classifyJoin(ack, projectId) {
     },
     role: ack.role,
     canvas: { nodes: normalized.nodes, edges: normalized.edges, version },
+    participants,
   };
 }
 
@@ -182,6 +194,11 @@ function startJoin(set, binding, force) {
   const attempt = ++binding.attempt;
   const projectId = binding.projectId;
   binding.inFlight = { attempt, connectionId };
+  // A new attempt must not keep a roster or a snapshot from the previous one,
+  // including a presence event that arrived before that attempt's ack.
+  binding.presenceBuffer = null;
+  binding.cursorController.clearAll();
+  binding.cursorThrottle.cancel();
   set(emptyWorkspace("loading"));
 
   const finish = () => {
@@ -196,13 +213,24 @@ function startJoin(set, binding, force) {
     const result = classifyJoin(ack, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     if (result.ok) {
+      // The server subscribes this socket before the ack is applied, so a
+      // presence snapshot can already be waiting. That snapshot wins. A failed
+      // or stale ack below must not install it.
+      const buffered = binding.presenceBuffer?.attempt === attempt
+        ? binding.presenceBuffer.participants
+        : null;
+      binding.presenceBuffer = null;
       sync.onJoined(binding, {
         project: result.project,
         role: result.role,
         canvas: result.canvas,
       });
+      if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+      const roster = buffered ?? result.participants;
+      set((state) => ({ participants: roster, cursors: pruneCursors(binding, state.cursors, roster) }));
       return;
     }
+    binding.presenceBuffer = null;
     binding.sync.denialRejoin = false;
     binding.sync.toastRecovery = false;
     if (result.message) toast.error(result.message);
@@ -211,6 +239,7 @@ function startJoin(set, binding, force) {
     set(emptyWorkspace(result.notFound ? "notFound" : "error"));
   }).catch(() => {
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    binding.presenceBuffer = null;
     binding.sync.denialRejoin = false;
     binding.sync.toastRecovery = false;
     leaveIfCurrent(binding, attempt, socket, connectionId, projectId);
@@ -219,20 +248,66 @@ function startJoin(set, binding, force) {
   }).finally(finish);
 }
 
+// The Mongo id of the signed-in account. Workspace state has no authUser.
+function selfUserId() {
+  return canonicalUserId(useSessionStore.getState().authUser?._id);
+}
+
+// Every role may send and receive cursors while the workspace is ready on a
+// live joined connection. Canvas-only recovery stays ready, so it is allowed.
+function cursorLive(binding, state) {
+  if (activeBinding !== binding || binding.disposed) return false;
+  const socket = binding.socket;
+  if (!socket?.connected) return false;
+  const joined = binding.sync?.joinedConnectionId;
+  if (!joined || socket.id !== joined) return false;
+  if (state.status !== "ready" || !JOIN_ROLES.has(state.role)) return false;
+  return state.project?._id === binding.projectId;
+}
+
+function clearBindingCursors(binding) {
+  binding.cursorThrottle?.cancel();
+  binding.cursorController?.clearAll();
+  binding.cursorPublished = false;
+}
+
+// Drops cursors (and their timers) for users an accepted roster no longer has.
+function pruneCursors(binding, cursors, participants) {
+  const present = new Set(participants.map((person) => person.userId));
+  let next = cursors;
+  for (const userId of Object.keys(cursors)) {
+    if (present.has(userId)) continue;
+    if (next === cursors) next = { ...cursors };
+    delete next[userId];
+    binding.cursorController.cancelExpiry(userId);
+  }
+  return next;
+}
+
 function disposeBinding(set, binding) {
   if (!binding || binding.disposed) return;
   const owns = activeBinding === binding;
+  // Decide before invalidation whether a final cursor:leave is still deliverable.
+  const sendCursorLeave = owns && cursorLive(binding, syncDeps.get());
   binding.disposed = true;
   binding.attempt += 1;
   binding.inFlight = null;
+  binding.presenceBuffer = null;
   if (binding.sync) invalidateSession(binding.sync);
   if (binding.previewThrottle) binding.previewThrottle.cancel();
   if (binding.previewController) binding.previewController.clearAllOverlays();
+  if (binding.cursorThrottle) binding.cursorThrottle.cancel();
+  if (binding.cursorController) binding.cursorController.dispose();
+  binding.unsubscribe?.();
+  binding.unsubscribe = null;
   binding.unlisten?.();
   binding.unlisten = null;
   // A disposer from an older route must not leave or clear the binding that replaced it.
   if (!owns) return;
   activeBinding = null;
+  if (sendCursorLeave) {
+    binding.socket.volatile?.emit("cursor:leave", { projectId: binding.projectId });
+  }
   if (binding.socket?.connected && binding.projectId) {
     binding.socket.emit("workspace:leave", { projectId: binding.projectId });
   }
@@ -281,8 +356,18 @@ export const useWorkspaceStore = create((set, get) => {
     if (activeBinding && !activeBinding.disposed) disposeBinding(set, activeBinding);
 
     const previewController = createPreviewOverlayController();
+    const cursorController = createCursorExpiryController((userId) => {
+      set((state) => {
+        if (!state.cursors[userId]) return state;
+        const next = { ...state.cursors };
+        delete next[userId];
+        return { cursors: next };
+      });
+    });
 
     const binding = {
+      cursorPublished: false,
+      unsubscribe: null,
       socket: socket ?? null,
       projectId: canonicalProjectId(projectId),
       attempt: 0,
@@ -298,11 +383,26 @@ export const useWorkspaceStore = create((set, get) => {
         currentBinding.socket.volatile.emit("canvas:preview", { projectId, nodes });
       }, 50),
       previewController,
+      // The callback revalidates its own binding, join attempt and connection
+      // when it runs, so queued work never reaches a replacement binding.
+      cursorThrottle: throttle(({ projectId, x, y, attempt, connectionId }) => {
+        if (!cursorLive(binding, get())) return;
+        if (binding.attempt !== attempt || binding.socket.id !== connectionId) return;
+        if (projectId !== binding.projectId) return;
+        binding.socket.volatile?.emit("cursor:move", { projectId, x, y });
+      }, 50),
+      cursorController,
+      presenceBuffer: null,
     };
     activeBinding = binding;
     syncDeps.get = get;
     syncDeps.set = set;
     set(emptyWorkspace("loading"));
+    // Failure transitions reached through the sync helper (error, notFound,
+    // emptyWorkspace) bypass this file, so the binding watches status itself.
+    binding.unsubscribe = useWorkspaceStore.subscribe((state) => {
+      if (state.status !== "ready") clearBindingCursors(binding);
+    });
 
     if (socket) {
       const onConnect = () => {
@@ -317,9 +417,34 @@ export const useWorkspaceStore = create((set, get) => {
         binding.inFlight = null;
         invalidateSession(binding.sync);
         binding.sync.joinedConnectionId = null;
+        binding.presenceBuffer = null;
         binding.previewController.clearAllOverlays();
         binding.previewThrottle.cancel();
+        clearBindingCursors(binding);
         set(emptyWorkspace("loading"));
+      };
+      const onPresence = (payload) => {
+        if (activeBinding !== binding || binding.disposed) return;
+        const live = binding.socket;
+        if (!live?.connected || live.id !== binding.sync?.joinedConnectionId) return;
+        if (!isRecord(payload) || typeof payload.projectId !== "string") return;
+        if (payload.projectId.toLowerCase() !== binding.projectId) return;
+        const participants = normalizeParticipants(payload.participants);
+        if (!participants) return;
+
+        const state = get();
+        // Recovery still has a joined connection. Canvas sync must not block
+        // the roster, and a snapshot publish must not clear it.
+        if (state.status === "ready") {
+          set((current) => ({
+            participants,
+            cursors: pruneCursors(binding, current.cursors, participants),
+          }));
+          return;
+        }
+        if (binding.inFlight) {
+          binding.presenceBuffer = { attempt: binding.inFlight.attempt, participants };
+        }
       };
       const onOps = (payload) => {
         if (activeBinding !== binding || binding.disposed) return;
@@ -346,15 +471,50 @@ export const useWorkspaceStore = create((set, get) => {
 
         binding.previewController.onCanonicalNodesChange(previousCanonical, state.canvas.nodes);
       };
+      const onCursorMove = (payload) => {
+        const state = get();
+        if (!cursorLive(binding, state)) return;
+        const move = validateInboundCursorMove(payload);
+        if (!move || move.projectId !== binding.projectId) return;
+        if (move.userId === selfUserId()) return;
+        if (!state.participants.some((person) => person.userId === move.userId)) return;
+        set((current) => ({
+          cursors: {
+            ...current.cursors,
+            [move.userId]: { x: move.x, y: move.y, lastSeen: Date.now() },
+          },
+        }));
+        binding.cursorController.scheduleExpiry(move.userId);
+      };
+      const onCursorLeave = (payload) => {
+        const state = get();
+        if (!cursorLive(binding, state)) return;
+        const leave = validateInboundCursorLeave(payload);
+        if (!leave || leave.projectId !== binding.projectId) return;
+        if (leave.userId === selfUserId()) return;
+        binding.cursorController.cancelExpiry(leave.userId);
+        if (!state.cursors[leave.userId]) return;
+        set((current) => {
+          const next = { ...current.cursors };
+          delete next[leave.userId];
+          return { cursors: next };
+        });
+      };
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
       socket.on("canvas:ops", onOps);
       socket.on("canvas:preview", onPreview);
+      socket.on("presence:update", onPresence);
+      socket.on("cursor:move", onCursorMove);
+      socket.on("cursor:leave", onCursorLeave);
       binding.unlisten = () => {
         socket.off("connect", onConnect);
         socket.off("disconnect", onDisconnect);
         socket.off("canvas:ops", onOps);
         socket.off("canvas:preview", onPreview);
+        socket.off("presence:update", onPresence);
+        socket.off("cursor:move", onCursorMove);
+        socket.off("cursor:leave", onCursorLeave);
       };
       if (socket.connected) startJoin(set, binding, false);
     }
@@ -368,7 +528,9 @@ export const useWorkspaceStore = create((set, get) => {
     if (!binding.socket?.connected) {
       binding.attempt += 1;
       binding.inFlight = null;
+      binding.presenceBuffer = null;
       invalidateSession(binding.sync);
+      clearBindingCursors(binding);
       set(emptyWorkspace("loading"));
       return;
     }
@@ -701,6 +863,35 @@ export const useWorkspaceStore = create((set, get) => {
     if (binding && binding.previewThrottle) {
       binding.previewThrottle.cancel();
     }
+  },
+
+  moveCursor: (point) => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed) return;
+    if (!cursorLive(binding, get())) return;
+    if (!isRecord(point)) return;
+    const valid = validateCursorMove({ projectId: binding.projectId, x: point.x, y: point.y });
+    if (!valid) return;
+    binding.cursorPublished = true;
+    binding.cursorThrottle({
+      projectId: valid.projectId,
+      x: valid.x,
+      y: valid.y,
+      attempt: binding.attempt,
+      connectionId: binding.socket.id,
+    });
+  },
+
+  // A leave cancels pending movement first so a trailing point cannot recreate
+  // the cursor, then emits only when a point was published on a live join.
+  leaveCursor: () => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed) return;
+    binding.cursorThrottle.cancel();
+    if (!binding.cursorPublished) return;
+    binding.cursorPublished = false;
+    if (!cursorLive(binding, get())) return;
+    binding.socket.volatile?.emit("cursor:leave", { projectId: binding.projectId });
   },
 };
 });

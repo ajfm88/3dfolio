@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { createServer } from "vite";
 
+// The store reads the session store for the signed-in id, which needs an API origin at import.
+process.env.VITE_API_URL ||= "http://127.0.0.1:3000/api";
+
 // Vite externalizes react-toastify, so the store and a Node import share one
 // module instance. Patch that instance; patching Vite's loader copy does not.
 
@@ -102,7 +105,12 @@ function joinBody(projectId, canvas, role = "editor") {
     project: { _id: projectId, name: "Design", description: "Notes" },
     role,
     canvas,
-    participants: [],
+    participants: [{
+      userId: USER_B,
+      fullName: "Grace",
+      img: "",
+      role: "viewer",
+    }],
     turn: null,
     serverNow: 1,
   };
@@ -183,6 +191,12 @@ describe("workspace sync", () => {
     const state = useWorkspaceStore.getState();
     assert.equal(state.status, "ready");
     assert.equal(state.syncStatus, "idle");
+    assert.deepEqual(state.participants, [{
+      userId: USER_B,
+      fullName: "Grace",
+      img: "",
+      role: "viewer",
+    }]);
     assert.equal(state.canvas.version, 0);
     assert.equal(selectCanEdit(state), true);
     assert.equal(socket.timeouts.includes(10000), true);

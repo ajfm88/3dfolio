@@ -5,6 +5,17 @@ import { safeHandler } from "../lib/safeHandler.js";
 import { applyOps, MAX_OPS_PER_COMMIT, normalizeCanvas, ID_PATTERN, POSITION_MAX, NODE_SIZE_MIN, NODE_SIZE_MAX } from "../shared/canvasOps.js";
 import { can } from "../lib/projectAccess.js";
 import { createSerialQueue, workspaceRegistry } from "../lib/workspaceRooms.js";
+import {
+  cancelRequest,
+  expire,
+  reclaimTurn,
+  recordActivity,
+  releaseTurn,
+  requestTurn,
+  tabLeft,
+  tabRejoined,
+  toPublic,
+} from "../lib/turns.js";
 
 // REST uses the same sentence for a bad id, a missing project, and a non-member.
 const PROJECT_NOT_FOUND = { ok: false, message: "Project not found" };
@@ -22,6 +33,9 @@ const UNABLE_SYNC = { ok: false, message: "Unable to sync canvas" };
 // object, which dies when the room is evicted, so a later first join loads
 // from the database instead of inheriting it.
 const refreshRequired = new WeakSet();
+
+const TURN_SWEEP_MS = 5000;
+const ACTIVITY_PUBLISH_MS = 5000;
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -124,8 +138,8 @@ function validCommitEnvelope(payload) {
 }
 
 // Edit rights follow the connection object stored on the room, not a payload
-// and not a lookalike with the same fields. Turn checks arrive in S20; until
-// then an owner or editor connection may write.
+// and not a lookalike with the same fields. Being an owner or editor is not
+// enough: this exact tab has to hold the turn.
 export function canWrite(room, connection) {
   if (!room || !connection || typeof connection !== "object") return false;
   if (!room.connections || typeof room.connections.values !== "function") return false;
@@ -138,7 +152,11 @@ export function canWrite(room, connection) {
   }
   if (!stored) return false;
   const member = room.members?.get(connection.userId);
-  return Boolean(member) && projectAccess.can(member.role, "edit") === true;
+  if (!member || projectAccess.can(member.role, "edit") !== true) return false;
+  const holder = room.turn?.holder;
+  return Boolean(holder)
+    && holder.userId === connection.userId
+    && holder.tabId === connection.tabId;
 }
 
 function sameAttempt(socket, state, room, captured) {
@@ -270,10 +288,63 @@ function publishPresence(io, registry, projectId) {
   }
 }
 
-async function detach(io, registry, socket, state, projectId, socketId) {
+function tabOf(connection) {
+  return { userId: connection.userId, tabId: connection.tabId };
+}
+
+function publishTurn(io, projectId, room, now) {
+  room.turnPublishedAt = now;
+  try {
+    io.to(roomName(projectId)).emit("turn:state", { projectId, ...toPublic(room.turn, now) });
+  } catch (error) {
+    logHandler("turn:state", error);
+  }
+}
+
+// Every turn change goes through here. The pure rules return the object they
+// were given when nothing changed, so a no-op never reaches the room.
+function setTurn(io, projectId, room, next, now) {
+  if (next === room.turn) return;
+  room.turn = next;
+  publishTurn(io, projectId, room, now);
+}
+
+// Commits and previews reset the idle clock on every call. Only someone
+// waiting can see that clock, and a preview arrives every 50ms, so the room
+// hears about it at most once per interval.
+function noteActivity(io, projectId, room, connection, now) {
+  const next = recordActivity(room.turn, tabOf(connection), now);
+  if (next === room.turn) return;
+  room.turn = next;
+  if (next.queue.length === 0 || now - room.turnPublishedAt < ACTIVITY_PUBLISH_MS) return;
+  publishTurn(io, projectId, room, now);
+}
+
+// A duplicated browser tab can copy its tab id, so one departure does not mean
+// the tab is gone while another connection still carries that identity.
+function tabStillConnected(room, connection) {
+  for (const current of room.connections.values()) {
+    if (current.userId === connection.userId && current.tabId === connection.tabId) return true;
+  }
+  return false;
+}
+
+// The connection is read first because removal forgets it. An evicted room has
+// nobody left to tell, and its turn state went with it.
+function removeFromRoom(io, registry, projectId, socketId) {
+  const room = registry.getRoom(projectId);
+  const connection = room?.connections.get(socketId);
   const removed = registry.removeConnection(projectId, socketId);
+  if (!removed) return;
+  publishPresence(io, registry, projectId);
+  if (!connection || registry.getRoom(projectId) !== room || tabStillConnected(room, connection)) return;
+  const now = Date.now();
+  setTurn(io, projectId, room, tabLeft(room.turn, tabOf(connection), now), now);
+}
+
+async function detach(io, registry, socket, state, projectId, socketId) {
+  removeFromRoom(io, registry, projectId, socketId);
   if (state.activeProjectId === projectId) state.activeProjectId = null;
-  if (removed) publishPresence(io, registry, projectId);
   if (socket.connected) await socket.leave(roomName(projectId));
 }
 
@@ -301,13 +372,12 @@ async function runJoin(io, socket, registry, deps, state, generation, projectId,
   const stale = () => !isCurrent(state, generation) || !socket.connected || socket.id !== socketId;
 
   const rollback = async () => {
-    const removed = registry.removeConnection(projectId, socketId);
+    // Entering the adapter room is not a connection. Announce only the socket
+    // that was actually stored, and never a different member of the room.
+    removeFromRoom(io, registry, projectId, socketId);
     if (state.activeProjectId === projectId) state.activeProjectId = null;
     if (state.joinedGeneration === generation) state.joinedGeneration = null;
     attached = false;
-    // Entering the adapter room is not a connection. Announce only the socket
-    // that was actually stored, and never a different member of the room.
-    if (removed) publishPresence(io, registry, projectId);
     if (adapterJoined && socket.connected) {
       adapterJoined = false;
       await socket.leave(roomName(projectId));
@@ -402,16 +472,19 @@ async function runJoin(io, socket, registry, deps, state, generation, projectId,
       state.joinedGeneration = generation;
 
       const participants = registry.getParticipants(projectId);
+      const now = Date.now();
+      const turn = tabRejoined(handle.room.turn, { userId, tabId }, now);
       reply({
         ok: true,
         project: projectSummary(project),
         role,
         canvas,
         participants,
-        turn: null,
-        serverNow: Date.now(),
+        turn: toPublic(turn, now),
+        serverNow: now,
       });
       publishPresence(io, registry, projectId);
+      setTurn(io, projectId, handle.room, turn, now);
       attached = false;
       adapterJoined = false;
       return "ok";
@@ -699,6 +772,7 @@ async function runCommit(io, socket, deps, state, room, release, captured, reply
     } catch (error) {
       logHandler(event, error);
     }
+    noteActivity(io, captured.projectId, room, captured.connection, Date.now());
   } catch (error) {
     logHandler(event, error);
     if (socket.connected && socket.id === captured.socketId) reply(UNABLE_SAVE);
@@ -813,8 +887,7 @@ function onDisconnecting(io, socket, registry) {
   const socketId = socket.id;
   state.activeProjectId = null;
   if (!projectId) return;
-  const removed = registry.removeConnection(projectId, socketId);
-  if (removed) publishPresence(io, registry, projectId);
+  removeFromRoom(io, registry, projectId, socketId);
 }
 
 // Validation constants for preview
@@ -880,7 +953,7 @@ async function onPreview(io, socket, registry, deps, payload, ack) {
   if (nodes.length === 0) return;
 
   try {
-    io.to(roomName(projectId)).except(socket.id).volatile.emit("canvas:preview", {
+    socket.to(roomName(projectId)).volatile.emit("canvas:preview", {
       projectId,
       by: userId,
       nodes,
@@ -888,6 +961,7 @@ async function onPreview(io, socket, registry, deps, payload, ack) {
   } catch (error) {
     logHandler("canvas:preview", error);
   }
+  noteActivity(io, projectId, joined.room, joined.connection, Date.now());
 }
 
 function validCursorMove(payload) {
@@ -959,6 +1033,41 @@ function onCursorLeave(io, socket, registry, deps, payload) {
   }
 }
 
+// Turn events carry no ack: the answer is the turn:state that follows. The
+// rules run synchronously, so two requests cannot interleave inside one.
+function onTurn(io, socket, registry, payload, transition) {
+  if (!isRecord(payload)) return;
+  if (typeof payload.projectId !== "string" || !OBJECT_ID.test(payload.projectId)) return;
+  const projectId = payload.projectId.toLowerCase();
+  const userId = readUserId(socket);
+  if (!userId) return;
+  const joined = joinedConnection(socket, registry, projectId, userId);
+  if (!joined) return;
+  const member = joined.room.members.get(userId);
+  if (!member) return;
+  const now = Date.now();
+  const next = transition(joined.room.turn, tabOf(joined.connection), member.role, now);
+  setTurn(io, projectId, joined.room, next, now);
+}
+
+// One room failing must not stop the others from being swept.
+export function sweepTurns(io, registry = workspaceRegistry, now = Date.now()) {
+  for (const [projectId, room] of registry.listRooms()) {
+    try {
+      setTurn(io, projectId, room, expire(room.turn, now), now);
+    } catch (error) {
+      logHandler("turn:sweep", error);
+    }
+  }
+}
+
+// Unref keeps a test run or a shutdown from waiting on this timer.
+export function startTurnSweeper(io, registry = workspaceRegistry) {
+  const timer = setInterval(() => sweepTurns(io, registry), TURN_SWEEP_MS);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
 export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRegistry, deps = defaultDeps) {
   // Touch the lifecycle so the queue exists before the first event.
   getLifecycle(socket);
@@ -989,6 +1098,22 @@ export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRe
 
   socket.on("cursor:leave", safeHandler("cursor:leave", (payload) => (
     onCursorLeave(io, socket, roomRegistry, deps, payload)
+  )));
+
+  socket.on("turn:request", safeHandler("turn:request", (payload) => (
+    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => requestTurn(turn, tab, can(role, "edit") === true, now))
+  )));
+
+  socket.on("turn:release", safeHandler("turn:release", (payload) => (
+    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => releaseTurn(turn, tab, now))
+  )));
+
+  socket.on("turn:cancel", safeHandler("turn:cancel", (payload) => (
+    onTurn(io, socket, roomRegistry, payload, (turn, tab) => cancelRequest(turn, tab))
+  )));
+
+  socket.on("turn:reclaim", safeHandler("turn:reclaim", (payload) => (
+    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => reclaimTurn(turn, tab, can(role, "reclaim") === true, now))
   )));
 
   // disconnecting drops the registry entry. Socket.io removes adapter rooms itself,

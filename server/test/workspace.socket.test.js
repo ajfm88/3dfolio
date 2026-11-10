@@ -283,7 +283,14 @@ describe("workspace socket", { concurrency: false }, () => {
     }]);
     assert.equal(JSON.stringify(body.participants).includes("hidden@"), false);
     assert.equal(JSON.stringify(body.participants).includes("clerk"), false);
-    assert.equal(body.turn, null);
+    assert.deepEqual(body.turn, {
+      holder: null,
+      holderSince: null,
+      queue: [],
+      idleDeadline: null,
+      graceUntil: null,
+      serverNow: body.serverNow,
+    });
     assert.equal(Number.isFinite(body.serverNow), true);
     assert.equal(body.canvas.version, 7);
     assert.equal(body.canvas.nodes.length, 1);
@@ -523,6 +530,7 @@ describe("workspace socket", { concurrency: false }, () => {
     await pending;
 
     assert.equal(ack.calls.length, 0);
+    assert.equal(presenceEmits(calls).length, 0);
     assert.equal(registry.getRoom(projectId), null);
     assert.equal(socket.leaves.includes(userId), false);
     assert.equal(socket.rooms.has(userId), true);

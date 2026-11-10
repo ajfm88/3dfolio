@@ -109,6 +109,7 @@ function createIo() {
   const io = {
     emits,
     presence,
+    turns: [],
     to(room) {
       const call = { room, except: [], volatile: false };
       const operator = {
@@ -125,6 +126,7 @@ function createIo() {
             volatile: call.volatile,
           };
           if (event === "presence:update") presence.push(record);
+          else if (event === "turn:state") io.turns.push(record);
           else emits.push(record);
         },
         get volatile() {
@@ -158,6 +160,7 @@ describe("canWrite", () => {
     const room = {
       connections: new Map([["socket-1", connection]]),
       members: new Map([["user-1", { role: "editor", fullName: "Ada", img: "" }]]),
+      turn: { holder: { userId: "user-1", tabId: "tab-1" } },
     };
     assert.equal(canWrite(room, connection), true);
     room.members.get("user-1").role = "owner";
@@ -171,8 +174,15 @@ describe("canWrite", () => {
     const other = {
       connections: new Map([["socket-2", connection]]),
       members: room.members,
+      turn: room.turn,
     };
     assert.equal(canWrite(other, connection), true);
+    room.turn = { holder: { userId: "user-1", tabId: "tab-2" } };
+    assert.equal(canWrite(room, connection), false);
+    room.turn = { holder: null };
+    assert.equal(canWrite(room, connection), false);
+    room.turn = undefined;
+    assert.equal(canWrite(room, connection), false);
     const foreign = { userId: "user-1", tabId: "tab-1" };
     room.connections.set("socket-9", foreign);
     assert.equal(canWrite({ connections: new Map(), members: room.members }, connection), false);
@@ -243,6 +253,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     const ack = ackCapture();
     await socket.handler("workspace:join")({ projectId, tabId }, ack);
     assert.equal(ack.calls[0].ok, true, ack.calls[0]?.message);
+    await socket.handler("turn:request")({ projectId });
     return registry.getRoom(projectId);
   }
 
@@ -507,7 +518,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     assert.equal(io.emits.length, 0);
   });
 
-  it("serializes two writers and reloads when the compare-and-set misses", async () => {
+  it("serializes two commits and reloads when the compare-and-set misses", async () => {
     const userA = id();
     const userB = id();
     const projectId = id();
@@ -536,7 +547,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     const firstAck = ackCapture();
     const secondAck = ackCapture();
     const first = socketA.handler("canvas:commit")({ projectId, baseVersion: 4, ops: [addOp("n2")] }, firstAck);
-    const second = socketB.handler("canvas:commit")({ projectId, baseVersion: 4, ops: [addOp("n3")] }, secondAck);
+    const second = socketA.handler("canvas:commit")({ projectId, baseVersion: 4, ops: [addOp("n3")] }, secondAck);
     await settle();
     assert.equal(writes, 1);
     gate.resolve();
@@ -564,7 +575,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     await socketA.handler("canvas:commit")({ projectId, baseVersion: 4, ops: [addOp("n2")] }, replay);
     assert.equal(replay.calls[0].message, "Canvas version mismatch");
     assert.equal(replay.calls[0].canvas.version, 9);
-    await socketB.handler("canvas:commit")({ projectId, baseVersion: 9, ops: [addOp("n5", "After")] }, retry);
+    await socketA.handler("canvas:commit")({ projectId, baseVersion: 9, ops: [addOp("n5", "After")] }, retry);
     assert.deepEqual(retry.calls, [{ ok: true, version: 10 }]);
     assert.equal(registry.getRoom(projectId).canvas.nodes.filter((item) => item.id === "n5").length, 1);
     assert.equal(calls.writes.length, 3);
@@ -736,6 +747,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     assert.equal(rejoin.calls[0].ok, true);
     const current = registry.getRoom(projectId);
     assert.notEqual(current.writeQueue, queue);
+    await socket.handler("turn:request")({ projectId });
     deferSave = true;
 
     const inflightAck = ackCapture();
@@ -910,6 +922,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     const ownerJoin = ackCapture();
     await owner.handler("workspace:join")({ projectId, tabId: TAB }, ownerJoin);
     assert.equal(ownerJoin.calls[0].ok, true);
+    await owner.handler("turn:request")({ projectId });
     const viewerJoin = ackCapture();
     await viewer.handler("workspace:join")({ projectId, tabId: TAB_B }, viewerJoin);
     assert.equal(viewerJoin.calls[0].role, "viewer");
@@ -1070,6 +1083,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
     await restored;
     assert.equal(restoredAck.calls[0].ok, true);
     assert.equal(restoredAck.calls[0].canvas.version, 0);
+    await socket.handler("turn:request")({ projectId });
 
     const syncAck = ackCapture();
     await socket.handler("canvas:sync")({ projectId }, syncAck);
@@ -1132,6 +1146,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
         data: { userId },
         rooms: new Set([socketId, userId]),
         emits: [],
+        relays: [],
         joinGate: null,
         on(event, handler) { handlers.set(event, handler); },
         async join(room) {
@@ -1140,7 +1155,20 @@ describe("canvas commit and sync", { concurrency: false }, () => {
         },
         async leave(room) { socket.rooms.delete(room); },
         emit(...args) { socket.emits.push(args); },
-        to() { throw new Error("socket.to must not be used for commits"); },
+        to(room) {
+          const call = { room, volatile: false };
+          const operator = {
+            get volatile() {
+              call.volatile = true;
+              return operator;
+            },
+            emit(event, payload) {
+              if (event !== "canvas:preview") throw new Error("socket.to is only for previews");
+              socket.relays.push({ room: call.room, event, payload, volatile: call.volatile });
+            },
+          };
+          return operator;
+        },
         volatile: {
           emit(event, payload) { socket.emits.push({ event, payload, volatile: true }); },
         },
@@ -1155,6 +1183,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
       const io = {
         emits,
         presence,
+        turns: [],
         to(room) {
           const call = { room, except: [], volatile: false };
           const operator = {
@@ -1171,6 +1200,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
                 volatile: call.volatile,
               };
               if (event === "presence:update") presence.push(record);
+              else if (event === "turn:state") io.turns.push(record);
               else emits.push(record);
             },
             get volatile() {
@@ -1205,6 +1235,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
       ack.calls = [];
       await socket.handler("workspace:join")({ projectId, tabId }, ack);
       assert.equal(ack.calls[0].ok, true, ack.calls[0]?.message);
+      await socket.handler("turn:request")({ projectId });
       return registry.getRoom(projectId);
     }
 
@@ -1233,14 +1264,14 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 1);
-      const emit = io.emits[0];
-      assert.equal(emit.event, "canvas:preview");
-      assert.equal(emit.volatile, true);
-      assert.equal(emit.room, `project:${projectId}`);
-      assert.deepEqual(emit.except, ["sender"]);
-      assert.equal(emit.payload.by, userId);
-      assert.deepEqual(emit.payload.nodes, [{ id: "n1", position: { x: 50, y: 60 } }]);
+      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 1);
+      const relay = sender.relays[0];
+      assert.equal(relay.event, "canvas:preview");
+      assert.equal(relay.volatile, true);
+      assert.equal(relay.room, `project:${projectId}`);
+      assert.equal(relay.payload.by, userId);
+      assert.deepEqual(relay.payload.nodes, [{ id: "n1", position: { x: 50, y: 60 } }]);
       assert.equal(sender.emits.length, 0);
       assert.equal(receiver.emits.length, 0);
     });
@@ -1265,10 +1296,9 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 1);
-      const emit = io.emits[0];
-      assert.deepEqual(emit.except, ["sender"]);
-      assert.equal(otherTab.emits.length, 0);
+      assert.equal(sender.relays.length, 1);
+      assert.equal(sender.relays[0].room, `project:${projectId}`);
+      assert.equal(otherTab.relays.length, 0);
     });
 
     it("viewer does not emit preview", async () => {
@@ -1288,7 +1318,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(viewer.relays.length, 0);
     });
 
     it("non-member does not emit preview", async () => {
@@ -1307,7 +1337,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(outsider.relays.length, 0);
     });
 
     it("bad project id does not emit", async () => {
@@ -1327,7 +1357,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 0);
     });
 
     it("payload over 50 nodes does not emit", async () => {
@@ -1348,7 +1378,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 0);
     });
 
     it("duplicate id does not emit", async () => {
@@ -1371,7 +1401,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 0);
     });
 
     it("non-finite coordinate does not emit", async () => {
@@ -1391,7 +1421,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 0);
     });
 
     it("width without height does not emit", async () => {
@@ -1411,7 +1441,7 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       await settle();
 
-      assert.equal(io.emits.length, 0);
+      assert.equal(sender.relays.length, 0);
     });
 
     it("leave and delayed rejoin invalidate authority before queued detach", async () => {
@@ -1434,37 +1464,38 @@ describe("canvas commit and sync", { concurrency: false }, () => {
       const registry = createWorkspaceRegistry();
       attach(io, socket, calls, registry);
 
+      const preview = () => socket.handler("canvas:preview")({ projectId, nodes: [{ id: "n1", position: { x: 1, y: 1 } }] });
       const joinAck = (body) => { joinAck.calls.push(body); };
       joinAck.calls = [];
-      await socket.handler("workspace:join")({ projectId, tabId: TAB }, joinAck);
+      const joining = socket.handler("workspace:join")({ projectId, tabId: TAB }, joinAck);
       await settle();
       gates[0].resolve(projectDoc(projectId, userId, "owner"));
-      await settle();
+      await joining;
       assert.equal(joinAck.calls[0].ok, true);
+      await socket.handler("turn:request")({ projectId });
 
       deferLookups = false;
       await socket.handler("workspace:leave")({ projectId: otherProject });
-      const stillAck = (body) => { stillAck.calls.push(body); };
-      stillAck.calls = [];
-      await socket.handler("canvas:preview")({ projectId, nodes: [{ id: "n1", position: { x: 1, y: 1 } }] }, stillAck);
-      assert.equal(io.emits.length, 0);
+      await preview();
+      assert.equal(socket.relays.length, 1);
 
       deferLookups = true;
       const rejoinAck = (body) => { rejoinAck.calls.push(body); };
       rejoinAck.calls = [];
-      await socket.handler("workspace:join")({ projectId, tabId: TAB_B }, rejoinAck);
+      const rejoining = socket.handler("workspace:join")({ projectId, tabId: TAB_B }, rejoinAck);
       await settle();
       assert.equal(rejoinAck.calls.length, 0);
+      await preview();
+      assert.equal(socket.relays.length, 1);
 
-      const duringPreview = (body) => { duringPreview.calls.push(body); };
-      duringPreview.calls = [];
-      await socket.handler("canvas:preview")({ projectId, nodes: [{ id: "n1", position: { x: 1, y: 1 } }] }, duringPreview);
-      assert.deepEqual(duringPreview.calls, []);
-      assert.equal(io.emits.length, 0);
+      const leaving = socket.handler("workspace:leave")({ projectId });
+      await settle();
+      await preview();
+      assert.equal(socket.relays.length, 1);
 
       gates[1].resolve(projectDoc(projectId, userId, "owner"));
-      await settle();
-      await settle();
+      await rejoining;
+      await leaving;
       assert.deepEqual(rejoinAck.calls, [{ ok: false, message: "Workspace request superseded" }]);
       assert.equal(registry.getRoom(projectId), null);
     });
@@ -1497,8 +1528,8 @@ describe("canvas commit and sync", { concurrency: false }, () => {
 
       assert.equal(updateOneCalls, 0);
       assert.equal(io.emits.filter((e) => e.event === "canvas:ops").length, 0);
-      assert.equal(io.emits.filter((e) => e.event === "canvas:preview").length, 1);
-      assert.equal(io.emits[0].volatile, true);
+      assert.equal(sender.relays.length, 1);
+      assert.equal(sender.relays[0].volatile, true);
     });
   });
 });

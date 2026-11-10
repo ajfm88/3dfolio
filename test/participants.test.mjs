@@ -231,6 +231,34 @@ describe("participants", () => {
     assert.equal(useWorkspaceStore.getState().canvas.version, 0);
     assert.deepEqual(errors, []);
     failed.dispose();
+
+    reset();
+    const duplicate = createSocket("sock-dup");
+    const dupJoin = beginJoin(duplicate);
+    dupJoin.gate.resolve(joinBody([
+      person(ADA, "Ada", "editor", ""),
+      person(ADA.toUpperCase(), "Ada Again", "viewer", ""),
+    ]));
+    await settle();
+    await settle();
+    assert.equal(useWorkspaceStore.getState().status, "error");
+    assert.deepEqual(useWorkspaceStore.getState().participants, []);
+    dupJoin.dispose();
+
+    reset();
+    const live = createSocket("sock-live-dup");
+    const ready = beginJoin(live);
+    await finishJoin(ready.gate, [person(GRACE, "Grace", "viewer", "")]);
+    const roster = useWorkspaceStore.getState().participants;
+    live.fire("presence:update", {
+      projectId: PROJECT,
+      participants: [
+        person(ADA, "Ada", "editor", ""),
+        person(ADA.toUpperCase(), "Ada Again", "viewer", ""),
+      ],
+    });
+    assert.equal(useWorkspaceStore.getState().participants, roster);
+    ready.dispose();
   });
 
   it("keeps the latest pre-ack snapshot and ignores a stale ack", async () => {
@@ -382,6 +410,21 @@ describe("participants", () => {
     joined.dispose();
   });
 
+  it("ignores a presence update under an old connection id", async () => {
+    reset();
+    const socket = createSocket();
+    const joined = beginJoin(socket);
+    await finishJoin(joined.gate, [person(ADA, "Ada", "editor", "")]);
+    const participants = useWorkspaceStore.getState().participants;
+    socket.id = "sock-new";
+    socket.fire("presence:update", {
+      projectId: PROJECT,
+      participants: [person(GRACE, "Grace", "viewer", "")],
+    });
+    assert.equal(useWorkspaceStore.getState().participants, participants);
+    joined.dispose();
+  });
+
   it("renders the other people in store order with overflow and initials", () => {
     reset();
     useSessionStore.setState({ authUser: null });
@@ -416,6 +459,8 @@ describe("participants", () => {
       null,
       createElement(WorkspaceNavbar),
     ));
+    assert.equal(html.includes('role="group"'), true, html);
+    assert.equal(html.includes('role="img"'), true, html);
     assert.equal(html.includes("People in this project"), true, html);
     assert.equal(html.includes("Myself"), false);
     const visible = ["Hedy — editor", "Ada Lovelace — editor", "Unknown user — viewer", "Katherine Johnson — owner", "Margaret — viewer"];

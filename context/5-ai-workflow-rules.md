@@ -11,7 +11,7 @@ Build `/collaborate` incrementally with a spec-driven workflow:
 
 Implement exactly what the spec says, no more and no less. Don't infer or invent behavior.
 
-Two agents implement (Grok and Codex). Claude reviews every slice. The user assigns slices and commits.
+Implementers are assigned slice by slice (Grok, Codex, Nemotron). Claude reviews by default, and the tracker records who reviewed each slice. The user assigns slices and commits.
 
 ## The Cycle
 
@@ -23,7 +23,7 @@ Two agents implement (Grok and Codex). Claude reviews every slice. The user assi
    - Run the verification below.
    - Set it to **Ready for review** and add a slice note: what changed, how you verified it, deviations.
    - Stop.
-3. **Review.** Claude reviews the uncommitted diff against the spec's checklist, the invariants in `2-architecture.md`, and `4-code-standards.md`, and runs the build and tests. Findings set the slice to **Changes requested**.
+3. **Review.** Claude reviews the uncommitted diff against the spec's checklist, the invariants in `2-architecture.md`, and `4-code-standards.md`, and reruns the build and every test suite itself instead of relying on the slice note. Findings set the slice to **Changes requested**.
 4. **Correct.** Fix only what the review lists. Don't change anything else.
 5. **Approve and commit.** Claude marks the slice **Approved**. The user commits it. **Implementers never commit, push, or create branches.**
 
@@ -57,7 +57,7 @@ Don't modify these unless the current slice's spec explicitly names them:
 
 - `src/chat/**`, `src/blog/**`, `src/admin/**`, `src/components/**`, `src/pages/` other than `Collaborate.jsx`
 - `server/src/controllers/{auth,post,comment,message}.controller.js`, `server/src/routes/{auth,post,comment,message}.route.js`, `server/src/models/{user,post,comment,message}.model.js`, `server/src/middleware/**`
-- `server/src/lib/socket.js` (S01, S13 only), `server/src/lib/imagekit.js` (S23 only), `server/src/webhooks/clerk.webhook.js` (S27 only), `server/src/index.js` (route mounting only)
+- `server/src/lib/socket.js` (S01, S13, S20 only), `server/src/lib/imagekit.js` (S23 only), `server/src/webhooks/clerk.webhook.js` (S27 only), `server/src/index.js` (route mounting only)
 - `src/App.jsx` (S04 only), `vite.config.js` and `package.json` (S07 only), `server/package.json` (S02 only), `src/components/Navbar.jsx` (S30 only)
 - `.env`, `.env.example`, `server/.env*`, `vercel.json`, `tailwind.config.cjs`, `postcss.config.cjs`
 - `node_modules/` and any third-party internals
@@ -73,13 +73,14 @@ Don't modify these unless the current slice's spec explicitly names them:
 - Server: `cd server && npm install` (first time), then `npm run dev`, with `server/.env` holding the values Render uses.
 - Frontend: `npm run dev`, with `.env` setting `VITE_API_URL=http://localhost:3000/api` while you work on server slices.
 - Multi-user checks: a normal window plus an incognito window signed into a second Clerk account. Both accounts must already be synced to MongoDB.
+- Until invitations ship (S26, S28), a second account can open a project only if it is added to that project's `members` by hand in MongoDB. Local runs also need `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL` for the frontend, and `CLIENT_URL=http://localhost:5173` for the server.
 - Test data goes to the database `MONGO_URI` names (see Q2 in the tracker). Collaborate only writes `projects`, `canvases`, and `projectmessages`.
 
 ## Before Moving to the Next Slice
 
 1. Every item in the spec's "Verify when done" list is checked, with how you checked it written in the slice note.
 2. `npm run build` passes at the repo root, with no new warnings from collaborate code.
-3. `cd server && npm test` passes (once S02 adds the harness).
+3. `cd server && npm test` passes and finishes on its own, and each root client suite passes in its own command.
 4. The server boots cleanly with `npm run dev`.
 5. `/blog` loads posts, and `/chat` sends and receives a DM with typing and presence working.
 6. No invariant in `2-architecture.md` was violated.

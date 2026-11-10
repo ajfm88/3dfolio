@@ -4,13 +4,13 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase D: Server-authoritative sync. S01–S13 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`, S12 + S13 as `5d0340e` (commit 63).
-- Git reconciliation (Codex, 2026-11-08): HEAD is `cc1f681` (commit 64), which includes S14, S15, and S16. S14/S15 were approved before that commit. S16 is committed but still Changes requested; its outstanding review findings are not resolved by the commit. Older slice notes describe their historical working-tree baseline.
+- Phase F: Turns. S01–S20 are built, and S21 is next. S01–S13 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`, S12 + S13 as `5d0340e` (commit 63).
+- Git reconciliation (Claude, 2026-11-09): HEAD is `f6ecdbd` (commit 65), which includes S17 and S18. S16 was committed in `cc1f681` (commit 64). S19, S20, and the S16 and S17 corrections are in the working tree and go into commit 66. At the user's direction, S19 and S20 are marked Committed ahead of that commit, which the user plans for 2026-11-10. Fill in its hash afterward.
 
 ## Current Goal
 
-- S17 (participants) is Ready for review. The user assigned it to Grok against HEAD `cc1f681` while S16 is still Changes requested. S16 was not repaired in this slice. No commit, push, or branch.
-- S18 (live cursors) is Approved by Codex after the final color-toolbar filter correction and its regression. Client cursor tests 69/69 and server cursor tests 7/7 pass; build passes. Browser/two-account/live-server checks remain unverified. S17 remains Ready for review; S16 remains Changes requested. No S19, commit, push, or branch.
+- S01–S20 are built and reviewed. Next is the S21 spec (turn UI and read-only mode), which restores in-browser editing.
+- Still unverified in a browser with two accounts: S16, S17, S18, and S20.
 
 ## Completed
 
@@ -29,15 +29,20 @@ Update this file after every meaningful implementation change. It records the **
 - S13: Workspace join / leave (approved 2026-11-06 by Codex after cleanup corrections, committed with S12 as `5d0340e`).
 - S14: Server commit handler and sync (approved 2026-11-07 by Codex after the lifecycle correction, committed as `cc1f681`).
 - S15: Client sync wiring (approved 2026-11-07 by Codex after the recovery correction, committed as `cc1f681`).
-- S18: Live cursors (approved 2026-11-08 by Codex after Claude Sonnet's corrections, uncommitted). Earlier S16/S17 review status and browser verification limitations remain outstanding.
+- S16: Drag and resize previews (approved 2026-11-09 by Claude after Nemotron's corrections and Grok's test clock fix; first committed in `cc1f681`, corrections go into commit 66).
+- S17: Participants (approved 2026-11-09 by Claude after Grok's corrections; first committed in `f6ecdbd`, corrections go into commit 66).
+- S18: Live cursors (approved 2026-11-08 by Codex after Claude Sonnet's corrections, committed as `f6ecdbd`, together with S17). Browser verification limitations remain outstanding.
+- S19: Turn state machine (approved 2026-11-09 by Claude, marked Committed for commit 66).
+- S20: Turn events and enforcement (approved 2026-11-09 by Claude after one test and readme correction, marked Committed for commit 66).
 
 ## In Progress
 
-- No S18 implementation remains in progress. S18 is Approved and uncommitted; S17 is still Ready for review and S16 still needs its separate corrections.
+- None.
 
 ## Next Up
 
-- Stop at S18 as requested for today. S17 still needs its separate review; S16 findings and browser/two-account checks remain outstanding. Preserve all prior work. No S19, commit, push, or branch.
+- Carry-forward to the S21 spec: read `turn` from the join ack and from `turn:state` (`classifyJoin` only accepts it so far), and make `selectCanEdit` require this tab to hold the turn, comparing `userId` and `tabId`, which replaces today's role-only gate.
+- User makes commit 66 and fills in its hash here. Claude writes the S21 spec, and the user chooses its implementer. After S21, do one full two-account browser walk of S16 to S21. It needs the second account added to a project's `members` by hand, because invitations arrive in S26 and S28. The 320px check needs six or more other accounts, so it waits for S29.
 
 ## Slice Status
 
@@ -60,11 +65,11 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S13 | Workspace join / leave | both | S01, S06, S12 | ✓ | Committed | Grok | `5d0340e` |
 | S14 | Commit handler | server | S13 | ✓ | Committed | Grok | `cc1f681` |
 | S15 | Client sync wiring | client | S14 | ✓ | Committed | Grok | `cc1f681` |
-| S16 | Drag / resize previews | both | S15 | ✓ | Changes requested | Nemotron | `cc1f681` |
-| S17 | Participants | both | S13 | ✓ | Ready for review | Grok | |
-| S18 | Live cursors | both | S17 | ✓ | Approved | Grok; Claude Sonnet corrections | |
-| S19 | Turn state machine | server | — | | Todo | | |
-| S20 | Turn events + enforcement | server | S14, S16, S19 | | Todo | | |
+| S16 | Drag / resize previews | both | S15 | ✓ | Approved | Nemotron; Grok clock fix | `cc1f681`; corrections in commit 66 |
+| S17 | Participants | both | S13 | ✓ | Approved | Grok | `f6ecdbd`; corrections in commit 66 |
+| S18 | Live cursors | both | S17 | ✓ | Committed | Grok; Claude Sonnet corrections | `f6ecdbd` |
+| S19 | Turn state machine | server | — | ✓ | Committed | Grok | commit 66 (hash pending) |
+| S20 | Turn events + enforcement | server | S14, S16, S19 | ✓ | Committed | Grok | commit 66 (hash pending) |
 | S21 | Turn UI + read-only mode | client | S20 | | Todo | | |
 | S22 | Turn robustness | client | S21 | | Todo | | |
 | S23 | Project messages API + typing relay | server | S13 | | Todo | | |
@@ -991,6 +996,8 @@ The claimed 151-pass server run and "Deviations: None" were not reproduced. Thes
 
 Fix only these findings and their regressions, update this slice note, and return Ready for review. S14 stays Approved. S15 stays Approved. Both stay uncommitted. No commit, push, branch, or S17.
 
+**Correction plan (Claude, 2026-11-09):** `specs/16-drag-resize-previews-corrections.md` is the complete list of work for Nemotron and supersedes the 2026-11-07 findings where S17 and S18 moved the code. Re-reading HEAD `f6ecdbd` confirmed the findings are still present, except that S18 already fixed the throttle's first call at clock 0. Fixing the suite's setup also exposes two wrong assertions that the crash was hiding. Claude proved the production and server-test changes on a throwaway copy of HEAD: server 164 of 164 with no cancellation, sync 12/12, cursor 69/69, participants 5/5, and eight store scenarios passed. No application or test file in this repo was changed by planning. Browser behavior was not tested. Status stays Changes requested until the corrections land.
+
 ### S17 — Participants
 
 **Planning (Codex, 2026-11-08):** The user requested the next slice's plan, with Grok implementing and Codex reviewing. `specs/17-participants.md` defines project-scoped participant snapshots, join/leave/disconnect broadcasts, per-user deduplication across tabs, client roster lifecycle and pre-ack buffering, and a navbar stack with five avatars, initials fallback, and overflow. It names allowed files and includes deterministic server, actual-store, rendering, and browser verification. S17 remains Todo; no application or test code was changed.
@@ -1012,6 +1019,23 @@ Checks that passed: `node --test test/participants.test.mjs` — 5 passed, 0 fai
 Checks that did not pass, all already outstanding on the S16 baseline: `node --test test/canvasPreview.test.mjs` runs 0 tests and throws `TypeError: Cannot destructure property 'throttle'` at `test/canvasPreview.test.mjs:44`. Full `node --test --test-timeout=8000` from `server/` — 157 tests, 156 passed, 0 failed, 1 cancelled, 8345.7 ms. The cancelled test is `leave and delayed rejoin invalidate authority before queued detach` at `server/test/canvas.socket.test.js:1417`. `server/readme.md` still says "Previews and turns are not part of this protocol yet" in the workspace realtime section. S17 did not rewrite that sentence. Passing presence tests do not mean the full verification matrix passed.
 
 Live and browser limits: no browser tools were available. Image load failure and reset, the native tooltip, keyboard focus beyond the static `tabindex="0"`, and a 320px width check were not exercised. The markup test covers an empty stack, self filtering, store order, initials, the blank-name `?`, image alt, overflow `+2` with the hidden names, the stack before the role badge, and `h-14`. The two-account walk was not done. No users were written and no live project fixtures were created. `npm run dev` in `server/` printed `Server is up and running on PORT: 3000` and connected to `3dfolio`. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /api/posts` returned 200 with 1 post; the body was not printed. Port 5173 was already another Vite app and was left alone. 3dfolio's Vite on port 5174 returned the SPA shell for `/blog`, `/chat`, and `/collaborate`. That does not show posts rendering or a chat DM. Chat send/receive, typing, and presence were not checked because there was no authenticated session. Both processes started for this check were stopped.
+
+**Review (Claude, 2026-11-09): Changes requested.** Full review in `specs/17-participants-review.md`. No functional defect in the server or store. Four small items: accessible roles on the avatar stack, and three checklist regressions (duplicate rosters, an old connection id, presence during a disconnected join). Independent runs: participants 5/5, sync 12/12, cursor 69/69, server 164 tests with 163 passing and the one known S16 cancellation, build passes. Browser and two-account checks were not run. S17 was committed in `f6ecdbd` before this review.
+
+**Corrections (Grok, 2026-11-09): Ready for review.** Fixed only the four findings. `ParticipantStack.jsx` adds `role="group"` on the stack and `role="img"` on each avatar and the overflow badge. `test/participants.test.mjs` rejects a duplicate join roster and a duplicate `presence:update` without replacing the installed array, ignores a valid update after `socket.id` changes, and asserts those roles in the markup. `server/test/workspace.socket.test.js` asserts that a disconnect during canvas initialization emits no presence. No other application file changed.
+
+**Verified (2026-11-09):**
+
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, 0 cancelled, 853.745 ms. Exit 0. The existing Vite dependency-scan shutdown diagnostic printed after the suite passed.
+- From `server/`, `node --test --test-timeout=8000 test/workspaceRooms.test.js test/workspace.socket.test.js`: 28 pass, 0 fail, 0 cancelled, 253.4657 ms.
+- Root `npm run build`: passed in 7.20s, 4261 modules, existing chunk-size warning only. Workspace chunk `WorkspacePage-3uV35oOE.js` is 248.96 kB, gzip 80.17 kB.
+- `git diff --check`: exit 0, LF-to-CRLF notices only.
+- `git diff --stat` is not limited to the S17 files. The working tree still contains the Approved, uncommitted S16 corrections (`server/readme.md`, `workspace.socket.js`, `canvas.socket.test.js`, `canvasPreview.js`, `useWorkspaceStore.js`, `canvasPreview.test.mjs`) and untracked S16/S17 spec files. This correction's own edits are `ParticipantStack.jsx` (4 lines), `test/participants.test.mjs` (45 lines), `server/test/workspace.socket.test.js` (1 line), and this tracker.
+- Browser and two-account checks were not run.
+
+**Deviations:** None in the four findings. S19 was not started. No commit, push, or branch.
+
+**Final review (Claude, 2026-11-09): Approved.** All four findings in `specs/17-participants-review.md` are fixed as specified, and the diff for this slice is confined to its allowed files. The approved S16 production code is unchanged. Independent runs: participants 6/6, `canvasPreview` 39/39, sync 12/12, cursor 69/69, server 164 of 164 with `npm test` finishing on its own, build passes (4261 modules, `WorkspacePage-3uV35oOE.js` 248.96 kB, gzip 80.17 kB, existing chunk warning only), whitespace check clean apart from line-ending notices. Browser and two-account checks were not run, so tab close, failed-image fallback, tooltips, keyboard focus, and the 320px navbar remain unverified.
 
 ### S18 — Live cursors
 
@@ -1096,6 +1120,121 @@ Added client and server cursor support:
 
 **Final review (Codex, 2026-11-08): Approved.** No remaining S18 code findings after the color-toolbar selector fix. Independently reran client cursor tests (69/69 pass), server cursor tests (7/7 pass), root build (4261 modules; workspace `WorkspacePage-Bw_vH8rk.js` 248.59 kB, gzip 80.06 kB; existing large-chunk warning), and whitespace check (line-ending notices only). An in-memory comparison removing only the two new class selectors reproduced failure for outer wrapper, inner group, and child; the corrected code blocks all three, and the pointer handler emits leave only. No source files were changed for that comparison. Prior participants/sync and full-server evidence from the previous review was not repeated for this selector-only follow-up. Browser/two-account/live-server/authenticated smoke checks remain unverified; S17 remains Ready for review and S16 remains Changes requested with its existing test setup failure/timeout. S18 approval does not approve those earlier slices or claim a fully passing project suite. Claude Sonnet implemented the corrections per user attribution. No application/test changes, live data writes, commits, branches, or S19 work during this review. The earlier S18 review requests above are historical and superseded by this approval; details are in `specs/18-live-cursors-review.md`.
 
+### S16 — Drag / resize previews (corrections)
+
+**Implementer:** Nemotron 3 Ultra
+
+**Changed:**
+- `src/collaborate/lib/canvasPreview.js`: Added injectable clock and `onExpire` callback to `createPreviewOverlayController`. Added `PREVIEW_TTL_MS` constant. Modified `clearOverlay`, `clearAllOverlays`, and `upsertOverlay` to use the injected clock. The timer now checks if it's been superseded before expiring.
+- `src/collaborate/store/useWorkspaceStore.js`: Added `displayNodes` and `clearPreviews` helpers. Updated `syncDeps.toDisplayNodes` to use `displayNodes` and clear previews during recovery. Updated `restoreDisplay` to use `displayNodes`. Simplified `dispatch` to build display inside `set` using `displayNodes`. Updated `bindWorkspace` to create `previewController` with `onExpire` callback that triggers a repaint. Updated `previewThrottle` to check binding and edit rights when it fires. Updated status subscription to clear previews on any non-ready transition. Updated `onPreview` listener to add connection rule check and use `displayNodes` for painting.
+- `server/src/sockets/workspace.socket.js`: Changed `onPreview` to use `socket.to(roomName(projectId)).volatile.emit` instead of `io.to(...).except(...)`.
+- `server/test/canvas.socket.test.js`: Updated inner `createSocket` in preview block to track `relays`. Updated all preview test assertions to check `relays` instead of `emits`. Rewrote "leave and delayed rejoin invalidate authority before queued detach" test to match corrected behavior.
+- `test/canvasPreview.test.mjs`: Repaired test setup (declare variables at top, assign in `before`, use `beforeEach` for controller). Fixed throttle tests to use proper fake clock. Fixed overlay lifecycle tests to use fake clock that doesn't invoke immediately. Added 18 store regression tests covering all scenarios from the corrections file.
+- `server/readme.md`: Updated preview documentation sentence.
+- `context/6-progress-tracker.md`: Status and slice note.
+
+**Verified (after corrections from `16-drag-resize-previews-corrections-review.md`):**
+- `node --test test/canvasPreview.test.mjs`: 39 of 39 tests pass, 0 cancelled, in about 2 seconds.
+- `node --test test/workspaceSync.test.mjs`: 12 of 12.
+- `node --test test/participants.test.mjs`: 5 of 5.
+- `node --test test/cursorPresence.test.mjs`: 69 of 69.
+- `cd server && npm test`: 164 of 164, finishes on its own.
+- `npm run build`: Passes with only existing large-chunk warning. Workspace chunk size: 248.93 kB (WorkspacePage-CsLJ3qWB.js).
+- `git diff --check`: Clean.
+- `grep -n "except(socket.id)" server/src/sockets/workspace.socket.js`: No matches (removed as required).
+- Browser two-session check: Not run (only one signed-in session available).
+
+**Deviations:** The first version of the store regressions did not match the corrections file and was replaced from `16-drag-resize-previews-corrections-review.md`.
+
+**Review (Claude, 2026-11-09): Changes requested.** Full review and replacement code in `specs/16-drag-resize-previews-corrections-review.md`. Production code, server tests, and the readme match the corrections file and are accepted. `test/canvasPreview.test.mjs` is not: 40 tests, 29 pass, 11 fail, and the store regressions drive the sender path, read a field the client never writes, and never install the fake clock, so 6 of the 7 passing store tests cannot fail. The note above understates this: Deviations was not None, and 7 store tests passed, not 5. Independent runs: server 164 of 164 and `npm test` finishes on its own, sync 12/12, participants 5/5, cursor 69/69, build passes. The replacement block passed 39 of 39 on a throwaway copy with this production code, and 11 of those fail against the old production code. Browser and two-account checks were not run.
+
+**Clock correction (Grok, 2026-11-09): Ready for review.** Production code, server tests, and the readme were left as accepted. The only edit is `createFakeClock` inside the store regressions block of `test/canvasPreview.test.mjs`. `setTimeout` now stores `delay` on each timer, and `pending()` counts only timers whose delay is 3000. The fake clock replaces the global timers, so the old `pending()` counted timers scheduled outside the store. Test 17 had failed once with expected 0 pending timers, got 9.
+
+**Verified (2026-11-09):**
+
+- `node --test test/canvasPreview.test.mjs`, five separate commands. Each exited 0 with 39 pass, 0 fail, 0 cancelled, and test 17 passed. Durations were 781.6911 ms, 737.7556 ms, 818.0953 ms, 788.429 ms, and 741.2661 ms. Each run printed the existing Vite dependency-scan shutdown diagnostic after the suite passed.
+- `node --test test/workspaceSync.test.mjs`: 12 pass, 0 fail, 793.2114 ms. Same Vite diagnostic.
+- `node --test test/participants.test.mjs`: 5 pass, 0 fail, 859.357 ms. Same Vite diagnostic.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, 848.7538 ms. Same Vite diagnostic.
+- `cd server && npm test`: 164 pass, 0 fail, 0 cancelled, 336.3043 ms. The suite finished on its own.
+- `npm run build`: passed in 7.93s, 4261 modules, existing chunk-size warning only. Workspace chunk `WorkspacePage-CsLJ3qWB.js` is 248.93 kB, gzip 80.16 kB.
+- Browser and two-account checks were not run.
+
+**Deviations:** `pending()` counts only 3000 ms timers. No other file changed. S17 corrections and S19 were not started. No commit, push, or branch.
+
+**Final review (Claude, 2026-11-09): Approved.** The store regressions match the reviewed block except Grok's two-line `createFakeClock` change. Production code is identical to the reviewed copy. The relay is the only line changed in `workspace.socket.js`. Independent runs: `canvasPreview` 39 of 39 on three separate runs, sync 12/12, participants 5/5, cursor 69/69, server 164 of 164 with `npm test` finishing on its own, build passes (4261 modules, `WorkspacePage-CsLJ3qWB.js` 248.93 kB, gzip 80.16 kB, existing chunk warning only). All eight findings in the 2026-11-07 review are closed. The one intermittent test 17 failure was never reproduced and its source was never identified; the fix makes `pending()` count only preview timers. Browser and two-account checks were not run, so a real drag between two sessions remains unverified.
+
+### S19 — Turn state machine
+
+**Planning (Claude, 2026-11-09):** `specs/19-turn-state-machine.md` is the contract. Grok implements and Claude reviews. It defines a zero-import pure module, adds `recordActivity` to the build plan's list, and settles four cases the rules left open, now recorded under Turn rules in `2-architecture.md`: grace beats idle, rejoining counts as activity, a reclaim during grace drops the old holder, and an idle holder is not re-queued. Claude checked the rules for contradictions with a throwaway implementation in the scratchpad (12 test groups passed). No application or test file was changed by planning.
+
+**Implementation (Grok, 2026-11-09): Ready for review.** `server/src/lib/turns.js` is a pure module with no imports. It stores only `userId` and `tabId`, returns the same object on a no-op, and never mutates its input. `server/test/turns.test.js` deep-freezes every state it passes in. `server/readme.md` gained one `lib/` line and one `test/` line, with the comment marks in column 39. Nothing calls the module yet. The uncommitted S16 and S17 corrections were left in place. `context/2-architecture.md` was already modified by the S19 planning pass and was not edited again.
+
+**Verified (2026-11-09):**
+
+- `node --test test/turns.test.js` from `server/`: 22 pass, 0 fail, 0 cancelled, 71.8805 ms.
+- `cd server && npm test`: 186 pass, 0 fail, 0 cancelled, 360.6132 ms. The suite finished on its own. That is the previous 164 plus these 22.
+- A search of `server/src/lib/turns.js` for import, require(, Date.now, setTimeout, setInterval, and Math.random found no matches, including in comments.
+- `node --check server/src/lib/turns.js` passed with no output.
+- Root `npm run build`: passed in 7.59s, 4261 modules, existing chunk-size warning only. Workspace chunk `WorkspacePage-3uV35oOE.js` is 248.96 kB, gzip 80.17 kB.
+- `git diff --check` exited 0, with LF-to-CRLF notices on the existing S16 and S17 files only.
+- S19's own files are `server/src/lib/turns.js`, `server/test/turns.test.js`, the two readme tree lines, and this tracker. The working tree still contains the Approved S16 and S17 corrections and the untracked spec files.
+
+**Deviations:** None. S20 was not started. No commit, push, or branch.
+
+**Final review (Claude, 2026-11-09): Approved. No findings.** `turns.js` matches the spec and has no imports, clock, or timers, and nothing calls it yet. Claude's own 12 check groups, written before implementation, pass against it. Grok's tests caught all 32 bugs Claude injected one at a time on a scratch copy, covering each rule, boundary, no-op, and copy guarantee. Independent runs: `turns` within the server suite, server 186 of 186 with `npm test` finishing on its own, participants 6/6, `canvasPreview` 39/39, sync 12/12, cursor 69/69, build passes (4261 modules, `WorkspacePage-3uV35oOE.js` 248.96 kB, gzip 80.17 kB, existing chunk warning only). The S20 handoff list stays open.
+
+### S20 — Turn events and enforcement
+
+**Planning (Claude, 2026-11-09):** `specs/20-turn-events-enforcement.md` is the contract. Grok implements and Claude reviews. Claude proved the production changes and test migration on a throwaway copy: 186 existing server tests plus 14 end-to-end turn scenarios, 200 of 200. The client `classifyJoin` line and a live server were not exercised. `2-architecture.md` records the S20 decisions, and `5-ai-workflow-rules.md` now lists S20 for `socket.js`. No application or test file was changed by planning.
+
+**Implementer:** Grok
+
+**Changed:**
+
+- `server/src/lib/workspaceRooms.js`: each room now starts with `turn` and `turnPublishedAt`, and the registry returns `listRooms()`.
+- `server/src/sockets/workspace.socket.js`: `canWrite` requires this tab to hold the turn. Turn request, release, cancel, and reclaim publish `turn:state`. Commits and previews note activity. Leave, disconnect, and rollback go through `removeFromRoom`. The sweeper is exported.
+- `server/src/lib/socket.js`: starts the sweeper before the export. Nothing else in that file changed.
+- `src/collaborate/store/useWorkspaceStore.js`: `classifyJoin` accepts `ack.turn` when it is `null` or a record. The store still does not keep the value.
+- `server/test/canvas.socket.test.js`: turn events are counted apart from canvas emits, joined writers request the turn, and the two-commit queue test uses one socket.
+- `server/test/workspace.socket.test.js`: the join ack's empty turn is the public object.
+- `server/test/turn.socket.test.js`: 14 end-to-end turn scenarios, no database.
+- `test/workspaceSync.test.mjs`: one test that a join ack with the empty public turn reaches `ready`.
+- `server/readme.md`: turn events, the public join `turn`, and the turn rules.
+- `server/src/lib/turns.js` was not edited. The uncommitted S16, S17, and S19 work is still in the tree.
+
+**Verified (2026-11-09):**
+
+- `cd server && npm test`: 200 pass, 0 fail, 0 cancelled, 0 skipped, duration_ms 350.9122. The suite finished on its own. That is the previous 186 plus 14 turn scenarios. A separate `node --test test/turn.socket.test.js` was 14 pass, 0 fail, duration_ms 250.9569.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, duration_ms 938.521. The new test is included. Vite printed its dependency-scan shutdown diagnostic after the passing suite. Exit code 0.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, duration_ms 1013.5662. Exit code 0.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, duration_ms 1843.4602. Exit code 0.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, duration_ms 1877.0308. Exit code 0.
+- The three client suites above were started together, so Vite also printed `WebSocket server error: Port 24678 is already in use` and the same dependency-scan shutdown diagnostic. Every test still passed and every process exited 0.
+- From `server/`, `npm run dev` logged `Server is up and running on PORT: 3000` and `MongoDB connected: … / 3dfolio`. No error. No data was written. The process was stopped afterward.
+- Root `npm run build`: passed in 7.33s, 4261 modules, existing chunk-size warning only. Workspace chunk `WorkspacePage-Dwi4jAD6.js` is 248.97 kB, gzip 80.18 kB.
+- `git diff --check` exited 0. The only messages were LF-to-CRLF notices on files already in the working tree.
+- `grep -n "registry.removeConnection" server/src/sockets/workspace.socket.js` shows one call, line 337, inside `removeFromRoom`.
+- `grep -n "turn: null" server/src/sockets/workspace.socket.js` finds nothing.
+- Browser: not run. Until S21 there is no button to request a turn, so an edit attempt is refused, toasts `You cannot edit this canvas`, and rejoins. That gap is expected.
+
+**Deviations:** The production snippets and the listed test migrations were applied as written. Two readme sentences were left because section 7 names only three replacements, and they still describe the pre-S20 rule: "Until turn enforcement, two editors can commit at once" and "Until turn enforcement arrives in a later slice, an owner or editor connection may commit." The rules paragraph added for this slice says only the holding tab may commit or preview. The structure tree has no line for `server/test/turn.socket.test.js` because section 7 did not list one. The rules paragraph also says a holder who is alone loses the turn, which is the decision already recorded in `2-architecture.md`. S21 was not started. No commit, push, or branch.
+
+**Review (Claude, 2026-11-09): Changes requested.** Full review in `specs/20-turn-events-review.md`. Production code is identical to the tested design and is accepted. Findings: the reclaim permission test uses the holder as the caller, so it cannot fail; a turn event naming another project is untested; two readme sentences and one tree line are stale (a spec omission, correctly flagged by Grok). Independent runs: server 200 of 200 with `npm test` finishing on its own, sync 13, participants 6, cursor 69, `canvasPreview` 39, build passes, Claude's 14 end-to-end scenarios pass. Of 23 injected bugs, the repo's tests caught 20; with the two test fixes, 22, and the last changes no observable behavior. Browser and two-account checks were not run, as expected until S21.
+
+**Corrections (Grok, 2026-11-09): Ready for review.** Production code was not changed. `server/test/turn.socket.test.js` now has an editor who is waiting, not holding, call `turn:reclaim`, and a test that a request for another project emits nothing and leaves the holder empty. `server/readme.md` replaces the two stale turn sentences with the review's text, and adds `turn.socket.test.js` in the test tree with `#` in column 39.
+
+**Verified (2026-11-09):**
+
+- `cd server && npm test`: 201 pass, 0 fail, 0 cancelled, 0 skipped, duration_ms 348.0808. The suite finished on its own. The new case is `ignores a turn event for a project the socket has not joined`.
+- `git diff --check` exited 0. The only messages were LF-to-CRLF notices on files already in the working tree.
+
+**Deviations:** None. S21 was not started. No commit, push, or branch.
+
+**Final review (Claude, 2026-11-09): Approved.** All three review items are fixed as written, and production code is unchanged. Independent runs: server 201 of 201 with `npm test` finishing on its own, sync 13, participants 6, cursor 69, `canvasPreview` 39, build passes (4261 modules, `WorkspacePage-Dwi4jAD6.js` 248.97 kB, gzip 80.18 kB, existing chunk warning only), Claude's 14 end-to-end scenarios pass. The repo's tests catch 22 of 23 injected bugs; the last changes no observable behavior because `safeHandler` absorbs it. Browser and two-account checks were not run, and in-browser editing is unavailable until S21.
+
+**Status (Claude, 2026-11-09):** S19 and S20 are marked Committed at the user's direction, ahead of commit 66 planned for 2026-11-10.
+
 ### S29 — Mobile and accessibility
 
 **Carry-forward from S08:** the shape panel is HTML5 drag-only. Add touch and keyboard/click alternatives in S29; no such handlers were added in S08.
@@ -1125,6 +1264,7 @@ Added client and server cursor support:
 
 ## Session Notes
 
+- Stopping point, 2026-11-09: S16 and S17 corrections, S19, and S20 are in the working tree for commit 66, and all were reviewed by Claude with every suite rerun: server 201, sync 13, participants 6, cursor 69, canvasPreview 39, build passing. After S20 the server refuses browser edits until S21 adds the turn UI, so do not deploy S20 without S21.
 - Outside `/collaborate`, not fixed: `clerk.webhook.js` passes `new: true` to `findOneAndUpdate`, which Mongoose 9 deprecates in favor of `returnDocument: "after"`. It still works, and it should print a warning when the webhook fires.
 - Outside `/collaborate`, not fixed: `server/src/webhooks/clerk.webhook.js` imports `@clerk/backend/webhooks`, but `@clerk/backend` isn't declared in `server/package.json`. It resolves only as a transitive dependency of `@clerk/express`. Also, a file type multer rejects returns `500` instead of `400`, because the error carries no `status`.
 - S01 installed `server/node_modules`. `server/.env` was added by the user on 2026-11-01 (live values, per Q2), and the server boots against the live `3dfolio` database.

@@ -48,7 +48,7 @@
 ### Turn-Based Editing
 
 - Request, release, cancel, and queue the turn. The owner can always take control.
-- 20-second reconnect grace for the holder.
+- 20-second reconnect grace for the holder while someone else is in the project.
 - 2-minute idle hand-off, but only while someone is waiting.
 - Turns belong to a tab: your second tab is read-only.
 - Turn bar shows who is editing, the queue, your position, and an idle countdown.
@@ -94,7 +94,7 @@
 2. Two signed-in accounts in different browsers see the same canvas, and a committed edit from one appears in the other within about one second.
 3. A commit sent by anyone other than the turn holder's tab is rejected by the server, even if the client is tampered with.
 4. Turn hand-off works via release, owner take-control, holder tab close after 20 seconds, and 2 minutes of idle while someone waits.
-5. Briefly dropping the network keeps the holder's turn, and no edit is lost or duplicated across the reconnect.
+5. Briefly dropping the network keeps the holder's turn while someone else is in the project, and no edit is lost or duplicated across the reconnect.
 6. Reloading shows the exact canvas and full chat history.
 7. Invite, accept, promote, demote, and remove all work from the UI and apply live, and a removed user can no longer read the project (`404`).
 8. Deleting a project removes its canvas and messages and kicks every connected member.

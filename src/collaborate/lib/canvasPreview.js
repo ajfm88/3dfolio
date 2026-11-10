@@ -1,5 +1,11 @@
 import { ID_PATTERN, POSITION_MAX, NODE_SIZE_MIN, NODE_SIZE_MAX } from "@shared/canvasOps.js";
 
+const PREVIEW_TTL_MS = 3000;
+const defaultClock = {
+  setTimeout: (fn, delay) => setTimeout(fn, delay),
+  clearTimeout: (id) => clearTimeout(id),
+};
+
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
 }
@@ -49,7 +55,7 @@ function sanitizePreviewNodes(rawNodes) {
   return { ok: true, nodes };
 }
 
-export function createPreviewOverlayController() {
+export function createPreviewOverlayController({ onExpire = () => {}, clock = defaultClock } = {}) {
   const overlays = new Map();
   const timers = new Map();
 
@@ -57,13 +63,13 @@ export function createPreviewOverlayController() {
     overlays.delete(id);
     const timer = timers.get(id);
     if (timer !== undefined) {
-      clearTimeout(timer);
+      clock.clearTimeout(timer);
       timers.delete(id);
     }
   }
 
   function clearAllOverlays() {
-    for (const timer of timers.values()) clearTimeout(timer);
+    for (const timer of timers.values()) clock.clearTimeout(timer);
     overlays.clear();
     timers.clear();
   }
@@ -92,11 +98,14 @@ export function createPreviewOverlayController() {
     const now = Date.now();
     overlays.set(id, { id, position: { ...position }, width, height, lastSample: now });
     const existing = timers.get(id);
-    if (existing !== undefined) clearTimeout(existing);
-    const timer = setTimeout(() => {
+    if (existing !== undefined) clock.clearTimeout(existing);
+    const timer = clock.setTimeout(() => {
+      // A superseded timer must not expire the newer sample that replaced it.
+      if (timers.get(id) !== timer) return;
       timers.delete(id);
       overlays.delete(id);
-    }, 3000);
+      onExpire(id);
+    }, PREVIEW_TTL_MS);
     timers.set(id, timer);
   }
 

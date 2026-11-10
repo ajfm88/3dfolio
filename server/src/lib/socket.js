@@ -6,7 +6,7 @@ import { verifyToken } from "@clerk/express";
 import User from "../models/user.model.js";
 import { safeHandler } from "./safeHandler.js";
 import { registerChatHandlers } from "../sockets/chat.socket.js";
-import { registerWorkspaceHandlers } from "../sockets/workspace.socket.js";
+import { registerWorkspaceHandlers, startTurnSweeper } from "../sockets/workspace.socket.js";
 
 // This file creates the shared http.Server and Socket.io layer, then dispatches
 // each connection to per-feature handler modules in server/src/sockets/. The
@@ -65,5 +65,7 @@ io.on(
     registerWorkspaceHandlers(io, socket);
   }),
 );
+
+startTurnSweeper(io);
 
 export { app, server, io };

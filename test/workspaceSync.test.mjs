@@ -1016,4 +1016,29 @@ describe("workspace sync", () => {
     assert.equal(commits.length, beforeDelete + 1);
     dispose();
   });
+
+  it("accepts a join ack whose turn is the empty public object", async () => {
+    reset();
+    const socket = createSocket();
+    const gate = defer();
+    socket.handler = (event) => {
+      if (event !== "workspace:join") return Promise.resolve({ ok: false, message: "unexpected" });
+      return gate.promise;
+    };
+    const dispose = useWorkspaceStore.getState().bindWorkspace(socket, PROJECT);
+    const body = joinBody(PROJECT, graph(), "editor");
+    body.turn = {
+      holder: null,
+      holderSince: null,
+      queue: [],
+      idleDeadline: null,
+      graceUntil: null,
+      serverNow: 1,
+    };
+    gate.resolve(body);
+    await settle();
+    await settle();
+    assert.equal(useWorkspaceStore.getState().status, "ready");
+    dispose();
+  });
 });

@@ -26,12 +26,13 @@ const syncDeps = {
   set: () => {},
   toast,
   toDisplayNodes: (nodes, previous) => {
-    const display = toDisplayNodes(nodes, previous);
+    // workspaceSync computes the display before it installs the canvas, so get()
+    // still returns the previous canonical graph here. recovering is true for the
+    // whole of a recovery, including its snapshot publish, so a replaced graph
+    // can never inherit a preview from the one before it.
     const binding = activeBinding;
-    if (binding && binding.previewController) {
-      return binding.previewController.applyOverlays(display);
-    }
-    return display;
+    if (binding?.sync?.recovering) clearPreviews(binding);
+    return displayNodes(binding, nodes, syncDeps.get().canvas.nodes, previous);
   },
   toDisplayEdges,
   emptyWorkspace,
@@ -120,6 +121,21 @@ function toDisplayEdges(edges, previous) {
   });
 }
 
+// Every display rebuild goes through here. Overlays are reconciled against the
+// canonical change first, so a committed move cannot be painted over and a
+// label edit cannot wipe another node's in-progress preview.
+function displayNodes(binding, nextNodes, previousCanonical, priorDisplay) {
+  const controller = binding?.previewController;
+  if (!controller) return toDisplayNodes(nextNodes, priorDisplay);
+  controller.onCanonicalNodesChange(previousCanonical, nextNodes);
+  return controller.applyOverlays(toDisplayNodes(nextNodes, priorDisplay));
+}
+
+function clearPreviews(binding) {
+  binding.previewThrottle?.cancel();
+  binding.previewController?.clearAllOverlays();
+}
+
 const DISPLAY_NODE_CHANGES = new Set(["select", "position", "dimensions"]);
 
 function isRecord(value) {
@@ -149,7 +165,7 @@ function classifyJoin(ack, projectId) {
     && Number.isSafeInteger(version)
     && version >= 0
     && participants !== null
-    && ack.turn === null
+    && (ack.turn === null || isRecord(ack.turn))
     && Number.isFinite(ack.serverNow);
   if (!valid) return { ok: false, notFound: false, message: "" };
 
@@ -317,7 +333,7 @@ function disposeBinding(set, binding) {
 function restoreDisplay(set, get) {
   const state = get();
   set({
-    rfNodes: toDisplayNodes(state.canvas.nodes, state.rfNodes),
+    rfNodes: displayNodes(activeBinding, state.canvas.nodes, state.canvas.nodes, state.rfNodes),
     rfEdges: toDisplayEdges(state.canvas.edges, state.rfEdges),
   });
 }
@@ -355,7 +371,14 @@ export const useWorkspaceStore = create((set, get) => {
     // keeps the old project room.
     if (activeBinding && !activeBinding.disposed) disposeBinding(set, activeBinding);
 
-    const previewController = createPreviewOverlayController();
+    const previewController = createPreviewOverlayController({
+      onExpire: () => {
+        if (activeBinding !== binding || binding.disposed) return;
+        set((state) => ({
+          rfNodes: displayNodes(binding, state.canvas.nodes, state.canvas.nodes, state.rfNodes),
+        }));
+      },
+    });
     const cursorController = createCursorExpiryController((userId) => {
       set((state) => {
         if (!state.cursors[userId]) return state;
@@ -376,11 +399,9 @@ export const useWorkspaceStore = create((set, get) => {
       unlisten: null,
       sync: createSyncState(),
       previewThrottle: throttle(({ projectId, nodes }) => {
-        const currentBinding = activeBinding;
-        if (!currentBinding || currentBinding.disposed) return;
-        if (!currentBinding.socket?.connected) return;
-        if (currentBinding.socket.id !== currentBinding.sync?.joinedConnectionId) return;
-        currentBinding.socket.volatile.emit("canvas:preview", { projectId, nodes });
+        if (activeBinding !== binding || binding.disposed) return;
+        if (projectId !== binding.projectId || !selectCanEdit(get())) return;
+        binding.socket.volatile.emit("canvas:preview", { projectId, nodes });
       }, 50),
       previewController,
       // The callback revalidates its own binding, join attempt and connection
@@ -401,7 +422,10 @@ export const useWorkspaceStore = create((set, get) => {
     // Failure transitions reached through the sync helper (error, notFound,
     // emptyWorkspace) bypass this file, so the binding watches status itself.
     binding.unsubscribe = useWorkspaceStore.subscribe((state) => {
-      if (state.status !== "ready") clearBindingCursors(binding);
+      if (state.status !== "ready") {
+        clearBindingCursors(binding);
+        clearPreviews(binding);
+      }
     });
 
     if (socket) {
@@ -452,6 +476,8 @@ export const useWorkspaceStore = create((set, get) => {
       };
       const onPreview = (payload) => {
         if (activeBinding !== binding || binding.disposed) return;
+        const live = binding.socket;
+        if (!live?.connected || live.id !== binding.sync?.joinedConnectionId) return;
         const state = get();
         if (state.status !== "ready" || state.syncStatus === "syncing") return;
         if (!isRecord(payload) || typeof payload.projectId !== "string") return;
@@ -462,14 +488,9 @@ export const useWorkspaceStore = create((set, get) => {
         const result = binding.previewController.receivePreview(payload, () => state.canvas.nodes);
         if (!result.ok) return;
 
-        const previousCanonical = state.canvas.nodes;
         set((current) => ({
-          rfNodes: binding.previewController.applyOverlays(
-            toDisplayNodes(current.canvas.nodes, current.rfNodes)
-          ),
+          rfNodes: displayNodes(binding, current.canvas.nodes, current.canvas.nodes, current.rfNodes),
         }));
-
-        binding.previewController.onCanonicalNodesChange(previousCanonical, state.canvas.nodes);
       };
       const onCursorMove = (payload) => {
         const state = get();
@@ -552,7 +573,6 @@ export const useWorkspaceStore = create((set, get) => {
       return false;
     }
 
-    const previousCanonicalNodes = state.canvas.nodes;
     const result = applyOps(state.canvas, ops);
     if (!result.ok) {
       toast.error(result.error);
@@ -567,15 +587,11 @@ export const useWorkspaceStore = create((set, get) => {
       edges: result.canvas.edges,
       version: state.canvas.version,
     };
-    const binding = activeBinding;
     set({
       canvas,
-      rfNodes: toDisplayNodes(canvas.nodes, state.rfNodes),
+      rfNodes: displayNodes(activeBinding, canvas.nodes, state.canvas.nodes, state.rfNodes),
       rfEdges: toDisplayEdges(canvas.edges, state.rfEdges),
     });
-    if (binding && binding.previewController) {
-      binding.previewController.onCanonicalNodesChange(previousCanonicalNodes, canvas.nodes);
-    }
     sync.enqueue(activeBinding, result.ops);
     return true;
   },
@@ -818,7 +834,8 @@ export const useWorkspaceStore = create((set, get) => {
     set((state) => ({ rfEdges: applyEdgeChanges(kept, state.rfEdges) }));
   },
 
-  onNodeDrag: (nodes) => {
+  onNodeDrag: (_event, _node, nodes) => {
+    if (!Array.isArray(nodes)) return;
     const state = get();
     if (!selectCanEdit(state)) return;
     const binding = activeBinding;

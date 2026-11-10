@@ -164,16 +164,17 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 ### Phase F — Turns
 
 #### S19 · Turn state machine `server` (pure) · parallel with S17–S18
-- `lib/turns.js`: pure functions of the form `(state, …, now) → state`: `createTurnState`, `requestTurn`, `releaseTurn`, `cancelRequest`, `reclaimTurn`, `tabLeft`, `tabRejoined`, `revokeEditRights`, `expire`, and `toPublic(state, now)`, which produces the `turn:state` payload. Constants `GRACE_MS = 20000`, `IDLE_MS = 120000`.
+- `lib/turns.js`: pure functions of the form `(state, …, now) → state`: `createTurnState`, `requestTurn`, `releaseTurn`, `cancelRequest`, `reclaimTurn`, `tabLeft`, `tabRejoined`, `recordActivity`, `revokeEditRights`, `expire`, and `toPublic(state, now)`, which produces the `turn:state` payload. Constants `GRACE_MS = 20000`, `IDLE_MS = 120000`.
 - `server/test/turns.test.js`: every turn rule in `2-architecture.md`, including skipping disconnected queue entries, an idle clock that starts at the first queue join, grace rejoin vs expiry, the reclaim ordering, and a viewer request being refused.
 - **Done when:** tests pass and the module has no timers and no I/O.
 
-#### S20 · Turn events and enforcement `server` · after S14, S16, S19
+#### S20 · Turn events and enforcement `server`, plus one client line · after S14, S16, S19
 - Handles `turn:request`, `turn:release`, `turn:cancel`, and `turn:reclaim` (owner only), and broadcasts `turn:state` on every change.
 - `canWrite` now also requires `holder.userId === connection.userId && holder.tabId === connection.tabId`. Commits and previews update `lastActivity`.
 - On disconnect, call `tabLeft`. On join, call `tabRejoined`. One 5s sweeper runs `expire`.
 - The join ack includes the turn state.
 - Readme: documents turn events and rules.
+- One client line lets `classifyJoin` accept the non-null turn. Between S20 and S21 the server refuses edits and no button can request a turn, so deploy the two together.
 - **Done when:** with two accounts, commits from the non-holder are rejected, request and release hand over correctly, closing the holder's tab passes the turn after 20s, and a queued user gets the turn after 2 minutes of holder inactivity.
 
 #### S21 · Turn UI and read-only mode `client` · after S20

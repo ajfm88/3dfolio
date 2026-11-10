@@ -102,6 +102,7 @@ server/
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
+│   │   ├── turns.js                  # Pure turn state: holder, queue, grace, and idle
 │   │   └── socket.js                 # Shared http.Server + Socket.io, auth, feature registration
 │   ├── shared/
 │   │   └── canvasOps.js              # Pure canvas op semantics shared by the server and the client
@@ -138,6 +139,8 @@ server/
 │   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
 │   ├── models.test.js                # Project and Canvas schema validation without a database
 │   ├── canvasOps.test.js             # Canvas op validation, atomic apply, and normalization
+│   ├── turn.socket.test.js           # Turn events, enforcement, grace, idle, and the sweeper
+│   ├── turns.test.js                 # Turn request, release, reclaim, grace, and idle
 │   ├── workspaceRooms.test.js        # Room registry and serial queue, with no database
 │   └── workspace.socket.test.js      # Join, leave, and cancellation, with models stubbed
 ├── .env                              # Environment variables
@@ -290,9 +293,13 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 | `workspace:leave` | `{ projectId }`            | Leaves that project room. No acknowledgement |
 | `canvas:commit`   | `{ projectId, baseVersion, ops }` | Acked. Saves one batch when this connection may edit |
 | `canvas:sync`     | `{ projectId }`            | Acked. Returns the current saved canvas for any joined role |
-| `canvas:preview`  | `{ projectId, nodes: [{ id, position, width?, height? }] }` | Volatile, no ack. Emitted at most every 50ms during drag/resize. Sent only by a joined editor/owner. Nodes are 1–50; `width` and `height` are both present or both absent. |
+| `canvas:preview`  | `{ projectId, nodes: [{ id, position, width?, height? }] }` | Volatile, no ack. Emitted at most every 50ms during drag/resize. Sent only by the tab holding the turn. Nodes are 1–50; `width` and `height` are both present or both absent. |
 | `cursor:move`     | `{ projectId, x, y }` | Volatile, no ack. Sent by any joined member (owner, editor, viewer). Position is in canvas flow coordinates. Throttled at 50ms. |
 | `cursor:leave`    | `{ projectId }` | Volatile, no ack. Sent when the local cursor leaves the canvas wrapper. |
+| `turn:request`    | `{ projectId }` | No ack. A joined owner or editor asks for the turn. The answer is the next `turn:state`. |
+| `turn:release`    | `{ projectId }` | No ack. Any joined tab may send it. The holder passes the turn to the next queued tab. |
+| `turn:cancel`     | `{ projectId }` | No ack. Any joined tab may send it. That tab leaves the queue. |
+| `turn:reclaim`    | `{ projectId }` | No ack. A joined owner takes the turn. An editor's call changes nothing. |
 
 `workspace:join` ignores a call that has no acknowledgement function. `projectId` is a 24-character hex ObjectId and `tabId` is a UUID v4; both are matched case-insensitively and stored lowercase. Any other field on the payload is ignored. The server uses the authenticated socket user, never a user id or role in the payload.
 
@@ -307,22 +314,29 @@ A successful acknowledgement looks like this:
   "participants": [
     { "userId": "…", "fullName": "Ada", "img": "", "role": "editor" }
   ],
-  "turn": null,
+  "turn": {
+    "holder": null,
+    "holderSince": null,
+    "queue": [],
+    "idleDeadline": null,
+    "graceUntil": null,
+    "serverNow": 1760000000000
+  },
   "serverNow": 1760000000000
 }
 ```
 
-S13 acked `"participants": []`. S17 replaces that empty list with every user who currently has a socket in the project: owner, editor, and viewer, including the joiner. Tabs of the same user are one row. `userId` is the Mongo id, sorted lexicographically. `fullName` and `img` come from the user document read during that join, and an empty profile field is `""`. The row has no email, Clerk id, tab id, or socket id. The list lives only in this process. A restart clears it, and the next join builds it again. It is not the global chat presence map.
+S13 acked `"participants": []`. S17 replaces that empty list with every user who currently has a socket in the project: owner, editor, and viewer, including the joiner. Tabs of the same user are one row. `userId` is the Mongo id, sorted lexicographically. `fullName` and `img` come from the user document read during that join, and an empty profile field is `""`. The row has no email, Clerk id, tab id, or socket id. The list lives only in this process. A restart clears it, and the next join builds it again. It is not the global chat presence map. `turn` is the public turn state: `holder`, `holderSince`, `queue`, `idleDeadline`, `graceUntil`, and `serverNow`. `holder` is null when nobody holds the turn, and each queue entry is `{ userId, tabId }`.
 
 Failures carry only `ok` and `message`. `"Project not found"` covers a bad id, a missing project, and a caller who cannot read it. `"Invalid workspace request"` covers a malformed payload or tab id. `"Workspace request superseded"` covers a join cancelled by a newer join, leave, or disconnect. `"Unable to open workspace"` covers an unexpected database or adapter failure; the server logs the cause and does not return it.
 
 Each join checks membership with the same scoped project query as REST, including when the room is already cached. The caller's `fullName` and `img` come from the synced user document. The first join of a project upserts a Canvas with insert-only defaults, normalizes `nodes` and `edges` in memory, and keeps the stored `version`. Joining does not rewrite an existing graph or save later edits. A duplicate-key race reads the canvas that won the unique index.
 
-The room registry is in-memory and single-process. A restart drops it; the client reconnects, joins again, and loads the stored snapshot. Joining itself does not save edits. After a join, the open tab sends each accepted gesture as `canvas:commit` and applies `canvas:ops` from other sockets, including the same user's other tabs. The confirmed version moves only when a commit is acknowledged or a snapshot is installed. Unsent edits are discarded on disconnect, route exit, sign-out, or recovery. A reject, a timeout, a version gap, or a remote edit that arrives while local work is queued replaces that optimistic graph with the server snapshot and does not replay it. A timeout still reads `canvas:sync` because the save may have landed. Until turn enforcement, two editors can commit at once; the loser resyncs instead of merging.
+The room registry is in-memory and single-process. A restart drops it; the client reconnects, joins again, and loads the stored snapshot. Joining itself does not save edits. After a join, the open tab sends each accepted gesture as `canvas:commit` and applies `canvas:ops` from other sockets, including the same user's other tabs. The confirmed version moves only when a commit is acknowledged or a snapshot is installed. Unsent edits are discarded on disconnect, route exit, sign-out, or recovery. A reject, a timeout, a version gap, or a remote edit that arrives while local work is queued replaces that optimistic graph with the server snapshot and does not replay it. A timeout still reads `canvas:sync` because the save may have landed. Only the tab holding the turn can commit, and a commit refused during a hand-off resyncs instead of merging.
 
 `canvas:commit` and `canvas:sync` ignore a call that has no acknowledgement function. `projectId` is the same 24-character hex id as join, matched without case and stored lowercase. Any other field on the envelope is ignored, including a user id, role, or `updatedBy`. `baseVersion` has to be a nonnegative integer below `Number.MAX_SAFE_INTEGER`. `ops` has to be an array of 1 to 50 entries. The shared canvas module checks each operation and is the only place that strips fields. A batch is never truncated or partly applied.
 
-Both events require a connected socket whose finished join is still current. An in-flight join is not enough, and neither event creates a room or a canvas. A newer join, a leave for that same project, or a disconnect drops that authority immediately, even when removal of the registry connection is still queued. A leave for a different project does not. Before a save or a snapshot, the handler reads membership again with the same scoped project query as REST and refreshes the cached role. A viewer may sync and may not commit. Until turn enforcement arrives in a later slice, an owner or editor connection may commit. `canWrite` is that check. It accepts only the connection object stored on the room.
+Both events require a connected socket whose finished join is still current. An in-flight join is not enough, and neither event creates a room or a canvas. A newer join, a leave for that same project, or a disconnect drops that authority immediately, even when removal of the registry connection is still queued. A leave for a different project does not. Before a save or a snapshot, the handler reads membership again with the same scoped project query as REST and refreshes the cached role. A viewer may sync and may not commit. Only the tab holding the turn may commit. `canWrite` is that check. It accepts only the connection object stored on the room.
 
 One room has one write queue. Commits and syncs for that project run in order. Two projects do not wait on each other. A queued commit or sync that loses its join, because of leave, disconnect, or a newer join, makes no write. The caller hears `"Workspace request superseded"` when that socket is still connected. A save that has already been sent to the database is not cancelled. If it matches, the room cache moves forward and `canvas:ops` is broadcast even when the sender has gone. That sender gets a success acknowledgement only when the same socket is still the joined connection.
 
@@ -338,7 +352,9 @@ A successful commit acknowledges `{ "ok": true, "version": 5 }` and does not ret
 
 A write that throws, or that comes back without an acknowledgement, does not advance the cache and does not broadcast. The room then reloads the saved canvas before a later commit or sync can succeed. A reload that fails stays closed rather than serving the cache from before the uncertain write. Sync normally returns that cache without writing. It does not increment the version, broadcast, or create a canvas. A snapshot is a copy of the whitelisted fields.
 
-The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews and turns are not part of this protocol yet. Cursor events are ephemeral and do not touch the database; they are relayed only to connected sockets in the project room.
+The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews are a volatile relay with no ack and no persistence, and each client drops an overlay 3 seconds after its last sample. Only the tab holding the turn may send one. Cursor events are ephemeral and do not touch the database; they are relayed only to connected sockets in the project room.
+
+Only the tab holding the turn may commit or send a preview. A holder who disconnects or leaves keeps the turn for 20 seconds when someone else is still in the project, and the same tab id can take it back by joining again. A holder who is alone loses the turn immediately, because an empty room is discarded. While at least one tab is waiting, 2 minutes without a commit or a preview passes the turn on. The sweeper runs every 5 seconds, so a hand-off can land up to 5 seconds after the deadline. Turn state is kept in memory only and is lost on restart.
 
 `tabId` comes from the tab's `sessionStorage` so a reconnect in the same tab repeats an id. Connections are still keyed by socket id, so two tabs remain two connections even when a duplicated tab copied the same id. One socket is in one project room at a time, separate from its per-user chat room. Leave and disconnect remove that socket. The room is discarded when it has no sockets, no join still in progress, and no commit or sync still holding it. A held save keeps the same cache and queue, so a join that arrives during that save waits for it and then reads the saved version.
 
@@ -350,7 +366,8 @@ The queue and the refresh flag live in this process. A restart loads the saved c
 | `typing`         | `{ userId, isTyping }`     | Sent to the recipient's room only         |
 | `newMessage`     | The saved message document | Sent to the recipient's room on send      |
 | `canvas:ops`     | `{ projectId, version, ops, by }` | After a saved commit, to the project room except the sender |
-| `canvas:preview` | `{ projectId, by, nodes }` | Volatile relay of a drag/resize sample. `by` is the authenticated Mongo userId. Sent to the project room except the sender. Overlay expires 3s after last sample; a canonical position/size update clears it immediately. Turn-holding is still S20. |
+| `canvas:preview` | `{ projectId, by, nodes }` | Volatile relay of a drag/resize sample. `by` is the authenticated Mongo userId. Sent to the project room except the sender. Overlay expires 3s after last sample; a canonical position/size update clears it immediately. Only the tab holding the turn is relayed. |
+| `turn:state`     | `{ projectId, holder, holderSince, queue, idleDeadline, graceUntil, serverNow }` | Not volatile. Sent with `io.to` to `project:<projectId>` on every turn change. `holder` is `{ userId, tabId }` or null. `queue` entries are `{ userId, tabId }`. Activity moves `idleDeadline` at most every 5 seconds, and only while someone is waiting. |
 | `cursor:move`    | `{ projectId, userId, x, y }` | Volatile relay of a remote cursor position. `userId` is the authenticated Mongo userId. Relayed with `socket.to(room).volatile.emit`, so every other socket in the project room receives it and the sender does not. One latest position per user; other tabs of the same user replace it. Viewers also emit. |
 | `cursor:leave`   | `{ projectId, userId }` | Volatile relay. Sent when a remote cursor leaves the canvas. The UI removes that user's cursor immediately. |
 | `presence:update` | `{ projectId, participants }` | Full roster after a join attaches or a socket is removed. Not volatile, no ack, and not written to the database. Sent with `io.to` to `project:<projectId>` only, including sockets still in that room. The user drops off when their last tab leaves or disconnects. |

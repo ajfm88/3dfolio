@@ -37,6 +37,7 @@ function ParticipantAvatar({ participant }) {
 
   return (
     <span
+      role="img"
       tabIndex={0}
       title={label}
       aria-label={label}
@@ -70,12 +71,13 @@ const ParticipantStack = () => {
   const hiddenLabel = hidden.map(personLabel).join(", ");
 
   return (
-    <div className="flex shrink-0 items-center" aria-label="People in this project">
+    <div role="group" className="flex shrink-0 items-center" aria-label="People in this project">
       {visible.map((person) => (
         <ParticipantAvatar key={person.userId} participant={person} />
       ))}
       {hidden.length > 0 ? (
         <span
+          role="img"
           tabIndex={0}
           title={hiddenLabel}
           aria-label={hiddenLabel}

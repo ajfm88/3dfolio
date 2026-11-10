@@ -77,7 +77,8 @@
 
 - Pure server modules get `node:test` unit tests in `server/test/<module>.test.js`, run with `cd server && npm test`.
 - Tests import the module directly and need no database, network, or environment variables.
-- UI and socket flows are verified manually against the slice's checklist (see `5-ai-workflow-rules.md`).
+- Socket handlers and client stores have automated tests with fake sockets: `server/test/*.socket.test.js`, and `test/*.test.mjs` at the root, run as `node --test test/<suite>.test.mjs`, one suite per command because the Vite harnesses collide on port 24678.
+- Rendering and two-browser flows are verified manually against the slice's checklist (see `5-ai-workflow-rules.md`).
 
 ## Documentation
 

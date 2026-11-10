@@ -1,3 +1,5 @@
+import { createTurnState } from "./turns.js";
+
 // In-memory rooms for one server process. Persistence, sockets, and timers stay
 // outside this module so a join can be cancelled without leaving a registry
 // entry behind, and so tests can run without a database.
@@ -44,6 +46,8 @@ export function createWorkspaceRegistry() {
           members: new Map(),
           connections: new Map(),
           writeQueue: createSerialQueue(),
+          turn: createTurnState(),
+          turnPublishedAt: 0,
         };
         return entry.room;
       })
@@ -176,7 +180,16 @@ export function createWorkspaceRegistry() {
     return participants;
   }
 
-  return { acquire, retain, getRoom, addConnection, removeConnection, getParticipants };
+  // A snapshot, so the sweeper can hand off turns while rooms come and go.
+  function listRooms() {
+    const open = [];
+    for (const [projectId, entry] of rooms) {
+      if (entry.room) open.push([projectId, entry.room]);
+    }
+    return open;
+  }
+
+  return { acquire, retain, getRoom, addConnection, removeConnection, getParticipants, listRooms };
 }
 
 export const workspaceRegistry = createWorkspaceRegistry();

@@ -103,6 +103,24 @@
   border-style: dashed;
 }
 
+/* The message list is the panel's only vertical scroller. Reduced motion keeps
+   that scroll instant; opening the panel does not animate the canvas. */
+.collab-root .project-chat-scroll {
+  scroll-behavior: auto;
+}
+
+.collab-root .project-chat-scroll:focus-visible {
+  outline: 2px solid var(--collab-accent-2);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collab-root .project-chat-panel,
+  .collab-root .project-chat-scroll {
+    scroll-behavior: auto;
+  }
+}
+
 /* Gentle hover on the signed-out gate's logo tile. */
 @keyframes collab-float-y {
   0%,

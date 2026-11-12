@@ -76,9 +76,10 @@
 ## Tests
 
 - Pure server modules get `node:test` unit tests in `server/test/<module>.test.js`, run with `cd server && npm test`.
-- Tests import the module directly and need no database, network, or environment variables.
+- Pure-module tests import directly and need no database, network, or environment variables. REST/multipart tests may use an ephemeral loopback server with stubbed auth/models/uploads; they must not contact live MongoDB, Clerk, or ImageKit.
 - Socket handlers and client stores have automated tests with fake sockets: `server/test/*.socket.test.js`, and `test/*.test.mjs` at the root, run as `node --test test/<suite>.test.mjs`, one suite per command because the Vite harnesses collide on port 24678.
-- Rendering and two-browser flows are verified manually against the slice's checklist (see `5-ai-workflow-rules.md`).
+- Rendering can be checked with the existing Vite SSR harness. React effects require mounted-hook/controller coverage; static markup alone does not execute them. Real browser layout and two-browser flows remain manual checklist evidence (see `5-ai-workflow-rules.md`).
+- Current root suites: workspaceSync, canvasPreview, participants, cursorPresence, turnState, turnRobustness, projectChat, projectChatUi. Run each separately and sequentially; see HANDOFF.md for commands and the last verified baseline.
 
 ## Documentation
 

@@ -1,5 +1,6 @@
 import Project from "../models/project.model.js";
 import Canvas from "../models/canvas.model.js";
+import ProjectMessage from "../models/projectMessage.model.js";
 import {
   MAX_OWNED_PROJECTS,
   can,
@@ -165,9 +166,13 @@ export async function deleteProject(req, res) {
   const deleted = await Project.deleteOne({ _id: project._id, owner: me });
   if (deleted.deletedCount === 0) return notFound(res);
 
-  // Project messages (S23) and kicking connected members (S27) join this
-  // cascade later. A missing canvas is fine: it is created lazily on join.
+  // The project row is already gone. Canvas and chat history follow it. A
+  // missing canvas, or a project that never received a message, is still success.
+  // These deletes are not one transaction with the project row: if history
+  // cleanup throws, the response must not say the delete succeeded. S27 still
+  // owns kicking connected members and the Clerk user.deleted cascade.
   await Canvas.deleteOne({ project: project._id });
+  await ProjectMessage.deleteMany({ project: project._id });
 
   res.status(200).json({ message: "Project deleted" });
 }

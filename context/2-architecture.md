@@ -27,6 +27,7 @@ server/src/
 │   ├── projectAccess.js            S02  roleOf, can, findProjectForMember, limits
 │   ├── workspaceRooms.js           S13  in-memory room registry + serial write queue
 │   ├── turns.js                    S19  pure turn state machine
+│   ├── projectMessages.js          S23  history cursor, text rules, message whitelist
 │   └── rateLimit.js                S29  per-socket token bucket
 ├── shared/
 │   └── canvasOps.js                S06  PURE canvas op semantics, imported by server AND client
@@ -40,7 +41,7 @@ server/src/
     ├── chat.socket.js              S01  existing chat presence + typing, moved verbatim
     └── workspace.socket.js         S13+ join/leave, commits, previews, cursors, turns, typing
 
-server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · rateLimit (*.test.js)
+server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · projectMessages · projectMessage.api · projectTyping.socket · imagekit · rateLimit (*.test.js)
 
 src/pages/Collaborate.jsx           S04  lazy route root
 src/collaborate/
@@ -100,12 +101,14 @@ indexes: { owner: 1 }, { "members.user": 1 }, { "invites.email": 1 }
 { project: ObjectId → Project (unique), nodes: [Mixed], edges: [Mixed], version: Number (default 0), updatedBy: ObjectId → User, timestamps }
 ```
 
-**ProjectMessage** (`projectmessages`), added in S23
+**ProjectMessage** (`projectmessages`), implemented in S23
 
 ```js
-{ project: ObjectId → Project, sender: ObjectId → User, text: String, image: String, video: String, timestamps }
-index: { project: 1, createdAt: -1 }
+{ project: ObjectId → Project, sender: ObjectId → User, text: String ≤ 2000, image: String, video: String, timestamps }
+index: { project: 1, createdAt: -1, _id: -1 }
 ```
+
+One saved row has nonblank text or exactly one media URL. The wire resource whitelists `_id`, `project`, `sender: { _id, fullName, img } | null`, `text`, `image`, `video`, `createdAt`, and `updatedAt`.
 
 ### Canonical canvas shapes
 
@@ -292,6 +295,22 @@ A live turn update that takes this tab's turn publishes the new holder before an
 The connection banner is a full-width warning strip under the navbar. Loading shows a spinner first and `Waking the server…` after 3 seconds. A drop after the workspace was ready shows `Reconnecting…` immediately, switching to the waking copy only if the connected rejoin itself takes 3 seconds. Join success and canvas-only recovery clear the connection notice. A socket that has stopped retrying shows the existing error card. `pagehide` emits volatile `turn:release` for the live holder, including during canvas recovery, and removes that packet if the client buffered it. The server grace period remains the fallback. A `canvas:commit` that Socket.IO queues while the socket still reports connected is removed by that payload's identity, so the queue cannot flush it ahead of the next join. A commit the transport already sent stays uncertain until its acknowledgement or a snapshot.
 
 The holder sees `Name is waiting — passes in m:ss unless you edit` while a queue head and an idle deadline exist outside grace. The receipt is `performance.now()` at packet acceptance, including before a join defers the packet. Each render and timer tick recomputes the remainder. The text sits outside the polite live region. At zero the client keeps the turn until the server says otherwise.
+
+### Project chat backend (S23)
+
+Implemented under `specs/23-project-messages-api.md` and approved by Codex. The client panel is also implemented and approved in S24. All project roles can read and send messages without a turn. REST authorizes membership before validating the query and before parsing uploads. A slow upload reads membership again before insertion. That second check does not make project deletion and message insertion one transaction: a delete that commits after the insert starts can leave the row, and a failed later check can leave the uploaded file. S27 owns live deletion coordination and Clerk cleanup. No ImageKit cleanup service was added.
+
+History uses `GET /api/projects/:id/messages?before=<ISO>&beforeId=<id>&limit=50`. The optional `beforeId` pairs with `before` to order equal timestamps by `_id`; a timestamp-only cursor still means strictly older timestamps. The compound index above supports newest-first selection, and each page is returned oldest first as `{ messages, hasMore, nextCursor }`, where nextCursor is `{ before, beforeId }` or null. This refines the original timestamp-only outline to avoid skipped messages. POST returns `{ message }`; the non-volatile `project:message` broadcast includes every socket in the project room, including the sender's tabs. Both use the same whitelisted resource and sender projection (`_id fullName img`). A member who cannot chat receives `403` with `You cannot chat in this project`.
+
+Media uses the existing 25 MB image/video parser and `uploadChatMedia(file, folder = "/chat")`, passing `/collaborate` for projects. Direct messages still default to `/chat`. Project-only middleware maps upload input errors to 400 without changing DM behavior. Typing reuses the completed-join authority and cached chat permission, relays volatile to other sockets, and never records turn activity. After an owner delete removes the project, canvas cleanup and `ProjectMessage.deleteMany({ project })` run in that order. A cleanup throw does not return success. Room eviction remains S27.
+
+### Project chat client (S24)
+
+Implemented under `specs/24-project-chat-panel.md` and approved after two correction rounds; see its final review and HANDOFF.md for verification limits. `useProjectChatStore` owns history, REST sends, realtime merge, typing timers, unread, and the sound preference. It reads the workspace and session stores. The workspace store does not import it. `selectCanChat` allows an owner, editor, or viewer without a turn and does not read canvas sync or recovery. It requires a ready workspace, the live joined socket, the matching project, and the session account that authenticated that connection. The connection keeps that account for its socket id. A workspace retry or route rebind on the same id cannot give it to a different account. A new socket id can. A missing or replaced session socket still clears chat until a join for that account. A same-account retry still loads chat. A same-account transport disconnect still keeps the draft and file. Sending and typing use that selector. `selectCanEdit` and `selectIsHolder` are unchanged. Chat never emits `workspace:join` or `workspace:leave` and never enters the canvas commit loop.
+
+History is `GET /projects/:id/messages` with limit 50. Load earlier sends both `before` and `beforeId`. Pages, POST results, and `project:message` events merge by `_id`, oldest first by `createdAt` then `_id`. A page that arrives after a live message keeps that message. The cursor follows the history response. A reconnect replaces the displayed window with a new newest page. It does not replay sends, chime, or claim that the offline gap was fully loaded. Older rows stay reachable through Load earlier. There is no optimistic row and no automatic resend. A failed send keeps the draft and file. S23 has no idempotency key, so a manual retry after an uncertain send can create a second row.
+
+Unread counts a live message from another user only while the panel is closed or the document is hidden. Own messages and fetched history stay silent. The message chime uses its own AudioContext and does not replace the turn chime. Only `isSoundEnabled` persists, under `ajfm88-collaborate`. Typing emits volatile `project:typing` as `{ projectId, isTyping }`, refreshes `true` at most every 2 seconds, sends `false` after 2 seconds idle, and expires each incoming user after 5 seconds. Self, unknown users, and other projects are ignored.
 
 ## Invariants
 

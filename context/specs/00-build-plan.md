@@ -1,6 +1,6 @@
 # 00 — Build Plan: /collaborate in 30 Slices
 
-This is the whole build, designed before the first prompt. Each slice is one scoped, verifiable unit. Before a slice starts, Claude expands its entry below into a full spec file, `specs/NN-<name>.md` (Goal · Design · Implementation · Dependencies · Verify when done). Implementers build from the spec file, not from this summary.
+This is the whole build, designed before the first prompt. Each slice is one scoped, verifiable unit. Before a slice starts, the assigned spec author expands its entry below into a full spec file, `specs/NN-<name>.md` (Goal · Design · Implementation · Dependencies · Verify when done). Implementers build from the spec file, not from this summary.
 
 Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and the invariants), `3-ui-context.md` (visuals), `4-code-standards.md` (conventions), `5-ai-workflow-rules.md` (process), `6-progress-tracker.md` (state).
 
@@ -14,6 +14,8 @@ Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and t
 
 
 ## Slices
+
+**Checkpoint (2026-11-11):** S01-S24 are implemented and approved in code review. S23/S24 are uncommitted on HEAD `43eb732`; the user handles commits. S25-S30 remain. The user stopped after S24; S25 has no spec or implementation yet. Start next session from `../HANDOFF.md`, then write S25's full spec before implementation. Browser/two-account and launch QA remain open.
 
 Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices in different lanes with no dependency between them can run in parallel, one agent per lane, in separate git worktrees. Suggested parallel pairs: S04∥S02, S06∥S05, S19∥S17–S18, S23∥S21–S22, S26∥S24–S25.
 
@@ -195,7 +197,7 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 
 #### S23 · Project messages API and typing relay `server` · after S13
 - `projectMessage.model.js`.
-- `GET /api/projects/:id/messages?before=<ISO>&limit=50`: member only, oldest-first page, sender populated.
+- `GET /api/projects/:id/messages?before=<ISO>&beforeId=<id>&limit=50`: member only, oldest-first page, sender populated. S23's full spec defines `{ messages, hasMore, nextCursor }`; optional `beforeId` breaks equal-timestamp ties using the `{ project: 1, createdAt: -1, _id: -1 }` index.
 - `POST /api/projects/:id/messages`: `upload.single("media")`, any member role. Text ≤ 2,000 or media is required. Emits `project:message` to the room.
 - `uploadChatMedia(file, folder = "/chat")` gains the folder parameter, and collaborate uses `/collaborate`. Existing chat calls are unchanged.
 - `project:typing` is relayed to the room except the sender, joined members only.

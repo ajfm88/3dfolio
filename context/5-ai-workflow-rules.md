@@ -11,11 +11,11 @@ Build `/collaborate` incrementally with a spec-driven workflow:
 
 Implement exactly what the spec says, no more and no less. Don't infer or invent behavior.
 
-Implementers are assigned slice by slice (Grok, Codex, Nemotron). Claude reviews by default, and the tracker records who reviewed each slice. The user assigns slices and commits.
+Implementers and reviewers are assigned by the user slice by slice. The current arrangement is Grok implementing and Codex writing specs/reviewing; the tracker records actual assignments and approvals. The user handles commits. Read HANDOFF.md for the latest stopping point.
 
 ## The Cycle
 
-1. **Spec.** Claude writes `specs/NN-<name>.md` from the build plan just before the slice starts, so it reflects the code as it actually is. Don't start a slice without its spec file.
+1. **Spec.** The assigned spec author writes `specs/NN-<name>.md` from the build plan just before the slice starts, so it reflects the code as it actually is. Don't start a slice without its spec file.
 2. **Implement.** When the user assigns slice NN:
    - Read `specs/NN-<name>.md`.
    - Set the slice to **In progress** in `6-progress-tracker.md`.
@@ -23,9 +23,9 @@ Implementers are assigned slice by slice (Grok, Codex, Nemotron). Claude reviews
    - Run the verification below.
    - Set it to **Ready for review** and add a slice note: what changed, how you verified it, deviations.
    - Stop.
-3. **Review.** Claude reviews the uncommitted diff against the spec's checklist, the invariants in `2-architecture.md`, and `4-code-standards.md`, and reruns the build and every test suite itself instead of relying on the slice note. Findings set the slice to **Changes requested**.
+3. **Review.** The assigned reviewer reviews the uncommitted diff against the spec's checklist, the invariants in `2-architecture.md`, and `4-code-standards.md`, and reruns the build and every test suite itself instead of relying on the slice note. Findings set the slice to **Changes requested**.
 4. **Correct.** Fix only what the review lists. Don't change anything else.
-5. **Approve and commit.** Claude marks the slice **Approved**. The user commits it. **Implementers never commit, push, or create branches.**
+5. **Approve and commit.** The assigned reviewer marks the slice **Approved**. The user commits it. **Implementers never commit, push, or create branches.**
 
 ## Scoping Rules
 
@@ -43,7 +43,7 @@ If the spec turns out to require any of the following, stop and record it as an 
 - changing a socket event, payload, collection, or limit defined in `2-architecture.md`
 - changing behavior of `/blog`, `/chat`, the portfolio, `/gft`, or the admin panel
 
-If a slice can't be verified end to end in one session, the spec is too broad. Say so in the tracker, and Claude will split it.
+If a slice can't be verified end to end in one session, the spec is too broad. Say so in the tracker, and the assigned spec author will split it.
 
 ## Handling Missing Requirements
 
@@ -65,7 +65,7 @@ Don't modify these unless the current slice's spec explicitly names them:
 ## Keeping Docs in Sync
 
 - Document new endpoints, socket events, and collections in `server/readme.md` in the same slice.
-- If implementation forces a change to architecture, storage, standards, UI tokens, or scope, update the relevant context file **in the same slice**, and call it out in the slice note. Claude will check it.
+- If implementation forces a change to architecture, storage, standards, UI tokens, or scope, update the relevant context file **in the same slice**, and call it out in the slice note. The assigned reviewer will check it.
 - `6-progress-tracker.md` reflects the actual state, never the intended state.
 
 ## Local Verification
@@ -99,14 +99,14 @@ Run the verification in context/5-ai-workflow-rules.md, mark it Ready for review
 with your slice note, and stop. Do not commit.
 ```
 
-**Correct** (user to agent, from Claude's review):
+**Correct** (user to agent, from the assigned reviewer's findings):
 
 ```text
 Review findings for slice NN: [paste findings].
 Fix only these. Do not change anything else. Update the slice note and mark it Ready for review again.
 ```
 
-**Close** (user, after Claude approves):
+**Close** (user, after the assigned reviewer approves):
 
 ```text
 Slice NN is approved. Commit it as <next number>. <summary>: with bullet points, matching the repo's history.

@@ -23,6 +23,28 @@ import { useSessionStore } from "./useSessionStore.js";
 // still matches this object, the socket id captured at emit, and its attempt.
 let activeBinding = null;
 
+// Socket.IO authenticates at handshake. A workspace retry or route rebind on
+// the same connection id does not make that transport belong to someone else.
+const connectionAccounts = new WeakMap();
+
+function connectionAccount(socket) {
+  if (!socket) return "";
+  const known = connectionAccounts.get(socket);
+  if (!known || known.id !== socket.id) return "";
+  return known.accountId;
+}
+
+function rememberConnectionAccount(socket) {
+  const connectionId = socket?.id ?? "";
+  if (!socket || !connectionId) return "";
+  const known = connectionAccounts.get(socket);
+  if (known && known.id === connectionId) return known.accountId;
+  const accountId = selfUserId();
+  if (!accountId) return "";
+  connectionAccounts.set(socket, { id: connectionId, accountId });
+  return accountId;
+}
+
 const syncDeps = {
   get: () => emptyWorkspace("idle"),
   set: () => {},
@@ -92,6 +114,36 @@ export const selectCanEdit = (state) => {
   if (!socket?.connected) return false;
   if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
   return selectIsHolder(state);
+};
+
+// Chat stays available to every project role without a turn, including while
+// the canvas is syncing or recovering. The account id is the one that
+// authenticated this connection. A later account cannot claim it by retrying
+// the join, and a missing or replaced session socket does not inherit it.
+export const selectCanChat = (state) => {
+  if (state.status !== "ready") return false;
+  if (!JOIN_ROLES.has(state.role)) return false;
+  const binding = activeBinding;
+  if (!binding || binding.disposed) return false;
+  const socket = binding.socket;
+  if (!socket?.connected) return false;
+  if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
+  if (state.project?._id !== binding.projectId) return false;
+  const session = useSessionStore.getState();
+  if (!session.socket || session.socket !== socket) return false;
+  const accountId = selfUserId();
+  const owner = connectionAccount(socket);
+  if (!accountId || accountId !== owner || accountId !== binding.joinedAccountId) return false;
+  return true;
+};
+
+// A session account change, or a session socket that is missing or replaced,
+// drops chat authority until a join whose connection id belongs to that
+// account. Canvas and turn checks do not read this field.
+export function revokeJoinedAccount(socket) {
+  const binding = activeBinding;
+  if (!binding || binding.disposed || binding.socket !== socket) return;
+  binding.joinedAccountId = "";
 }
 
 syncDeps.canEdit = () => selectCanEdit(syncDeps.get());
@@ -335,6 +387,7 @@ function failConnection(set, binding) {
   binding.inFlight = null;
   binding.presenceBuffer = null;
   if (binding.sync) invalidateSession(binding.sync);
+  binding.joinedAccountId = "";
   binding.previewController?.clearAllOverlays();
   binding.previewThrottle?.cancel();
   clearBindingCursors(binding);
@@ -371,6 +424,7 @@ function startJoin(set, binding, force) {
   const keepDenial = Boolean(binding.sync?.denialRejoin);
   invalidateSession(binding.sync, { keepDenial });
   binding.sync.joinedConnectionId = connectionId;
+  binding.joinedAccountId = rememberConnectionAccount(socket);
 
   const attempt = ++binding.attempt;
   const projectId = binding.projectId;
@@ -599,6 +653,7 @@ export const useWorkspaceStore = create((set, get) => {
         binding.socket.volatile.emit("canvas:preview", { projectId, nodes });
       }, 50),
       previewController,
+      joinedAccountId: "",
       tabId: getTabId(),
       // The callback revalidates its own binding, join attempt and connection
       // when it runs, so queued work never reaches a replacement binding.
@@ -658,6 +713,7 @@ export const useWorkspaceStore = create((set, get) => {
         binding.inFlight = null;
         invalidateSession(binding.sync);
         binding.sync.joinedConnectionId = null;
+        binding.joinedAccountId = "";
         binding.presenceBuffer = null;
         binding.previewController.clearAllOverlays();
         binding.previewThrottle.cancel();

@@ -69,7 +69,7 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside three extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`), a **blog** (`/blog`), and a **real-time chat** (`/chat`).
+Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside three extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`), a **blog** (`/blog`), and a **real-time chat** (`/chat`). A turn-based collaborative diagram workspace is also in development at `/collaborate`, reachable by URL only. Its project chat is implemented through S24; it is not launch-ready. See [the current handoff](context/HANDOFF.md) and [progress tracker](context/6-progress-tracker.md).
 
 ## 🚀 <a name="live-app">Live App</a>
 
@@ -83,9 +83,9 @@ The site runs on two backends, each serving the half of the app it fits.
 | Layer                         | Backend                                      | Powers                                        | Hosting |
 | ----------------------------- | -------------------------------------------- | --------------------------------------------- | ------- |
 | This root project             | Firebase — Firestore, Storage, Auth          | The 3D portfolio, `/gft`, and the admin panel | Vercel  |
-| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog` and `/chat`                           | Render  |
+| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog`, `/chat`, and `/collaborate`         | Render  |
 
-Firebase serves single-author content over plain REST calls, with no server to run or keep alive. The blog and chat need relational references between users, posts, comments, and messages, plus a WebSocket server for presence and message delivery, so they run against a separate API committed in [`server/`](server/readme.md). Both features share one auth system, one database, and one deployment rather than standing up two.
+Firebase serves single-author content over plain REST calls, with no server to run or keep alive. The blog and chat need relational references between users, posts, comments, and messages, plus a WebSocket server for presence and message delivery, so they run against a separate API committed in [`server/`](server/readme.md). The blog, direct messages, and workspace share one auth system, database, and deployment.
 
 Every feature route is lazy-loaded, so Clerk, Axios, Zustand, and socket.io-client never reach the main portfolio bundle. The full API surface, schema, and socket events are documented in [`server/readme.md`](server/readme.md).
 

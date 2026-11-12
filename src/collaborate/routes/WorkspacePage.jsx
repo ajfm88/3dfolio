@@ -2,21 +2,18 @@ import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import WorkspaceCanvas from "../components/canvas/WorkspaceCanvas";
+import ProjectChatPanel from "../components/chat/ProjectChatPanel.jsx";
 import ConnectionBanner from "../components/workspace/ConnectionBanner";
 import TurnBar from "../components/workspace/TurnBar";
 import WorkspaceNavbar from "../components/workspace/WorkspaceNavbar";
+import useVisualViewportHeight from "../hooks/useVisualViewportHeight.js";
+import { bindProjectChat, useProjectChatStore } from "../store/useProjectChatStore.js";
 import { useSessionStore } from "../store/useSessionStore";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 
 // Same spinner as CollaborateLoader. It stays local so the dashboard module
 // does not have to export a piece only the workspace uses.
 const spinnerClass = "h-8 w-8 animate-spin rounded-full border-2 border-[var(--collab-border-strong)] border-t-[var(--collab-accent-2)]";
-
-const WorkspaceLoader = () => (
-  <div className="flex min-h-[100dvh] items-center justify-center">
-    <div className={spinnerClass} />
-  </div>
-);
 
 const cardFrame =
   "flex min-h-[100dvh] items-center justify-center p-4 sm:p-6";
@@ -60,18 +57,34 @@ const WorkspacePage = () => {
   const status = useWorkspaceStore((s) => s.status);
   const connectionNotice = useWorkspaceStore((s) => s.connectionNotice);
   const bindWorkspace = useWorkspaceStore((s) => s.bindWorkspace);
+  const chatOpen = useProjectChatStore((s) => s.isOpen);
+  const viewportHeight = useVisualViewportHeight();
+  const shellStyle = typeof viewportHeight === "number" ? { height: `${viewportHeight}px` } : undefined;
 
   useEffect(() => {
-    return bindWorkspace(socket, projectId);
+    // Listeners attach before join can deliver room traffic. Chat is released
+    // first so workspace:leave cannot land in a panel that still believes it is current.
+    const disposeChat = bindProjectChat(socket, projectId);
+    const disposeWorkspace = bindWorkspace(socket, projectId);
+    return () => {
+      disposeChat();
+      disposeWorkspace();
+    };
   }, [socket, projectId, bindWorkspace]);
 
   if (status === "notFound") return <NotFoundCard />;
   if (status === "error") return <ErrorCard />;
 
-  if ((status === "idle" || status === "loading") && !connectionNotice) return <WorkspaceLoader />;
+  if ((status === "idle" || status === "loading") && !connectionNotice) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center" style={shellStyle}>
+        <div className={spinnerClass} />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className="flex h-[100dvh] min-w-0 flex-col overflow-hidden" style={shellStyle}>
       <WorkspaceNavbar />
       <ConnectionBanner />
       {status === "idle" || status === "loading" ? (
@@ -79,9 +92,12 @@ const WorkspacePage = () => {
           <div className={spinnerClass} />
         </main>
       ) : (
-        <main className="relative min-h-0 flex-1">
-          <WorkspaceCanvas />
-          <TurnBar />
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <WorkspaceCanvas />
+            <TurnBar />
+          </div>
+          {chatOpen ? <ProjectChatPanel /> : null}
         </main>
       )}
     </div>

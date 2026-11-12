@@ -1,6 +1,6 @@
 # 3dfolio — Backend (Server)
 
-A REST API and WebSocket server built with Express 5, MongoDB, Clerk authentication, and Socket.io. The server handles all business logic, database operations, media uploads via ImageKit, and real-time message delivery for the two dynamic features of the portfolio: the blog (`/blog`) and the real-time chat (`/chat`). Both features run on a single auth system, a single database, and a single deployment.
+A REST API and WebSocket server built with Express 5, MongoDB, Clerk authentication, and Socket.io. The server handles all business logic, database operations, media uploads via ImageKit, and real-time message delivery for the blog (`/blog`), direct-message chat (`/chat`), and the collaborative workspace (`/collaborate`). They share Clerk authentication, MongoDB, and one deployment. Project chat is separate from direct messages while reusing Socket.IO and the media upload infrastructure.
 
 <div align="center">
   <img src="../mern.png" alt="MERN stack — MongoDB, Express, React, Node" width="600">
@@ -98,8 +98,9 @@ server/
 │   ├── lib/
 │   │   ├── db.js                     # MongoDB connection, exits the process on failure
 │   │   ├── roles.js                  # resolveRole — Clerk claim, webhook-mirrored fallback
-│   │   ├── imagekit.js               # Lazily built ImageKit client and chat media upload
+│   │   ├── imagekit.js               # Lazily built ImageKit client; DM folder /chat, project folder /collaborate
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
+│   │   ├── projectMessages.js        # Project chat query, text, paging, and response whitelist
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
 │   │   ├── turns.js                  # Pure turn state: holder, queue, grace, and idle
@@ -109,20 +110,23 @@ server/
 │   ├── middleware/
 │   │   ├── auth.middleware.js        # protectRoute (signed in) and requireAdmin (role gate)
 │   │   ├── increaseVisit.js          # Atomic $inc of a post's visit counter
-│   │   └── upload.middleware.js      # Multer config for chat media uploads
+│   │   ├── upload.middleware.js      # Multer config for chat media uploads
+│   │   └── projectMessage.middleware.js # Project chat membership, then project-only upload errors
 │   ├── controllers/
 │   │   ├── auth.controller.js        # Returns the current synced user
 │   │   ├── post.controller.js        # Post CRUD, featuring, and upload authorization
 │   │   ├── comment.controller.js     # Comment list, add, and delete handlers
 │   │   ├── message.controller.js     # Message history, conversations, and send + emit
-│   │   └── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
+│   │   ├── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
+│   │   └── projectMessage.controller.js # Project chat history and send, then room broadcast
 │   ├── models/
-│   │   ├── user.model.js             # Mongoose User model — shared by both features
+│   │   ├── user.model.js             # Mongoose User model — shared identity for blog, DMs, and workspace
 │   │   ├── post.model.js             # Mongoose Post model
 │   │   ├── comment.model.js          # Mongoose Comment model
 │   │   ├── message.model.js          # Mongoose Message model
 │   │   ├── project.model.js          # Project ownership, members, and pending invites
-│   │   └── canvas.model.js           # One versioned canvas snapshot per project
+│   │   ├── canvas.model.js           # One versioned canvas snapshot per project
+│   │   └── projectMessage.model.js   # One project chat message; collection projectmessages
 │   ├── routes/
 │   │   ├── auth.route.js             # /api/auth routes
 │   │   ├── post.route.js             # /api/posts routes
@@ -131,7 +135,7 @@ server/
 │   │   └── project.route.js          # /api/projects routes
 │   ├── sockets/
 │   │   ├── chat.socket.js            # Chat presence, typing, and disconnect handlers
-│   │   └── workspace.socket.js       # Workspace join, leave, and disconnect cleanup
+│   │   └── workspace.socket.js       # Workspace join, leave, canvas, turns, cursors, and project typing
 │   ├── webhooks/
 │   │   └── clerk.webhook.js          # Clerk to MongoDB user sync and cascade deletes
 │   └── index.js                      # Express app entry point
@@ -142,7 +146,11 @@ server/
 │   ├── turn.socket.test.js           # Turn events, enforcement, grace, idle, and the sweeper
 │   ├── turns.test.js                 # Turn request, release, reclaim, grace, and idle
 │   ├── workspaceRooms.test.js        # Room registry and serial queue, with no database
-│   └── workspace.socket.test.js      # Join, leave, and cancellation, with models stubbed
+│   ├── workspace.socket.test.js      # Join, leave, and cancellation, with models stubbed
+│   ├── projectMessages.test.js       # Project message schema, cursor, and response shaping
+│   ├── projectMessage.api.test.js    # History, send, upload rejection, and delete cascade
+│   ├── projectTyping.socket.test.js  # Project typing authority and relay
+│   └── imagekit.test.js              # DM /chat default and project /collaborate folder
 ├── .env                              # Environment variables
 ├── .env.example
 ├── package.json
@@ -236,9 +244,33 @@ All requests to `/api/projects` require a valid Clerk session.
 | POST   | `/api/projects`     | Any signed-in user, under the cap | Create a project                        |
 | GET    | `/api/projects/:id` | Member (any role)                 | One project and the caller's role       |
 | PATCH  | `/api/projects/:id` | Owner                             | Rename or change the description        |
-| DELETE | `/api/projects/:id` | Owner                             | Delete the project and its canvas       |
+| DELETE | `/api/projects/:id` | Owner                             | Delete the project, its canvas, and its chat |
+| GET    | `/api/projects/:id/messages` | Member (any role)          | One page of project chat, oldest first  |
+| POST   | `/api/projects/:id/messages` | Member (any role)          | Send text and/or one image or video     |
 
 A non-member, or a request with an invalid id, gets `404`, so a project's existence never leaks. A member without permission gets `403`.
+
+Project chat uses the same membership check. Owner, editor, and viewer may read and send without holding a turn and without a socket. The route authorizes the caller before it validates the query or reads an upload. A signed-out request is still `401` from `protectRoute`.
+
+`GET /api/projects/:id/messages` accepts `limit`, `before`, and `beforeId`.
+
+| Query | Rule |
+| ----- | ---- |
+| `limit` | Omitted means 50. A single decimal integer string from 1 to 50 is accepted. `0`, `51`, a prefix such as `10abc`, a repeated key, an array, or an object is `400` with `Limit must be a whole number from 1 to 50`. The server does not clamp. |
+| `before` | Optional. It must be one canonical UTC timestamp, where `new Date(value).toISOString() === value`. Anything else is `400` with `before must be a UTC timestamp`. |
+| `beforeId` | Optional tie-breaker. It requires `before`, or the response is `400` with `beforeId requires before`. It must be one 24-character hex id, stored lowercase. A bad id is `400` with `beforeId must be a message id`. It is not a lookup of another project's message. |
+
+The query is always limited to the authorized project. With both cursor fields the filter is `createdAt < before` OR (`createdAt` equal to `before` AND `_id < beforeId`). With only `before`, it is strictly `createdAt < before`. Rows are read newest first (`createdAt` descending, then `_id` descending), `limit + 1` of them, and the extra row is dropped. The returned page is oldest first. `hasMore` is true only when that extra row existed. `nextCursor` is `{ before, beforeId }` taken from the oldest returned row when `hasMore` is true, and `null` otherwise. An empty page is `{ messages: [], hasMore: false, nextCursor: null }`.
+
+Each message is exactly `{ _id, project, sender, text, image, video, createdAt, updatedAt }`. `sender` is `{ _id, fullName, img }`, or `null` when that user is gone. Email, Clerk ids, and `__v` are not included. Ids are strings and dates are ISO timestamps. Absent text, image, or video is `""`.
+
+`POST /api/projects/:id/messages` accepts JSON or `multipart/form-data`. Missing `text` means empty text. Present `text` must be a string; a number, array, object, or repeated multipart field is `400` with `Message text must be text`. Length is checked against 2,000 characters before outer whitespace is trimmed, and internal newlines stay. The stored text is the trimmed string. The message needs trimmed text or one `media` file. Text plus one file is valid. Media alone is valid. An empty body is `400` with `A message needs text or one attachment`. Invalid text is `400` even when a file is attached, and ImageKit is not called. A request with no file does not check ImageKit. Body fields such as `_id`, `project`, `sender`, `image`, and `video` are ignored.
+
+A file is uploaded only after that text check. Missing ImageKit configuration returns `503` with `Media upload is not configured`, and nothing is saved or broadcast. The file goes to the `/collaborate` folder. A `video/*` MIME is stored on `video`; any other accepted file is stored on `image`. After the upload returns, membership is read again. A caller who is no longer a member gets `404` and no insert. A member who cannot chat gets `403` with `You cannot chat in this project`. That second check is not a transaction with project deletion: a delete that lands after the insert has started can still leave the message, and a failed later check can leave the ImageKit file in place. There is no cleanup job for those files.
+
+The save is awaited, the sender is populated with `_id fullName img`, and the whitelist above is built. Only then does the server emit a non-volatile `project:message` to `project:<projectId>`, including the sender's own sockets in that room. Sockets in another project, and sockets that are only in a per-user room, do not receive it. Sending does not create a workspace room. The HTTP response is `201` and `{ message }` with that same resource. A validation, upload, or save failure emits nothing. An upload or save that throws reaches the central error handler.
+
+Owner delete still requires the manage permission and a `deleteOne` that matches the owner. Only after that delete removes a row does the handler delete the canvas and then `projectmessages` for that project. A missing canvas or an empty history is still success. The response is `200` with `{ "message": "Project deleted" }`. A non-owner, an outsider, an invalid id, or a delete that matches nothing does not delete messages. If message cleanup throws, the handler does not return success. Removing people from the room, and deleting a Clerk user's messages, stay later work.
 
 ## Authorization
 
@@ -300,6 +332,7 @@ Sockets authenticate exactly like REST requests: the client sends its Clerk sess
 | `turn:release`    | `{ projectId }` | No ack. Any joined tab may send it. The holder passes the turn to the next queued tab. |
 | `turn:cancel`     | `{ projectId }` | No ack. Any joined tab may send it. That tab leaves the queue. |
 | `turn:reclaim`    | `{ projectId }` | No ack. A joined owner takes the turn. An editor's call changes nothing. |
+| `project:typing`  | `{ projectId, isTyping }` | No ack. Any joined member. `isTyping` must be a boolean. Unknown fields are ignored. |
 
 `workspace:join` ignores a call that has no acknowledgement function. `projectId` is a 24-character hex ObjectId and `tabId` is a UUID v4; both are matched case-insensitively and stored lowercase. Any other field on the payload is ignored. The server uses the authenticated socket user, never a user id or role in the payload.
 
@@ -352,7 +385,7 @@ A successful commit acknowledges `{ "ok": true, "version": 5 }` and does not ret
 
 A write that throws, or that comes back without an acknowledgement, does not advance the cache and does not broadcast. The room then reloads the saved canvas before a later commit or sync can succeed. A reload that fails stays closed rather than serving the cache from before the uncertain write. Sync normally returns that cache without writing. It does not increment the version, broadcast, or create a canvas. A snapshot is a copy of the whitelisted fields.
 
-The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews are a volatile relay with no ack and no persistence, and each client drops an overlay 3 seconds after its last sample. Only the tab holding the turn may send one. Cursor events are ephemeral and do not touch the database; they are relayed only to connected sockets in the project room.
+The queue and the refresh flag live in this process. A restart loads the saved canvas on the next join. Two server instances would not share them. Previews are a volatile relay with no ack and no persistence, and each client drops an overlay 3 seconds after its last sample. Only the tab holding the turn may send one. Cursor events are ephemeral and do not touch the database; they are relayed only to connected sockets in the project room. `project:typing` uses that same completed join. The payload is a plain object, `projectId` is a 24-character hex id stored lowercase, and `isTyping` is a boolean. A bad payload, a socket that is not in that finished join, or a cached role that cannot chat is dropped with no acknowledgement. The relay is volatile and excludes the sending socket. It does not read or write the database, enqueue canvas work, or mark turn activity. A leave for a different project does not remove this authority. A leave for this project, a disconnect, or a join that has not finished does.
 
 Only the tab holding the turn may commit or send a preview. A holder who disconnects or leaves keeps the turn for 20 seconds when someone else is still in the project, and the same tab id can take it back by joining again. A holder who is alone loses the turn immediately, because an empty room is discarded. While at least one tab is waiting, 2 minutes without a commit or a preview passes the turn on. The sweeper runs every 5 seconds, so a hand-off can land up to 5 seconds after the deadline. Turn state is kept in memory only and is lost on restart.
 
@@ -371,6 +404,8 @@ Only the tab holding the turn may commit or send a preview. A holder who disconn
 | `cursor:move`    | `{ projectId, userId, x, y }` | Volatile relay of a remote cursor position. `userId` is the authenticated Mongo userId. Relayed with `socket.to(room).volatile.emit`, so every other socket in the project room receives it and the sender does not. One latest position per user; other tabs of the same user replace it. Viewers also emit. |
 | `cursor:leave`   | `{ projectId, userId }` | Volatile relay. Sent when a remote cursor leaves the canvas. The UI removes that user's cursor immediately. |
 | `presence:update` | `{ projectId, participants }` | Full roster after a join attaches or a socket is removed. Not volatile, no ack, and not written to the database. Sent with `io.to` to `project:<projectId>` only, including sockets still in that room. The user drops off when their last tab leaves or disconnects. |
+| `project:message` | `{ projectId, message }` | Not volatile. Sent with `io.to` to `project:<projectId>` after the message is saved, including the sender's tabs. `message` is the same whitelist as `GET` and `POST`. |
+| `project:typing`  | `{ projectId, userId, isTyping }` | Volatile. `socket.to` on that project room, so the sending socket is excluded and its other tabs are included. `userId` is the authenticated socket user. Not stored, and it does not refresh the turn idle clock. |
 
 Presence is an in-memory map of `userId` to a `Set` of socket ids. A user goes offline only once their last tab disconnects. That map is global chat presence. Workspace participants are a separate project-room roster and are not derived from it. Every handler is wrapped so that an exception inside one event cannot take down the process, which also serves the blog. Workspace join acknowledges on the same event instead of emitting a second one.
 
@@ -530,6 +565,75 @@ Called as the owner.
 
 A non-owner member receives no `invites` key. It is absent, not an empty array.
 
+### GET `/api/projects/:id/messages?limit=2`
+
+Called by a member. The first page omits both cursors.
+
+**Response:**
+
+```json
+{
+  "messages": [
+    {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d8",
+      "project": "64f1a2b3c4d5e6f7a8b9c0d5",
+      "sender": {
+        "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+        "fullName": "Alejandro Foucault",
+        "img": ""
+      },
+      "text": "First note",
+      "image": "",
+      "video": "",
+      "createdAt": "2026-11-11T12:00:00.000Z",
+      "updatedAt": "2026-11-11T12:00:00.000Z"
+    }
+  ],
+  "hasMore": true,
+  "nextCursor": {
+    "before": "2026-11-11T12:00:00.000Z",
+    "beforeId": "64f1a2b3c4d5e6f7a8b9c0d8"
+  }
+}
+```
+
+The next page sends both `before` and `beforeId` from `nextCursor`. The last page returns `hasMore: false` and `nextCursor: null`.
+
+### POST `/api/projects/:id/messages`
+
+JSON, text only:
+
+```json
+{ "text": "  Saved with the newline\nin the middle  " }
+```
+
+The stored `text` is `Saved with the newline\nin the middle`. A body longer than 2,000 characters before that trim is rejected.
+
+Multipart uses the field `text` (optional) and one file field named `media`. The file is an image or a video, at most 25 MB, and is stored under `/collaborate`.
+
+**Response `201`:**
+
+```json
+{
+  "message": {
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d9",
+    "project": "64f1a2b3c4d5e6f7a8b9c0d5",
+    "sender": {
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "fullName": "Alejandro Foucault",
+      "img": ""
+    },
+    "text": "Look at this",
+    "image": "https://ik.imagekit.io/<id>/collaborate/photo.jpg",
+    "video": "",
+    "createdAt": "2026-11-11T12:00:02.000Z",
+    "updatedAt": "2026-11-11T12:00:02.000Z"
+  }
+}
+```
+
+That `message` object is also the `message` field of the `project:message` event. The chat panel that renders this history is not on the server; this slice only stores and broadcasts it.
+
 ## Database Schema
 
 ### Users Collection
@@ -644,6 +748,26 @@ Index: { project: 1 } (unique)
 
 Canvas content is validated field by field by the shared canvas ops module (S06), not the schema. The first workspace join creates an empty snapshot if one does not exist. Join normalizes the loaded graph in memory and does not write that normalized graph back. Edits made after the snapshot loads are committed by the client (S15) through `canvas:commit`. A reconnect loads the stored snapshot again and drops anything that was still unsent.
 
+### Project Messages Collection
+
+Collection name: `projectmessages`. This is separate from the direct-message `messages` collection.
+
+```
+{
+  _id:       ObjectId,
+  project:   ObjectId (ref: Project, required),
+  sender:    ObjectId (ref: User, required),
+  text:      String (default: "", max 2000),
+  image:     String (default: ""),
+  video:     String (default: ""),
+  createdAt: Date,
+  updatedAt: Date
+}
+Index: { project: 1, createdAt: -1, _id: -1 }
+```
+
+A saved message needs nonblank text or exactly one of `image` and `video`. Numbers, arrays, and objects are not cast into those strings. Owner delete removes every row whose `project` is the deleted project. Direct messages are not part of that cascade.
+
 ## Validation Rules
 
 ### Posts
@@ -675,6 +799,8 @@ Canvas content is validated field by field by the shared canvas ops module (S06)
 | Authorization    | Admin, signed params, 30 min expiry | Signed-in session       |
 
 Blog covers upload straight from the browser because the editor references the returned URL in a later step. Chat media goes through the server because `sendMessage` needs the media URL before it can save the message and emit it over the socket.
+
+Project chat uses that same 25 MB image/video parser and the same `media` field. One file is stored under `/collaborate`. A direct message still uses `/chat` when its caller passes one argument. A project upload that is too large answers `400` with `File too large`. A field other than `media`, or a second file, answers `400` with `Unexpected file field`. A file that is neither an image nor a video answers `400` with `Only image and video uploads are allowed`. Those three mappings apply only to the project route. Direct-message upload errors are unchanged. Missing ImageKit configuration is `503` with `Media upload is not configured`, and only when the project request includes a file.
 
 ## Error Handling
 

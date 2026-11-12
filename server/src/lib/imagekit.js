@@ -24,14 +24,16 @@ function createFileName(originalName = "upload") {
   return `chat-${Date.now()}-${safeName}`;
 }
 
-export async function uploadChatMedia(file) {
+// Direct messages keep the original folder when the caller passes one argument.
+// Project chat passes "/collaborate" so its files do not land in the DM folder.
+export async function uploadChatMedia(file, folder = "/chat") {
   const ik = getImageKitClient();
   const fileName = createFileName(file.originalname);
 
   const result = await ik.files.upload({
     file: await toFile(file.buffer, fileName, { type: file.mimetype }),
     fileName,
-    folder: "/chat",
+    folder,
   });
 
   return result.url;

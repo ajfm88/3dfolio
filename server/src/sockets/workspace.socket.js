@@ -1013,6 +1013,36 @@ function onCursorMove(io, socket, registry, deps, payload) {
   }
 }
 
+function validTyping(payload) {
+  if (!isRecord(payload)) return null;
+  if (typeof payload.projectId !== "string" || !OBJECT_ID.test(payload.projectId)) return null;
+  if (typeof payload.isTyping !== "boolean") return null;
+  return { projectId: payload.projectId.toLowerCase(), isTyping: payload.isTyping };
+}
+
+// Same completed-join gate as a cursor. Typing is not turn activity, and it
+// does not read the database: the role cached at join is enough until S27.
+function onTyping(socket, registry, payload) {
+  const validated = validTyping(payload);
+  if (!validated) return;
+
+  const userId = readUserId(socket);
+  if (!userId) return;
+
+  const authorized = authorizeCursor(socket, registry, validated.projectId, userId);
+  if (!authorized) return;
+
+  try {
+    socket.to(roomName(validated.projectId)).volatile.emit("project:typing", {
+      projectId: validated.projectId,
+      userId,
+      isTyping: validated.isTyping,
+    });
+  } catch (error) {
+    logHandler("project:typing", error);
+  }
+}
+
 function onCursorLeave(io, socket, registry, deps, payload) {
   const validated = validCursorLeave(payload);
   if (!validated) return;
@@ -1098,6 +1128,10 @@ export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRe
 
   socket.on("cursor:leave", safeHandler("cursor:leave", (payload) => (
     onCursorLeave(io, socket, roomRegistry, deps, payload)
+  )));
+
+  socket.on("project:typing", safeHandler("project:typing", (payload) => (
+    onTyping(socket, roomRegistry, payload)
   )));
 
   socket.on("turn:request", safeHandler("turn:request", (payload) => (

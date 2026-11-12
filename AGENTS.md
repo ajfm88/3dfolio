@@ -15,6 +15,8 @@ Update `context/6-progress-tracker.md` after each meaningful implementation chan
 
 If implementation changes the architecture, scope, or standards documented in the context files, update the relevant file before continuing.
 
-Never commit, push, or create branches. Claude reviews every slice, and the user commits.
+Current handoff: `context/HANDOFF.md`. S23 and S24 passed Codex review and remain uncommitted on HEAD `43eb732`. Work stopped at the user's request; S25 has no spec or implementation yet. Recheck git and the tracker before resuming.
+
+Never commit, push, or create branches. The user assigns implementers/reviewers and handles commits. The current arrangement is Grok implementing and Codex specifying/reviewing; historical Claude review notes remain valid history.
 
 For work unrelated to `/collaborate` (portfolio, blog, chat, admin), follow the existing code, `readme.md`, and `server/readme.md`. The protected-file rules in `context/5-ai-workflow-rules.md` still apply while a slice is in progress.

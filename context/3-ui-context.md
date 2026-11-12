@@ -105,8 +105,8 @@ There's no component library: components are hand-built with Tailwind and the to
   - an **Invitations** list (only when non-empty), then **My projects** and **Shared with me** as responsive card grids (1 / 2 / 3 columns)
   - empty states with a lucide icon (`h-8 w-8`), one line of copy, and a call to action
 - **Workspace (`/collaborate/:projectId`):** a full viewport (`h-[100dvh]`, following the visual viewport on phones like chat does), split into:
-  - **Navbar:** height `h-14`, `bg-[var(--collab-panel)]`, bottom border. Left: back to Projects and the project name. Right: participant stack, Share, and the chat toggle.
-  - **Main row:** the canvas (`flex-1`) plus a chat panel on the right (`w-80`, left border) at `lg` and up. Below `lg` the chat panel becomes a bottom drawer.
+  - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: back to Projects and the project name (`min-w-0 truncate`). Right: participant stack, role badge, and the Chat toggle. Share stays S28.
+  - **Main row:** at `lg` and above, a relative `min-w-0 flex-1` canvas column plus, when chat is open, one complementary panel (`lg:w-80`, left border). Below `lg` that same panel is the bottom flex child, capped at `max-h-[70%]`, with no second copy, scrim, or focus trap. The canvas column holds the canvas and `TurnBar`.
   - **Floating over the canvas:**
     - `TurnBar`: top center, glass pill
     - `ShapePanel`: bottom center, glass pill, holder only
@@ -114,6 +114,14 @@ There's no component library: components are hand-built with Tailwind and the to
     - `ConnectionBanner`: a full-width strip under the navbar, warning-tinted
 - **Dialogs:** a centered `rounded-3xl` card on `--collab-elevated`, with a `bg-black/60 backdrop-blur-sm` scrim. Escape closes it and focus is trapped.
 - **Read-only state:** while you're not holding the turn, the canvas shows no editing affordances (no shape panel, toolbar, or resize handles). The turn bar says why, so it never looks broken.
+
+## S24 chat layout
+
+Implemented under `specs/24-project-chat-panel.md` and code-approved by Codex. Browser layout, keyboard/focus, live-media and two-account checks remain open; see HANDOFF.md. Chat starts closed on a new project route. One `<aside role="complementary">` is mounted only while the workspace is ready and the panel is open. At `lg` and above it is a `w-80` right column with a left border. Below `lg` it is the bottom flex child of the workspace main area, `max-h-[70%]`, with a top border. There is no scrim, focus trap, or `aria-modal`. The canvas and navbar stay available. Opening and closing resize the canvas through flex. The page does not call `fitView`.
+
+The navbar Chat button is `#project-chat-toggle`. It sets `aria-expanded` and `aria-controls="project-chat-panel"`. The accessible name includes the unread count, and the visible badge shows `99+` above 99. The panel header has a sound toggle (`aria-pressed`) and Close chat. Escape closes the panel only while `matchMedia("(max-width: 1023px)")` matches, then focus returns to the toggle. Composer keys stop at the panel so they do not reach the canvas. Enter sends, Shift+Enter inserts a newline, and an IME composition Enter does not send.
+
+The message list is the only vertical scroller. The first load and the user's own successful send move to the bottom. A live message follows only when the reader was already within 64px of the bottom. Load earlier and its Retry button capture the first visible message and its offset before the request. A failed earlier page keeps that anchor and the current messages until the reader scrolls. Scrolling while the earlier page is pending or failed releases the old anchor, and Retry captures the row now in view. A later live row or media resize keeps that new position when the reader is away from the bottom. Late image or video growth is observed on the message content, not the fixed panel height. That growth follows the bottom only when the reader is already near it. Otherwise it keeps the visible message and offset. A stable polite region shows `Sam is typing…`, `Sam and Jo are typing…`, or `Several people are typing…`. Bubbles use plain text, `You` for the signed-in user, and `Deleted user` when the sender is missing. The visible time is timeago.js. The `<time>` element exposes the canonical ISO timestamp. Images and videos keep a labelled `target="_blank"` link. A local visual viewport hook sets the workspace shell height, with `h-[100dvh]` as the fallback. Reduced motion sets `scroll-behavior: auto` on the panel scroller. The sound preference is independent of the turn chime.
 
 ## Icons
 

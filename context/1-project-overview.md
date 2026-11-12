@@ -6,6 +6,8 @@
 
 ## Goals
 
+**Development checkpoint (2026-11-11):** S01-S24 are implemented and code-reviewed; S23/S24 remain approved but uncommitted on HEAD `43eb732`. `/collaborate` is still URL-only, with browser/shared-project QA outstanding. S25-S30 remain before launch. Work stopped after S24 at the user's request; the next session starts from `HANDOFF.md` and writes the S25 spec before implementation. Feature lists describe the full target, not a claim that later membership or undo features already exist.
+
 1. A signed-in user can create, rename, and delete projects, and see the projects shared with them.
 2. Members of a project see the same canvas, and every committed edit appears for all of them within about one second.
 3. Exactly one tab can edit a project's canvas at any moment. The server enforces this, never the client.

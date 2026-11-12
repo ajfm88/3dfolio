@@ -4,13 +4,13 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase F: Turns. S01–S20 are built. S21 and S22 passed code review. S01–S13 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`, S12 + S13 as `5d0340e` (commit 63).
-- Git reconciliation (Codex, 2026-11-10): HEAD is `e09a624` (commit 66), which commits S16 and S17 corrections, S19, and S20. S21 is in the working tree.
+- Phase G: Project chat complete in code. S01–S22 are committed. S23 and S24 passed Codex review and remain approved/uncommitted on HEAD `43eb732`.
+- Git reconciliation (Codex, 2026-11-11): HEAD is `43eb732` (commit 67), which commits the approved S21 and S22 implementations and reviews. The working tree was clean before S23 planning.
 
 ## Current Goal
 
-- S22 passed code review in `specs/22-turn-robustness-review.md` and awaits the user's commit.
-- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, and S22.
+- Work stopped at the user's request after S23/S24. Preserve the approved tree; the user handles commits. Tomorrow's agent starts from `HANDOFF.md` and writes the S25 spec before implementation. S25 planning was interrupted before a spec was written; no S25 implementation exists.
+- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, and S24.
 
 ## Completed
 
@@ -34,15 +34,19 @@ Update this file after every meaningful implementation change. It records the **
 - S18: Live cursors (approved 2026-11-08 by Codex after Claude Sonnet's corrections, committed as `f6ecdbd`, together with S17). Browser verification limitations remain outstanding.
 - S19: Turn state machine (approved 2026-11-09 by Claude, committed in `e09a624`).
 - S20: Turn events and enforcement (approved 2026-11-09 by Claude after one test and readme correction, committed in `e09a624`).
+- S21: Turn UI and read-only mode (approved by Codex after corrections, committed with S22 as `43eb732`).
+- S22: Turn robustness (approved by Codex after the Socket.IO buffer correction, committed with S21 as `43eb732`).
+- S23: Project messages API and typing relay (approved by Codex after the empty-cursor correction; uncommitted).
+- S24: Project chat panel (approved by Codex after two correction rounds; uncommitted). Browser and live-media checks remain open.
 
 ## In Progress
 
-- None.
+- None. The user ended work for today. S23 and S24 are approved and uncommitted.
 
 ## Next Up
 
-- The user handles the S21 and S22 commits.
-- The shared-project browser walkthrough of S16–S22 waits until S26/S28 provide membership and sharing. The 320px participant-stack check with six other accounts stays in S29.
+- Next session: read `HANDOFF.md`, reconcile git state, and write the S25 undo/redo spec before implementing. Grok implements and Codex reviews unless reassigned. S25 remains Todo, with no spec or implementation; this documentation update does not start it.
+- The shared-project browser walkthrough of S16–S24 waits until S26/S28 provide membership and sharing. The 320px participant-stack check with six other accounts stays in S29.
 
 ## Slice Status
 
@@ -70,10 +74,10 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S18 | Live cursors | both | S17 | ✓ | Committed | Grok; Claude Sonnet corrections | `f6ecdbd` |
 | S19 | Turn state machine | server | — | ✓ | Committed | Grok | `e09a624` |
 | S20 | Turn events + enforcement | server | S14, S16, S19 | ✓ | Committed | Grok | `e09a624` |
-| S21 | Turn UI + read-only mode | client | S20 | ✓ | Approved | Grok | |
-| S22 | Turn robustness | client | S21 | ✓ | Approved | Grok | |
-| S23 | Project messages API + typing relay | server | S13 | | Todo | | |
-| S24 | Chat panel | client | S23 | | Todo | | |
+| S21 | Turn UI + read-only mode | client | S20 | ✓ | Committed | Grok | `43eb732` |
+| S22 | Turn robustness | client | S21 | ✓ | Committed | Grok | `43eb732` |
+| S23 | Project messages API + typing relay | server | S13 | ✓ | Approved | Grok | |
+| S24 | Chat panel | client | S23 | ✓ | Approved | Grok | |
 | S25 | Undo / redo for the turn holder | both | S22 | | Todo | | |
 | S26 | Invites + members API | server | S03 | | Todo | | |
 | S27 | Live membership enforcement + cleanup | server | S20, S26 | | Todo | | |
@@ -1372,6 +1376,104 @@ The fake-socket regression buffers the commit while `connected` stays true. Afte
 
 **Final code review (Codex): Approved.** The targeted cleanup preserves unrelated Socket.IO packets, and the real-client regression sees `join`, `join`. The test fails with the cleanup disabled in a temporary copy. All 366 automated tests, the production build, and `git diff --check` passed independently. Browser and shared-project verification remain scheduled for S26/S28. See `specs/22-turn-robustness-review.md`.
 
+### S23 — Project messages API and typing relay
+
+**Planning (Codex, 2026-11-11):** `specs/23-project-messages-api.md` is ready for Grok, with Codex assigned to review. Baseline is clean HEAD `43eb732` (commit 67); S21 and S22 are committed. The spec covers member-only history/send, image/video uploads through the existing helper with `/collaborate`, room-wide durable message events, completed-join typing authority, and project-message deletion. It names all implementation and test files and leaves the UI to S24, live membership/Clerk cleanup to S27, and rate limiting to S29.
+
+The timestamp-only history outline is refined with optional `beforeId`, a matching compound index, and a defined `{ messages, hasMore, nextCursor }` response so identical timestamps cannot lose messages between pages. The architecture and build-plan outline record that planning decision. Membership precedes multipart parsing, project-only upload errors map to 400, and slow uploads recheck access before insertion. Existing DM upload defaults remain unchanged. Browser/shared-project checks stay deferred where unavailable; code review and launch evidence remain separate.
+
+Planning verification: inspected the six context files, build plan, S21/S22 reviews and status, relevant client/store and server/model/controller/route/socket/test code, and git baseline; `git diff --check` passed. No application code changed, no tests/build/server boot or live data writes were performed, and S23 remains Todo.
+
+**Implementation (Grok, 2026-11-11): Ready for review.** Baseline is still HEAD `43eb732` (commit 67). S24 was not started. No commit, push, branch, or deploy.
+
+Member-only history and send are on the existing project router, after `protectRoute`. Authorization runs before query validation and before multer. History is newest-first in the query and oldest-first in the response, with `before` plus `beforeId` so equal timestamps are not skipped. Send accepts JSON or one `media` file, stores project files under `/collaborate`, rechecks membership after upload, then emits non-volatile `project:message` to `project:<id>`, including the sender. `project:typing` reuses the completed-join cursor gate and is a volatile relay to other sockets in that room. Owner delete removes that project's messages only after the project row is deleted. Direct messages still upload to `/chat`.
+
+Changed application and test files: `server/src/models/projectMessage.model.js`, `server/src/lib/projectMessages.js`, `server/src/middleware/projectMessage.middleware.js`, `server/src/controllers/projectMessage.controller.js`, `server/src/routes/project.route.js`, `server/src/controllers/project.controller.js`, `server/src/lib/imagekit.js`, `server/src/sockets/workspace.socket.js`, `server/test/projectMessages.test.js`, `server/test/projectMessage.api.test.js`, `server/test/projectTyping.socket.test.js`, `server/test/imagekit.test.js`. Docs: `server/readme.md`, `context/2-architecture.md`, this tracker. The planning edit in `context/specs/00-build-plan.md` is the one-line `beforeId` outline already in the tree. `context/specs/23-project-messages-api.md` is the untracked spec. No client file, dependency, environment file, or `index.js` route mount changed.
+
+- `npm test` from `server/`: 221 pass, 0 fail, 0 skipped, duration_ms 957.5382. The output had no warning.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, duration_ms 15990.5863.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, duration_ms 689.7903.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, duration_ms 1546.3284.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, duration_ms 737.5521.
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, duration_ms 801.9951.
+- `node --test test/turnRobustness.test.mjs`: 28 pass, 0 fail, duration_ms 1112.6777.
+- Client suites ran one after another. Combined automated tests: 386 pass, 0 fail. This run's captured output did not include the older Vite port-24678 conflict.
+- `npm run build` at the repo root: Vite 7.3.5, 4265 modules, 43.45s. The existing chunk-size warning is the only warning. Entry `index-B8d84CSd.js` is 577.75 kB, gzip 181.01 kB. Workspace `WorkspacePage-D2QW4qBn.js` is 262.23 kB, gzip 84.07 kB, the same workspace chunk as the committed S22 build.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `project.controller.js`, `project.route.js`, and `workspace.socket.js`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and MongoDB connected to `3dfolio`. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No config change and no database write.
+
+**Deviations:** The 403 copy for a member who cannot chat is `You cannot chat in this project`. The spec requires 403 and does not set that sentence. Current owner, editor, and viewer roles can chat, so this path is the permission failure. Tests replace ImageKit config and upload through `setProjectMessageDeps` on the send controller because Node ESM namespace exports cannot be redefined. The mounted handlers stay the production functions. Express 5's simple query parser does not turn `limit[a]=1` into an object, so that URL uses the default page. An array or object `limit` value is still 400, and a repeated `limit` is an array under that parser. Project deletion and message insertion are not one transaction, and a failed check after upload can leave an ImageKit file. Both boundaries are in the architecture. No cleanup service was added.
+
+**Deferred:** No browser tools or second synced account were available. Live REST history and send, outsider 404, two-socket message and typing delivery, page reload, owner deletion cleanup, a real attachment upload, `/blog`, and `/chat` DM, typing, presence, and attachment checks were not run. ImageKit coverage is the stubbed SDK upload in `imagekit.test.js`. A 503 from missing configuration is not evidence that live media works. Shared-project walks stay with S26/S28. This slice is not approved and not launch-ready.
+
+**Review (Codex): Changes requested.** All 386 tests, the production build, and `git diff --check` passed independently. One input-validation defect was reproduced through the HTTP handler with stubbed models: `?before=` returns 200 and queries the first page instead of rejecting the invalid timestamp with 400. Correct the parser and add helper/HTTP regressions, preserving outsider 404 precedence and existing paging behavior. See `specs/23-project-messages-api-review.md`. No application code changed during review; no live DB/media operations or S24 work occurred. Browser and authenticated runtime checks remain unverified as already documented.
+
+**Correction (Grok, 2026-11-11): Ready for review.** A supplied `before` must be a canonical UTC timestamp. `?before=` is present and empty, so it returns 400 with `before must be a UTC timestamp` and does not query messages. An omitted `before` is still the first page. An outsider with that same query still gets 404 before validation. Canonical timestamps, timestamp-only paging, and paired cursors are unchanged. The helper regression rejects `{ before: "" }`. The HTTP regression uses the mounted authorization and history handlers. No other behavior changed. S24 was not started. No commit, push, branch, or deploy.
+
+- `npm test` from `server/`: 221 pass, 0 fail, 0 skipped, duration_ms 1089.4438. The new checks are assertions inside the existing helper and history tests, so the count is unchanged. The output had no warning.
+- Client suites, one command each: workspaceSync 13 (duration_ms 704.8808), canvasPreview 39 (686.357), participants 6 (794.1376), cursorPresence 69 (745.6519), turnState 10 (792.3646), turnRobustness 28 (1069.7847). Combined with the server: 386 pass, 0 fail.
+- `npm run build`: Vite 7.3.5, 4265 modules, 8.06s. The existing chunk-size warning is the only warning. Entry `index-B8d84CSd.js` is 577.75 kB, gzip 181.01 kB. Workspace `WorkspacePage-D2QW4qBn.js` is 262.23 kB, gzip 84.07 kB.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `project.controller.js`, `project.route.js`, and `workspace.socket.js`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and MongoDB connected to `3dfolio`. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No config change and no database write.
+
+Browser, two-account, live media, `/blog`, and `/chat` checks remain unverified. This slice is not approved.
+
+**Final code review (Codex): Approved.** The explicit empty timestamp is rejected with 400 before querying messages, while missing cursors, valid paging, and outsider 404 precedence remain intact. The helper and HTTP regressions exercise the production paths and retain existing assertions. Independently reran all 386 tests (221 server, 165 client across six sequential suites), the production build (8.37s, existing chunk-size warning), and `git diff --check`; all passed. The workspace chunk is unchanged. See `specs/23-project-messages-api-review.md`. Browser/two-account/live-media and `/blog`/`/chat` checks remain unverified; approval does not establish launch readiness. No application edits, live DB operations, or S24 implementation occurred during review. The user handles the commit.
+
+### S24 — Project chat panel
+
+**Planning (Codex, 2026-11-11):** `specs/24-project-chat-panel.md` is ready for Grok with Codex reviewing. HEAD remains `43eb732`; approved S23 is in the working tree and must be preserved. S24 is client-only: a separate project-chat store uses S23's endpoints/events, with a read-only workspace readiness selector that permits every project role without a turn. The spec defines paired-cursor pagination, merging live traffic with delayed history, REST/socket echo deduplication, binding/connection guards, failure-preserved drafts/files, typing refresh and expiry, collapsed/hidden unread, and sound-only persistence. It copies useful DM patterns without importing from `/chat`.
+
+Desktop uses a right panel; small screens use a nonmodal bottom drawer and a locally adapted visual viewport hook. The spec names all allowed files and automated/browser checks, and leaves backend changes, undo, and sharing to later slices. Reconnect reloads the newest history window without replaying sends or claiming to cover an arbitrary offline gap. Browser/two-account checks remain distinct from automated coverage. Planning verification: source inspection and `git diff --check`; no application code, tests, DB writes, or S24 implementation. S24 remained Todo at the end of planning.
+
+**Implementation (Grok, 2026-11-11): Ready for review.** Baseline is still HEAD `43eb732` (commit 67). Approved S23 stayed in the working tree and was not rewritten. S25 was not started. No commit, push, branch, or deploy.
+
+The workspace page binds project chat before the workspace join and releases chat first. History starts only after that workspace is ready for the same project and the signed-in account. `selectCanChat` lets every role chat without a turn, including while the canvas is syncing. Disconnect on a socket that is still retrying clears the displayed page and keeps the draft, file, open choice, and sound preference. The next ready workspace loads a fresh newest page. A hard disconnect, route change, or sign-out clears project content and keeps only the sound preference. Sends are JSON or one `media` file. A failure keeps the submitted draft and file. Live traffic merges by message id. Own messages and history do not increment unread or chime.
+
+Changed client files: `src/collaborate/store/useProjectChatStore.js`, `src/collaborate/store/useWorkspaceStore.js` (`selectCanChat` only), `src/collaborate/lib/projectChat.js`, `src/collaborate/lib/projectTyping.js`, `src/collaborate/lib/projectMessageSound.js`, `src/collaborate/hooks/useProjectChatScroll.js`, `src/collaborate/hooks/useVisualViewportHeight.js`, `src/collaborate/components/chat/ProjectChatPanel.jsx`, `src/collaborate/components/chat/ProjectMessageList.jsx`, `src/collaborate/components/chat/ProjectMessageBubble.jsx`, `src/collaborate/components/chat/ProjectComposer.jsx`, `src/collaborate/components/workspace/WorkspaceNavbar.jsx`, `src/collaborate/routes/WorkspacePage.jsx`, `src/collaborate/collaborate.css`. Tests: `test/projectChat.test.mjs`, `test/projectChatUi.test.mjs`. Docs: `context/2-architecture.md`, `context/3-ui-context.md`, this tracker. No server file, dependency, environment file, or route outside the workspace changed for S24.
+
+- `npm test` from `server/`: 221 pass, 0 fail, 0 skipped, duration_ms 1050.6455.
+- Client suites, one command each: workspaceSync 13 (duration_ms 693.0688), canvasPreview 39 (661.4744), participants 6 (819.4639), cursorPresence 69 (727.7569), turnState 10 (772.7702), turnRobustness 28 (1109.4894), projectChat 12 (723.712), projectChatUi 4 (823.9059). Combined automated tests: 402 pass, 0 fail.
+- `npm run build` at the repo root: Vite 7.3.5, 4275 modules, 7.70s. The existing chunk-size warning is the only warning. Entry `index-BjCMdV6r.js` is 577.78 kB, gzip 181.04 kB. Workspace `WorkspacePage-DCLNH8ki.js` is 291.52 kB, gzip 92.41 kB.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `project.controller.js`, `project.route.js`, `workspace.socket.js`, `collaborate.css`, `WorkspaceNavbar.jsx`, `WorkspacePage.jsx`, and `context/3-ui-context.md`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000`. MongoDB connected and the database name was `3dfolio`. The host was not recorded. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No config change and no database write.
+
+**Deviations:** An earlier-page failure says `Couldn't load earlier messages` and keeps the current messages plus Retry. The spec fixes the initial sentence `Couldn't load messages` and requires retry for the earlier page without naming that second sentence. An oversized file toasts `Attachment must be 25 MB or smaller` before upload. That sentence is not a server string. The wrong-type toast uses the server sentence `Only image and video uploads are allowed`. Idle history uses the same `Loading messages` status as the in-flight load so the empty state does not flash. Retry after a settled failure starts one new request for that operation. A second initial or earlier request does not run while the first is in flight, and turn, presence, and canvas-only updates do not refetch. The reconnect loading shell unmounts the panel, which revokes the preview URL. The File, draft, open flag, and sound preference stay, and `aria-expanded` follows the stored open flag. `selectCanChat` does not read `syncStatus` or `binding.sync.recovering`. The syncing case is covered by setting `syncStatus` to `syncing`. The recovering flag stays internal. The typing label also omits the signed-in user if that id is present. The store already ignores self. History does not arm until the binding account matches the signed-in account. Visible times use the existing timeago.js dependency. The accessible timestamp is the canonical ISO string on `dateTime` and `aria-label`. A manual retry can duplicate a message because S23 has no idempotency key.
+
+**Deferred:** `renderToStaticMarkup` does not run effects, and the UI suite does not render `WorkspacePage` because that pulls in React Flow. Scroll anchoring, keyboard decisions, Escape, focus return, and preview URL create/revoke are covered through the extracted helpers. The real DOM and this browser checklist were not run: open/close and canvas viewport, text, multiline, IME, image, video, caption, echo, Load earlier position, reading older history, a typing burst longer than 5 seconds, badge and sound persistence, disconnect and failed send, route change, 320px, phone keyboard, drawer, focus, Escape, Tab, media failure, cursor packets over chat, `/blog`, and `/chat`. No browser tools were used. Shared-project two-account chat and typing stay with S26/S28. No users, memberships, or environment files were created. This slice is not approved and not launch-ready.
+
+**Review (Codex): Changes requested.** All 402 submitted tests, production build (8.16s), and `git diff --check` passed independently. Two additional store regressions failed: a changed account still accepted traffic on the old socket, and a null session socket allowed a pending send to append and clear its draft. An actual-hook effect reproduction also showed an earlier-page retry losing the scroll anchor (400 actual vs 800 required after a prepend). The resize observer watches only the fixed scrollport and does not reliably handle late media growth. See `specs/24-project-chat-panel-review.md` for the corrections and test contracts. The spec now explicitly allows capturing/checking the workspace binding's account identity. No application code or approved S23 work changed during review. Temporary reproductions were cleaned up. A headless browser launch was rejected by automatic approval review as blocked by policy; browser/two-account/live-media and `/blog`/`/chat` checks remain open.
+
+**Correction (Grok, 2026-11-11): Ready for review.** Baseline is still HEAD `43eb732` (commit 67). Approved S23 was not rewritten. S25 was not started. No commit, push, branch, or deploy.
+
+The join records the account that established it. `selectCanChat` requires that account and the same session socket. An account change clears chat content, drops the pin, and does not arm history from the previous ready workspace. A session socket replacement, including null, invalidates in-flight chat work before the response is published and keeps the draft, file, open choice, and sound preference. A same-account transport disconnect still keeps the draft and file. A later valid join loads history and accepts live messages again. Load earlier and its Retry button share one anchor capture. The scroll hook keeps that anchor across an earlier-page error. The resize observer watches the message content. Growth follows the bottom only when the reader is already within 64px. Otherwise it restores the visible message and offset. `selectCanEdit` and `selectIsHolder` are unchanged.
+
+- `npm test` from `server/`: 221 pass, 0 fail, 0 skipped, duration_ms 19030.6226.
+- Client suites, one command each: workspaceSync 13 (duration_ms 694.6283), canvasPreview 39 (663.0972), participants 6 (821.6945), cursorPresence 69 (737.2582), turnState 10 (770.1812), turnRobustness 28 (1198.9942), projectChat 13 (748.534), projectChatUi 5 (860.1386). Combined automated tests: 404 pass, 0 fail.
+- `npm run build` at the repo root: Vite 7.3.5, 4275 modules, 39.97s. The existing chunk-size warning is the only warning. Entry `index-DV8QqlHV.js` is 577.78 kB, gzip 181.03 kB. Workspace `WorkspacePage-teVtu__c.js` is 292.47 kB, gzip 92.63 kB.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `project.controller.js`, `project.route.js`, `workspace.socket.js`, `collaborate.css`, `WorkspaceNavbar.jsx`, `WorkspacePage.jsx`, and `context/3-ui-context.md`.
+- `node src/index.js` from `server/`: `Server is up and running on PORT: 3000`. MongoDB connected and the database name was `3dfolio`. The host was not recorded. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No config change and no database write.
+
+**Deviations kept:** the earlier-page copy, the client oversize toast, the shared loading sentence, one retry request after a settled failure, the reconnect shell revoking the preview URL, `selectCanChat` not reading sync or recovery, the typing label omitting the signed-in user, timeago.js timestamps, and possible duplicate rows on a manual retry. Added: history does not arm until the joined account matches the signed-in account, and a content resize is not treated as native browser anchoring.
+
+**Deferred:** the browser checklist in the implementation note is still open. This correction did not launch a browser. The earlier headless launch remains blocked by policy. Shared-project two-account chat stays with S26/S28. This slice is not approved and not launch-ready.
+
+**Second review (Codex): Changes requested.** Original immediate account/null-socket regressions and retry/content-observer corrections now pass. Two related follow-up reproductions still fail: switching accounts then retrying the workspace on the unchanged authenticated connection enables chat on the old socket; scrolling from 400 to 800 after an earlier-page error then receiving a live row restores the old 400 anchor. See the second review in `specs/24-project-chat-panel-review.md`. All 404 submitted tests, production build (8.91s), and diff check passed independently. Temporary reproduction files were removed. No application edits, live DB/media operations, or browser launch occurred; browser/two-account and other-route checks remain open. S23 stays approved; S25 stays unstarted.
+
+**Second correction (Grok, 2026-11-11): Ready for review.** Baseline is still HEAD `43eb732` (commit 67). Approved S23 was not rewritten. S25 was not started. No commit, push, branch, or deploy.
+
+A connection id keeps the account that authenticated it. `retryWorkspace` and a route rebind on that same id do not assign the socket to a different account. A new socket id can. Same-account retries still load chat. After an earlier-page error, a reader scroll releases the old hold. A following live row stays at the new position, and a content resize follows the row now in view. Retry still captures the visible row before it runs, so a successful prepend keeps that anchor.
+
+- `npm test` from `server/`: 221 pass, 0 fail, 0 skipped, duration_ms 1088.8319.
+- Client suites, one command each: workspaceSync 13 (duration_ms 955.9317), canvasPreview 39 (826.5023), participants 6 (929.0005), cursorPresence 69 (828.5716), turnState 10 (833.3278), turnRobustness 28 (1234.9435), projectChat 14 (824.864), projectChatUi 5 (999.1792). Combined automated tests: 405 pass, 0 fail.
+- `npm run build` at the repo root: Vite 7.3.5, 4275 modules, 8.20s. The existing chunk-size warning is the only warning. Entry `index-CBfDdAtt.js` is 577.78 kB, gzip 181.03 kB. Workspace `WorkspacePage-CNgz3832.js` is 292.98 kB, gzip 92.84 kB.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `project.controller.js`, `project.route.js`, `workspace.socket.js`, `collaborate.css`, `WorkspaceNavbar.jsx`, `WorkspacePage.jsx`, and `context/3-ui-context.md`.
+- `node src/index.js` from `server/`: `Server is up and running on PORT: 3000`. MongoDB connected and the database name was `3dfolio`. The host was not recorded. Clerk printed its development-instance telemetry notice. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No config change and no database write.
+
+**Deferred:** the browser checklist remains open. This correction did not launch a browser. Shared-project two-account chat stays with S26/S28. This slice is not approved and not launch-ready.
+
+**Final code review (Codex): Approved after second correction.** Connection ownership remains pinned across workspace retry/rebind; a fresh connection id can establish new ownership. Reader scrolling releases the stale earlier-page hold; live appends and content resizing preserve the current visible anchor. Account and mounted-hook regressions pass with existing assertions intact. Independently reran all 405 tests (221 server, 184 client), build (8.77s, 4275 modules, existing chunk warning), and diff check; all passed. Workspace: `WorkspacePage-CNgz3832.js`, 292.98 kB, gzip 92.84 kB. See `specs/24-project-chat-panel-review.md`. Browser/two-account/live-media and `/blog`/`/chat` remain unverified; API health is reported implementer evidence. The user stopped after S23/S24; both are approved/uncommitted on `43eb732`. No S25 spec or implementation was created.
+
 ### S29 — Mobile and accessibility
 
 **Carry-forward from S08:** the shape panel is HTML5 drag-only. Add touch and keyboard/click alternatives in S29; no such handlers were added in S08.
@@ -1397,10 +1499,22 @@ The fake-socket regression buffers the commit while `connected` stays true. Afte
 - 2026-10-31: Canvas op semantics live in one pure module (`server/src/shared/canvasOps.js`) that both the server and the client import, so validation and application can't drift between implementers.
 - 2026-10-31: Turns belong to a tab (`userId` + `tabId`), not a user, so a second tab is read-only and a reconnecting tab keeps its turn through the grace period.
 - 2026-10-31: Project chat uses a new `projectmessages` collection rather than extending `messages`, so 1:1 DMs are untouched whatever Q1 decides.
-- 2026-10-31: Spec files are written just in time, one per slice, by Claude, from `specs/00-build-plan.md`, so each spec reflects the code as it actually is.
+- 2026-10-31: Spec files are written just in time, one per slice, from `specs/00-build-plan.md`, so each spec reflects the code as it actually is. Originally assigned to Claude; current user assignment is Codex writing specs/reviewing and Grok implementing.
 
 ## Session Notes
 
+- **Latest handoff, 2026-11-11:** User ended work after S23/S24. Both passed Codex review and remain uncommitted on HEAD `43eb732`. Final independent verification: 405 tests, build, and diff check pass. S25 is Todo with no spec or implementation. Read `HANDOFF.md` next session; preserve the approved tree and write the S25 spec before implementing. Documentation reconciled at the user's request after stopping. No application code, environment, DB data, commits, branches, pushes, or deployments changed in this reconciliation. Earlier stopping points below are historical and superseded by this entry.
+- Stopping point, 2026-11-11: S24's second correction is Ready for review on HEAD `43eb732`. It is not approved. A retried connection stays with the account that authenticated it, and a scroll after an earlier-page error is not pulled back by the old anchor. 405 automated tests, the production build, and `git diff --check` passed. The API was stopped after `GET /health` returned 200, with no database writes. Browser checks remain open. S23 remains approved. S25 was not started. No commit, push, branch, or deploy.
+- Stopping point, 2026-11-11: S24 remains Changes requested after the second Codex review on HEAD `43eb732`. Fix the two remaining retry/account-ownership and user-scroll sequences in `specs/24-project-chat-panel-review.md`. All 404 submitted tests/build/diff check passed independently, while targeted follow-up reproductions failed. S23 remains approved and S25 has not started.
+- Stopping point, 2026-11-11: S24 corrections are Ready for review on HEAD `43eb732`. They are not approved. Account and socket changes drop the old chat authority, Load earlier Retry keeps its scroll anchor, and late media growth is observed on the message content. 404 automated tests, the production build, and `git diff --check` passed. The API was stopped after `GET /health` returned 200, with no database writes. Browser checks remain open. S23 remains approved. S25 was not started. No commit, push, branch, or deploy.
+- Stopping point, 2026-11-11: S24 has Changes requested after Codex review on HEAD `43eb732`. See `specs/24-project-chat-panel-review.md` for session-account/socket invalidation, retry scroll anchoring, and late media resize handling. All 402 submitted tests and the build passed independently; targeted new lifecycle regressions failed. S23 remains approved; S25 was not started.
+- Stopping point, 2026-11-11: S24 is Ready for review on HEAD `43eb732`. It is not approved. Approved S23 stayed uncommitted and unchanged. 402 automated tests, the production build, and `git diff --check` passed. The API was stopped after `GET /health` returned 200, with no database writes. Browser and two-account checks were not run. S25 was not started. No commit, push, branch, or deploy.
+- Stopping point, 2026-11-11: S24 spec is ready for Grok at `specs/24-project-chat-panel.md`, with Codex reviewing afterward. S23 is approved and uncommitted on HEAD `43eb732`; preserve it. S24 implementation has not started. This planning pass changed documentation only.
+- Stopping point, 2026-11-11: S23 passed Codex's final code review after the empty-cursor correction, in the working tree on HEAD `43eb732`. All 386 tests, the build, and diff check passed independently. The user handles commits. S24 is next and requires its spec; browser and live-media limitations remain open.
+- Stopping point, 2026-11-11: S23's empty `before` correction is Ready for review on HEAD `43eb732`. It is not approved. An authorized `?before=` returns 400 and does not query. S24 was not started. No commit, push, branch, or deploy.
+- Stopping point, 2026-11-11: Codex requested one S23 correction on HEAD `43eb732`: reject an explicitly empty history timestamp and cover it with helper/HTTP regressions. All 386 submitted tests and the build passed independently. See `specs/23-project-messages-api-review.md`; S24 remains Todo.
+- Stopping point, 2026-11-11: S23 is Ready for review in the working tree on HEAD `43eb732`. It is not approved. S24 was not started. Browser, two-account, live media, `/blog`, and `/chat` checks were not run. The implementer stopped the API after `GET /health` returned 200, with no database writes. No commit, push, branch, or deploy.
+- Stopping point, 2026-11-11: S21/S22 are committed as `43eb732`. S23 spec is ready for Grok to implement and Codex to review; implementation has not started. This session changed planning documents only. The separate drawDB plan beside the repo is a different track and was not started.
 - Stopping point, 2026-11-10: S21 and S22 passed code review in the working tree on HEAD `e09a624` and await the user's commits. Browser and two-account checks are carried to S26/S28. The implementer stopped the API after `GET /health` returned 200, with no database writes.
 - Stopping point, 2026-11-10: S22 has one change requested in the working tree on HEAD `e09a624`. S21 remains approved and uncommitted. Browser and two-account checks remain open and are carried to S26/S28. The implementer stopped the API after `GET /health` returned 200, with no database writes.
 - Stopping point, 2026-11-10: S21 passed final code review in the working tree on HEAD `e09a624` and awaits the user's commit. Browser and two-account checks remain open. The implementer stopped the API after `GET /health` returned 200, with no database writes.

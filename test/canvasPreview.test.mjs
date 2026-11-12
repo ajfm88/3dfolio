@@ -440,15 +440,23 @@ describe("canvasPreview", () => {
     // Setting ready by hand leaves it empty and every remote op is then ignored.
     async function joined({ role = "editor", nodes = [node("n1"), node("n2", 300)] } = {}) {
       const socket = createSocket();
-      socket.handler = async (event) => {
+      socket.handler = async (event, payload) => {
         if (event === "workspace:join") {
+          const turn = role === "viewer" ? null : {
+            holder: { userId: SELF, tabId: payload.tabId },
+            holderSince: 1,
+            queue: [],
+            idleDeadline: null,
+            graceUntil: null,
+            serverNow: 1,
+          };
           return {
             ok: true,
             project: { _id: PROJECT, name: "Design", description: "" },
             role,
             canvas: { nodes, edges: [], version: 4 },
             participants: [],
-            turn: null,
+            turn,
             serverNow: 1,
           };
         }

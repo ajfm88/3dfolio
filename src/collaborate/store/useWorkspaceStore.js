@@ -15,6 +15,8 @@ import {
   validateInboundCursorLeave,
   validateInboundCursorMove,
 } from "../lib/cursorPresence.js";
+import { normalizeTurn, sameTurnTab } from "../lib/turnState.js";
+import { playTurnSound } from "../lib/turnSound.js";
 import { useSessionStore } from "./useSessionStore.js";
 
 // The route effect owns one binding at a time. A late ack is ignored unless it
@@ -52,13 +54,35 @@ function emptyWorkspace(status) {
     rfEdges: [],
     participants: [],
     cursors: {},
+    turn: null,
+    turnReceivedAt: null,
   };
 }
 
-// From S20 this also means holding the turn. One helper keeps that change in one place.
-// Recovery and a disconnected binding refuse even when the role is still editor.
-// The socket is read at call time so sign-out can remove listeners, and therefore
-// skip the disconnect handler, without leaving a dispatch path open.
+// Who this binding is. The component reads it while rendering the queue, and
+// a fresh object here would retrigger the subscription on every pass.
+export const selectBindingTabId = () => (
+  activeBinding && !activeBinding.disposed ? activeBinding.tabId : null
+);
+
+// Ownership, not permission to dispatch. Canvas recovery stays ready, so the
+// holder is still identifiable while edits and previews are refused.
+export const selectIsHolder = (state) => {
+  if (state.status !== "ready") return false;
+  if (state.role !== "owner" && state.role !== "editor") return false;
+  const binding = activeBinding;
+  if (!binding || binding.disposed) return false;
+  const socket = binding.socket;
+  if (!socket?.connected) return false;
+  if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
+  if (state.project?._id !== binding.projectId) return false;
+  if (!state.turn?.holder || !binding.tabId) return false;
+  return sameTurnTab(state.turn.holder, { userId: selfUserId(), tabId: binding.tabId });
+};
+
+// Recovery and a disconnected binding refuse even when this tab holds the
+// turn. The socket is read at call time so sign-out can remove listeners,
+// and therefore skip the disconnect handler, without leaving a dispatch path open.
 export const selectCanEdit = (state) => {
   if (state.status !== "ready" || state.syncStatus === "syncing") return false;
   if (state.role !== "owner" && state.role !== "editor") return false;
@@ -67,8 +91,10 @@ export const selectCanEdit = (state) => {
   const socket = binding.socket;
   if (!socket?.connected) return false;
   if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
-  return true;
-};
+  return selectIsHolder(state);
+}
+
+syncDeps.canEdit = () => selectCanEdit(syncDeps.get());
 
 // React Flow owns selected and measured. A rebuild that dropped them would
 // deselect nodes and force a re-measure on every edit. The canonical object
@@ -165,9 +191,16 @@ function classifyJoin(ack, projectId) {
     && Number.isSafeInteger(version)
     && version >= 0
     && participants !== null
-    && (ack.turn === null || isRecord(ack.turn))
     && Number.isFinite(ack.serverNow);
   if (!valid) return { ok: false, notFound: false, message: "" };
+
+  // null is the pre-S20 ack: the turn is unknown, which is read-only. A
+  // present snapshot has to parse. Its own serverNow is not the join clock.
+  let turn = null;
+  if (ack.turn !== null) {
+    turn = normalizeTurn(ack.turn);
+    if (!turn) return { ok: false, notFound: false, message: "" };
+  }
 
   // Display builders only see a normalized snapshot. The join is not an edit.
   const normalized = normalizeCanvas(ack.canvas);
@@ -181,7 +214,71 @@ function classifyJoin(ack, projectId) {
     role: ack.role,
     canvas: { nodes: normalized.nodes, edges: normalized.edges, version },
     participants,
+    turn,
   };
+}
+
+// A join or a rejoin already describes the turn. Chiming there would sound on
+// every reconnect. Only a later event that newly assigns this exact tab is a grant.
+function publishTurn(set, binding, turn, live, receivedAt) {
+  const self = { userId: selfUserId(), tabId: binding.tabId };
+  const previous = syncDeps.get().turn;
+  const wasHolding = Boolean(previous?.holder) && sameTurnTab(previous.holder, self);
+  const nowHolding = sameTurnTab(turn?.holder, self);
+  // The receipt is the one sampled for this packet. The countdown pairs it
+  // with the snapshot, and a null turn clears both.
+  set({ turn, turnReceivedAt: turn ? receivedAt : null });
+  // A sample queued while this tab held the turn must not leave after a
+  // later grant. The throttle would otherwise see the new permission and send it.
+  if (wasHolding && !nowHolding) binding.previewThrottle?.cancel();
+  // The turn is already published, so a recovery snapshot cannot be edited
+  // under the holder that just lost it.
+  if (live && wasHolding && !nowHolding) {
+    const session = binding.sync;
+    if (session && session.pending.length > 0) {
+      toast.error("Your turn ended before some edits could be sent");
+      sync.beginRecovery(binding);
+    }
+  }
+  if (!live || wasHolding || !nowHolding) return;
+  toast.success("It's your turn");
+  playTurnSound();
+}
+
+// A turn packet during join is deferred so packet order, not timestamp order,
+// decides what survives. The ack continuation is already registered: an earlier
+// packet's microtask runs before it and finds the workspace not ready, so the
+// ack wins. A later packet's microtask runs after the snapshot is installed.
+// Packets stay deferred while the attempt is in flight, including after ready,
+// so a newer packet cannot publish ahead of one still waiting.
+function deferTurn(set, binding, turn, attempt, connectionId, receivedAt) {
+  queueMicrotask(() => {
+    if (activeBinding !== binding || binding.disposed || binding.attempt !== attempt) return;
+    const socket = binding.socket;
+    if (!socket?.connected || socket.id !== connectionId) return;
+    if (binding.sync?.joinedConnectionId !== connectionId) return;
+    const state = syncDeps.get();
+    if (state.status !== "ready" || state.project?._id !== binding.projectId) return;
+    publishTurn(set, binding, turn, true, receivedAt);
+  });
+}
+
+// Request, release, cancel, and reclaim share one authority check. Recovery
+// stays ready, so it does not block them. Unknown turn state does: null is
+// not an empty queue. The server still decides whether the emit sticks.
+function emitTurn(get, event, allowed) {
+  const binding = activeBinding;
+  if (!binding || binding.disposed || !binding.tabId) return;
+  const socket = binding.socket;
+  if (!socket?.connected) return;
+  if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return;
+  const state = get();
+  if (state.status !== "ready" || state.project?._id !== binding.projectId) return;
+  if (!state.turn) return;
+  const self = { userId: selfUserId(), tabId: binding.tabId };
+  if (!self.userId) return;
+  if (!allowed(state, self)) return;
+  socket.emit(event, { projectId: binding.projectId });
 }
 
 function stillCurrent(binding, attempt, socket, connectionId) {
@@ -195,6 +292,74 @@ function stillCurrent(binding, attempt, socket, connectionId) {
 function leaveIfCurrent(binding, attempt, socket, connectionId, projectId) {
   if (!stillCurrent(binding, attempt, socket, connectionId) || !projectId) return;
   socket.emit("workspace:leave", { projectId });
+}
+
+const WAKING_NOTICE_MS = 3000;
+const WAKING_NOTICE = "Waking the server…";
+const RECONNECTING_NOTICE = "Reconnecting…";
+
+function clearNoticeTimer(binding) {
+  if (binding.noticeTimer != null) {
+    clearTimeout(binding.noticeTimer);
+    binding.noticeTimer = null;
+  }
+}
+
+// emptyWorkspace deliberately leaves connectionNotice alone. A rejoin replaces
+// the canvas while "Reconnecting…" must stay up until this attempt goes ready
+// or the slow-join timer replaces it.
+function clearConnectionNotice(set, binding) {
+  clearNoticeTimer(binding);
+  binding.noticeDueAt = null;
+  if (syncDeps.get().connectionNotice) set({ connectionNotice: null });
+}
+
+function armWaking(set, binding, attempt, delay = WAKING_NOTICE_MS) {
+  clearNoticeTimer(binding);
+  const wait = Math.max(0, delay);
+  binding.noticeDueAt = Date.now() + wait;
+  binding.noticeTimer = setTimeout(() => {
+    binding.noticeTimer = null;
+    if (activeBinding !== binding || binding.disposed || binding.attempt !== attempt) return;
+    if (syncDeps.get().status !== "loading") return;
+    set({ connectionNotice: WAKING_NOTICE });
+  }, wait);
+}
+
+function failConnection(set, binding) {
+  if (activeBinding !== binding || binding.disposed) return;
+  clearConnectionNotice(set, binding);
+  binding.noticeMode = null;
+  binding.wasReady = false;
+  binding.attempt += 1;
+  binding.inFlight = null;
+  binding.presenceBuffer = null;
+  if (binding.sync) invalidateSession(binding.sync);
+  binding.previewController?.clearAllOverlays();
+  binding.previewThrottle?.cancel();
+  clearBindingCursors(binding);
+  set(emptyWorkspace("error"));
+}
+
+// Page exit is best effort. A volatile emit can still land in sendBuffer when
+// the heartbeat has expired but the transport looks writable, and that packet
+// would flush on a later connection. Drop only the object this call passed.
+function releaseOnPageHide(binding) {
+  if (activeBinding !== binding || binding.disposed) return;
+  if (!selectIsHolder(syncDeps.get())) return;
+  const socket = binding.socket;
+  const channel = socket?.volatile;
+  if (!channel || typeof channel.emit !== "function") return;
+  const payload = { projectId: binding.projectId };
+  channel.emit("turn:release", payload);
+  const buffer = socket.sendBuffer;
+  if (!Array.isArray(buffer)) return;
+  for (let index = buffer.length - 1; index >= 0; index -= 1) {
+    const data = buffer[index]?.data;
+    if (Array.isArray(data) && data[0] === "turn:release" && data[1] === payload) {
+      buffer.splice(index, 1);
+    }
+  }
 }
 
 function startJoin(set, binding, force) {
@@ -215,7 +380,20 @@ function startJoin(set, binding, force) {
   binding.presenceBuffer = null;
   binding.cursorController.clearAll();
   binding.cursorThrottle.cancel();
+  const continuingInitial = binding.noticeMode === "initial" && binding.noticeDueAt != null;
+  const dueAt = binding.noticeDueAt;
   set(emptyWorkspace("loading"));
+  // The first connection and its join share one three-second clock. A rejoin
+  // after a drop keeps "Reconnecting…" and starts that clock only once the
+  // socket is connected again.
+  if (binding.noticeMode === "reconnect") {
+    armWaking(set, binding, attempt);
+  } else if (continuingInitial) {
+    armWaking(set, binding, attempt, Math.max(0, dueAt - Date.now()));
+  } else {
+    binding.noticeMode = "initial";
+    armWaking(set, binding, attempt);
+  }
 
   const finish = () => {
     if (binding.inFlight?.attempt === attempt) binding.inFlight = null;
@@ -223,29 +401,37 @@ function startJoin(set, binding, force) {
 
   socket.timeout(10000).emitWithAck("workspace:join", {
     projectId,
-    tabId: getTabId(),
+    tabId: binding.tabId,
   }).then((ack) => {
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     const result = classifyJoin(ack, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     if (result.ok) {
-      // The server subscribes this socket before the ack is applied, so a
-      // presence snapshot can already be waiting. That snapshot wins. A failed
-      // or stale ack below must not install it.
-      const buffered = binding.presenceBuffer?.attempt === attempt
+      // Presence may already be buffered. The turn may not: the server samples
+      // it immediately before this ack, so anything queued earlier is older.
+      // Installing the ack before ready lets a later packet, deferred behind
+      // this continuation, apply without flashing the stale holder.
+      clearConnectionNotice(set, binding);
+      binding.noticeMode = null;
+      binding.wasReady = true;
+      const bufferedParticipants = binding.presenceBuffer?.attempt === attempt
         ? binding.presenceBuffer.participants
         : null;
       binding.presenceBuffer = null;
+      publishTurn(set, binding, result.turn, false, performance.now());
       sync.onJoined(binding, {
         project: result.project,
         role: result.role,
         canvas: result.canvas,
       });
       if (!stillCurrent(binding, attempt, socket, connectionId)) return;
-      const roster = buffered ?? result.participants;
+      const roster = bufferedParticipants ?? result.participants;
       set((state) => ({ participants: roster, cursors: pruneCursors(binding, state.cursors, roster) }));
       return;
     }
+    clearConnectionNotice(set, binding);
+    binding.noticeMode = null;
+    binding.wasReady = false;
     binding.presenceBuffer = null;
     binding.sync.denialRejoin = false;
     binding.sync.toastRecovery = false;
@@ -255,6 +441,9 @@ function startJoin(set, binding, force) {
     set(emptyWorkspace(result.notFound ? "notFound" : "error"));
   }).catch(() => {
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
+    clearConnectionNotice(set, binding);
+    binding.noticeMode = null;
+    binding.wasReady = false;
     binding.presenceBuffer = null;
     binding.sync.denialRejoin = false;
     binding.sync.toastRecovery = false;
@@ -318,8 +507,13 @@ function disposeBinding(set, binding) {
   binding.unsubscribe = null;
   binding.unlisten?.();
   binding.unlisten = null;
+  binding.removePageHide?.();
+  binding.removePageHide = null;
   // A disposer from an older route must not leave or clear the binding that replaced it.
   if (!owns) return;
+  clearConnectionNotice(set, binding);
+  binding.noticeMode = null;
+  binding.wasReady = false;
   activeBinding = null;
   if (sendCursorLeave) {
     binding.socket.volatile?.emit("cursor:leave", { projectId: binding.projectId });
@@ -362,6 +556,7 @@ export const useWorkspaceStore = create((set, get) => {
   syncDeps.set = set;
   return {
   ...emptyWorkspace("idle"),
+  connectionNotice: null,
 
   // Socket listeners live here so the page never emits. The disposer is the
   // effect cleanup: it drops only the listeners this binding registered.
@@ -404,6 +599,7 @@ export const useWorkspaceStore = create((set, get) => {
         binding.socket.volatile.emit("canvas:preview", { projectId, nodes });
       }, 50),
       previewController,
+      tabId: getTabId(),
       // The callback revalidates its own binding, join attempt and connection
       // when it runs, so queued work never reaches a replacement binding.
       cursorThrottle: throttle(({ projectId, x, y, attempt, connectionId }) => {
@@ -414,6 +610,11 @@ export const useWorkspaceStore = create((set, get) => {
       }, 50),
       cursorController,
       presenceBuffer: null,
+      noticeTimer: null,
+      noticeDueAt: null,
+      noticeMode: null,
+      wasReady: false,
+      removePageHide: null,
     };
     activeBinding = binding;
     syncDeps.get = get;
@@ -426,6 +627,10 @@ export const useWorkspaceStore = create((set, get) => {
         clearBindingCursors(binding);
         clearPreviews(binding);
       }
+      if (activeBinding !== binding || binding.disposed) return;
+      if (state.status === "ready" || state.status === "error" || state.status === "notFound" || state.status === "idle") {
+        if (binding.noticeTimer != null || state.connectionNotice) clearConnectionNotice(set, binding);
+      }
     });
 
     if (socket) {
@@ -437,6 +642,18 @@ export const useWorkspaceStore = create((set, get) => {
         if (activeBinding !== binding || binding.disposed) return;
         // Drop role, queued edits, and the canvas together. A reconnect joins
         // again and installs whatever the server saved. Unsent work is not replayed.
+        const session = binding.sync;
+        if (session && (session.pending.length > 0 || session.commit)) {
+          toast.error("Connection lost. Some edits may not have been saved");
+        }
+        if (binding.socket?.active === false) {
+          failConnection(set, binding);
+          return;
+        }
+        const reconnecting = binding.wasReady || binding.noticeMode === "reconnect";
+        const initialDue = !reconnecting && binding.noticeMode === "initial" ? binding.noticeDueAt : null;
+        binding.wasReady = false;
+        clearConnectionNotice(set, binding);
         binding.attempt += 1;
         binding.inFlight = null;
         invalidateSession(binding.sync);
@@ -446,7 +663,20 @@ export const useWorkspaceStore = create((set, get) => {
         binding.previewThrottle.cancel();
         clearBindingCursors(binding);
         set(emptyWorkspace("loading"));
+        if (reconnecting) {
+          binding.noticeMode = "reconnect";
+          set({ connectionNotice: RECONNECTING_NOTICE });
+          return;
+        }
+        binding.noticeMode = "initial";
+        const remaining = initialDue == null ? WAKING_NOTICE_MS : Math.max(0, initialDue - Date.now());
+        armWaking(set, binding, binding.attempt, remaining);
       };
+      const onConnectError = () => {
+        if (activeBinding !== binding || binding.disposed) return;
+        if (binding.socket?.active === false) failConnection(set, binding);
+      };
+      const onPageHide = () => releaseOnPageHide(binding);
       const onPresence = (payload) => {
         if (activeBinding !== binding || binding.disposed) return;
         const live = binding.socket;
@@ -468,6 +698,27 @@ export const useWorkspaceStore = create((set, get) => {
         }
         if (binding.inFlight) {
           binding.presenceBuffer = { attempt: binding.inFlight.attempt, participants };
+        }
+      };
+      const onTurn = (payload) => {
+        if (activeBinding !== binding || binding.disposed) return;
+        const live = binding.socket;
+        if (!live?.connected || live.id !== binding.sync?.joinedConnectionId) return;
+        if (!isRecord(payload) || typeof payload.projectId !== "string") return;
+        if (payload.projectId.toLowerCase() !== binding.projectId) return;
+        const receivedAt = performance.now();
+        const turn = normalizeTurn(payload);
+        if (!turn) return;
+        // finally clears the attempt only after the ack continuation. Until
+        // then every packet for this join stays in arrival order. The receipt
+        // is taken now so a deferred packet does not look newer than it was.
+        if (binding.inFlight) {
+          deferTurn(set, binding, turn, binding.inFlight.attempt, binding.inFlight.connectionId, receivedAt);
+          return;
+        }
+        const state = get();
+        if (state.status === "ready" && state.project?._id === binding.projectId) {
+          publishTurn(set, binding, turn, true, receivedAt);
         }
       };
       const onOps = (payload) => {
@@ -523,21 +774,34 @@ export const useWorkspaceStore = create((set, get) => {
       };
       socket.on("connect", onConnect);
       socket.on("disconnect", onDisconnect);
+      socket.on("connect_error", onConnectError);
       socket.on("canvas:ops", onOps);
       socket.on("canvas:preview", onPreview);
       socket.on("presence:update", onPresence);
+      socket.on("turn:state", onTurn);
       socket.on("cursor:move", onCursorMove);
       socket.on("cursor:leave", onCursorLeave);
+      if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+        window.addEventListener("pagehide", onPageHide);
+        binding.removePageHide = () => window.removeEventListener("pagehide", onPageHide);
+      }
       binding.unlisten = () => {
         socket.off("connect", onConnect);
         socket.off("disconnect", onDisconnect);
+        socket.off("connect_error", onConnectError);
         socket.off("canvas:ops", onOps);
         socket.off("canvas:preview", onPreview);
         socket.off("presence:update", onPresence);
+        socket.off("turn:state", onTurn);
         socket.off("cursor:move", onCursorMove);
         socket.off("cursor:leave", onCursorLeave);
       };
-      if (socket.connected) startJoin(set, binding, false);
+      if (!socket.connected && socket.active === false) failConnection(set, binding);
+      else if (socket.connected) startJoin(set, binding, false);
+      else {
+        binding.noticeMode = "initial";
+        armWaking(set, binding, binding.attempt);
+      }
     }
 
     return () => disposeBinding(set, binding);
@@ -546,13 +810,22 @@ export const useWorkspaceStore = create((set, get) => {
   retryWorkspace: () => {
     const binding = activeBinding;
     if (!binding || binding.disposed) return;
-    if (!binding.socket?.connected) {
+    const socket = binding.socket;
+    clearConnectionNotice(set, binding);
+    binding.wasReady = false;
+    binding.noticeMode = null;
+    if (!socket?.connected) {
       binding.attempt += 1;
       binding.inFlight = null;
       binding.presenceBuffer = null;
       invalidateSession(binding.sync);
       clearBindingCursors(binding);
+      binding.previewThrottle?.cancel();
+      binding.previewController?.clearAllOverlays();
       set(emptyWorkspace("loading"));
+      binding.noticeMode = "initial";
+      armWaking(set, binding, binding.attempt);
+      if (socket && socket.active === false && typeof socket.connect === "function") socket.connect();
       return;
     }
     startJoin(set, binding, true);
@@ -560,7 +833,36 @@ export const useWorkspaceStore = create((set, get) => {
 
   resetWorkspace: () => {
     if (activeBinding) disposeBinding(set, activeBinding);
-    else set(emptyWorkspace("idle"));
+    else set({ ...emptyWorkspace("idle"), connectionNotice: null });
+  },
+
+  requestTurn: () => {
+    emitTurn(get, "turn:request", (state, self) => {
+      if (state.role !== "owner" && state.role !== "editor") return false;
+      if (sameTurnTab(state.turn.holder, self)) return false;
+      return !state.turn.queue.some((entry) => sameTurnTab(entry, self));
+    });
+  },
+
+  releaseTurn: () => {
+    emitTurn(get, "turn:release", (state, self) => {
+      if (state.role !== "owner" && state.role !== "editor") return false;
+      return sameTurnTab(state.turn.holder, self);
+    });
+  },
+
+  cancelTurnRequest: () => {
+    emitTurn(get, "turn:cancel", (state, self) => {
+      if (state.role !== "owner" && state.role !== "editor") return false;
+      return state.turn.queue.some((entry) => sameTurnTab(entry, self));
+    });
+  },
+
+  reclaimTurn: () => {
+    emitTurn(get, "turn:reclaim", (state, self) => {
+      if (state.role !== "owner" || !state.turn.holder) return false;
+      return !sameTurnTab(state.turn.holder, self);
+    });
   },
 
   dispatch: (ops) => {

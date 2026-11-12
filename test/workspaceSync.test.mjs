@@ -99,7 +99,7 @@ function createSocket(id = "sock-1") {
   return socket;
 }
 
-function joinBody(projectId, canvas, role = "editor") {
+function joinBody(projectId, canvas, role = "editor", turn = null) {
   return {
     ok: true,
     project: { _id: projectId, name: "Design", description: "Notes" },
@@ -111,9 +111,24 @@ function joinBody(projectId, canvas, role = "editor") {
       img: "",
       role: "viewer",
     }],
-    turn: null,
+    turn,
     serverNow: 1,
   };
+}
+
+// Editors and owners in these fixtures hold the turn on the tab that just
+// joined. A null turn stays read-only, which is what the viewer and the
+// empty-turn join still pass explicitly.
+function editorBody(socket, projectId, canvas, role = "editor") {
+  const tabId = [...socket.sent].reverse().find((item) => item.event === "workspace:join")?.payload?.tabId;
+  return joinBody(projectId, canvas, role, {
+    holder: { userId: USER_A, tabId },
+    holderSince: 1,
+    queue: [],
+    idleDeadline: null,
+    graceUntil: null,
+    serverNow: 1,
+  });
 }
 
 function commitsOf(socket) {
@@ -127,6 +142,7 @@ function syncsOf(socket) {
 describe("workspace sync", () => {
   let vite;
   let useWorkspaceStore;
+  let useSessionStore;
   let selectCanEdit;
   let errors;
   let successes;
@@ -141,6 +157,7 @@ describe("workspace sync", () => {
       logLevel: "error",
     });
     const storeMod = await vite.ssrLoadModule("/src/collaborate/store/useWorkspaceStore.js");
+    const sessionMod = await vite.ssrLoadModule("/src/collaborate/store/useSessionStore.js");
     toastMod = await import("react-toastify");
     errors = [];
     successes = [];
@@ -153,6 +170,7 @@ describe("workspace sync", () => {
       successes.push(message);
     };
     useWorkspaceStore = storeMod.useWorkspaceStore;
+    useSessionStore = sessionMod.useSessionStore;
     selectCanEdit = storeMod.selectCanEdit;
   });
 
@@ -169,6 +187,7 @@ describe("workspace sync", () => {
     errors.length = 0;
     successes.length = 0;
     useWorkspaceStore.getState().resetWorkspace();
+    useSessionStore.setState({ authUser: { _id: USER_A, fullName: "Ada", img: "" } });
   }
 
   async function join(socket, canvas = graph(), role = "editor", projectId = PROJECT) {
@@ -178,7 +197,8 @@ describe("workspace sync", () => {
       return gate.promise;
     };
     const dispose = useWorkspaceStore.getState().bindWorkspace(socket, projectId);
-    gate.resolve(joinBody(projectId, canvas, role));
+    const body = role === "viewer" ? joinBody(projectId, canvas, role) : editorBody(socket, projectId, canvas, role);
+    gate.resolve(body);
     await settle();
     await settle();
     return dispose;
@@ -450,7 +470,7 @@ describe("workspace sync", () => {
     };
     useWorkspaceStore.getState().retryWorkspace();
     await settle();
-    joinGate.resolve(joinBody(PROJECT, graph([node("kept")], 3), "editor"));
+    joinGate.resolve(editorBody(socket, PROJECT, graph([node("kept")], 3), "editor"));
     await settle();
     await settle();
     assert.equal(successes.length, 0);
@@ -612,7 +632,7 @@ describe("workspace sync", () => {
       by: USER_B,
     });
     socket.fire("canvas:ops", { projectId: PROJECT, ops: [], by: "not-an-id" });
-    joinGate.resolve(joinBody(PROJECT, graph([node("old")], 1)));
+    joinGate.resolve(editorBody(socket, PROJECT, graph([node("old")], 1)));
     await settle();
     assert.equal(useWorkspaceStore.getState().status, "ready");
     assert.equal(useWorkspaceStore.getState().syncStatus, "syncing");
@@ -777,7 +797,7 @@ describe("workspace sync", () => {
     socket.handler = (event) => (event === "workspace:join" ? rejoin.promise : Promise.resolve({ ok: false, message: "unexpected" }));
     socket.sent.length = 0;
     useWorkspaceStore.getState().bindWorkspace(socket, PROJECT);
-    rejoin.resolve(joinBody(PROJECT, graph([node("n1", "Saved")], 4)));
+    rejoin.resolve(editorBody(socket, PROJECT, graph([node("n1", "Saved")], 4)));
     await settle();
     await settle();
     assert.equal(useWorkspaceStore.getState().canvas.version, 4);
@@ -790,7 +810,7 @@ describe("workspace sync", () => {
     const gate = defer();
     next.handler = (event) => (event === "workspace:join" ? gate.promise : Promise.resolve({ ok: false, message: "unexpected" }));
     const disposeNext = useWorkspaceStore.getState().bindWorkspace(next, PROJECT);
-    gate.resolve(joinBody(PROJECT, graph([node("n1", "Saved")], 4)));
+    gate.resolve(editorBody(next, PROJECT, graph([node("n1", "Saved")], 4)));
     await settle();
     await settle();
     assert.equal(next.listenerCount("canvas:ops"), 1);
@@ -803,7 +823,7 @@ describe("workspace sync", () => {
     const disposeOther = useWorkspaceStore.getState().bindWorkspace(other, OTHER);
     assert.equal(next.sent.some((item) => item.event === "workspace:leave"), true);
     assert.equal(next.listenerCount("canvas:ops"), 0);
-    moved.resolve(joinBody(OTHER, graph(), "owner"));
+    moved.resolve(editorBody(other, OTHER, graph(), "owner"));
     await settle();
     await settle();
     assert.equal(useWorkspaceStore.getState().project._id, OTHER);
@@ -838,7 +858,7 @@ describe("workspace sync", () => {
     socket.handler = (event) => (event === "workspace:join" ? second.promise : Promise.resolve({ ok: false, message: "unexpected" }));
     const disposeAgain = useWorkspaceStore.getState().bindWorkspace(socket, PROJECT);
     held.resolve({ ok: true, version: 2 });
-    second.resolve(joinBody(PROJECT, graph([node("n1", "Saved")], 5)));
+    second.resolve(editorBody(socket, PROJECT, graph([node("n1", "Saved")], 5)));
     await settle();
     await settle();
     assert.equal(socket.listenerCount("canvas:ops"), 1);
@@ -861,7 +881,7 @@ describe("workspace sync", () => {
     const third = defer();
     socket.handler = (event) => (event === "workspace:join" ? third.promise : Promise.resolve({ ok: false, message: "unexpected" }));
     socket.fire("connect");
-    third.resolve(joinBody(PROJECT, graph([node("n1")], 5)));
+    third.resolve(editorBody(socket, PROJECT, graph([node("n1")], 5)));
     await settle();
     await settle();
     assert.equal(useWorkspaceStore.getState().canvas.nodes.some((item) => item.id === "offline"), false);
@@ -871,7 +891,7 @@ describe("workspace sync", () => {
     replacement.handler = (event) => (event === "workspace:join" ? replaced.promise : Promise.resolve({ ok: false, message: "unexpected" }));
     const disposeReplacement = useWorkspaceStore.getState().bindWorkspace(replacement, PROJECT);
     assert.equal(socket.listenerCount("canvas:ops"), 0);
-    replaced.resolve(joinBody(PROJECT, graph([node("fresh")], 7)));
+    replaced.resolve(editorBody(replacement, PROJECT, graph([node("fresh")], 7)));
     await settle();
     await settle();
     disposeAgain();
@@ -891,8 +911,8 @@ describe("workspace sync", () => {
     firstDispose();
     const secondDispose = useWorkspaceStore.getState().bindWorkspace(strict, PROJECT);
     assert.equal(strict.listenerCount("canvas:ops"), 1);
-    secondPass.resolve(joinBody(PROJECT, graph(), "editor"));
-    firstPass.resolve(joinBody(PROJECT, graph([node("stale")], 3)));
+    secondPass.resolve(editorBody(strict, PROJECT, graph(), "editor"));
+    firstPass.resolve(editorBody(strict, PROJECT, graph([node("stale")], 3)));
     await settle();
     await settle();
     assert.equal(useWorkspaceStore.getState().canvas.nodes.some((item) => item.id === "stale"), false);

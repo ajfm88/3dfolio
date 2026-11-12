@@ -3,6 +3,23 @@ import { applyOps, MAX_OPS_PER_COMMIT, normalizeCanvas } from "@shared/canvasOps
 export const COMMIT_TIMEOUT_MS = 8000;
 export const RECOVERY_TOAST = "Canvas re-synced";
 
+// The Engine.IO heartbeat can expire while socket.connected stays true.
+// Socket.IO then keeps canvas:commit in sendBuffer and flushes that queue
+// on the next connection, ahead of workspace:join. This emit owns one
+// payload object, and that object is the only canvas:commit removed here.
+// A packet the transport already wrote stays in place until the server
+// acknowledgement or a snapshot settles it.
+function dropBufferedCommit(socket, payload) {
+  const buffer = socket?.sendBuffer;
+  if (!Array.isArray(buffer)) return;
+  for (let index = buffer.length - 1; index >= 0; index -= 1) {
+    const data = buffer[index]?.data;
+    if (Array.isArray(data) && data[0] === "canvas:commit" && data[1] === payload) {
+      buffer.splice(index, 1);
+    }
+  }
+}
+
 const OBJECT_ID = /^[0-9a-f]{24}$/i;
 
 function isRecord(value) {
@@ -489,6 +506,9 @@ export function createSyncController(deps) {
     if (state.status !== "ready" || state.syncStatus === "syncing") return;
     if (!socket?.connected || socket.id !== binding.sync.joinedConnectionId) return;
     if (!session.confirmed) return;
+    // Turn loss drops the queue itself. A closed gate must not take batches
+    // or emit, including when an ack pumps the next commit.
+    if (!deps.canEdit()) return;
 
     const ops = [];
     const batches = [];
@@ -520,17 +540,20 @@ export function createSyncController(deps) {
       ops,
     };
     session.commit = captured;
+    const payload = {
+      projectId: binding.projectId,
+      baseVersion: captured.baseVersion,
+      ops,
+    };
     let pending;
     try {
-      pending = socket.timeout(COMMIT_TIMEOUT_MS).emitWithAck("canvas:commit", {
-        projectId: binding.projectId,
-        baseVersion: captured.baseVersion,
-        ops,
-      });
+      pending = socket.timeout(COMMIT_TIMEOUT_MS).emitWithAck("canvas:commit", payload);
     } catch {
+      dropBufferedCommit(socket, payload);
       if (session.commit?.token === token) beginRecovery(binding);
       return;
     }
+    dropBufferedCommit(socket, payload);
     pending.then((body) => {
       onCommitAck(binding, captured, body);
     }).catch(() => {

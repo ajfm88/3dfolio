@@ -4,13 +4,13 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase F: Turns. S01–S20 are built, and S21 is next. S01–S13 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`, S12 + S13 as `5d0340e` (commit 63).
-- Git reconciliation (Claude, 2026-11-09): HEAD is `f6ecdbd` (commit 65), which includes S17 and S18. S16 was committed in `cc1f681` (commit 64). S19, S20, and the S16 and S17 corrections are in the working tree and go into commit 66. At the user's direction, S19 and S20 are marked Committed ahead of that commit, which the user plans for 2026-11-10. Fill in its hash afterward.
+- Phase F: Turns. S01–S20 are built. S21 and S22 passed code review. S01–S13 are committed: S01 as `421a99a`, S02 + S03 as `06716fa`, S04 + S05 as `7ad4bbb`, S06 + S07 as `a7e9d6d`, S08 + S09 as `7fb9533`, S10 + S11 as `050c1a8`, S12 + S13 as `5d0340e` (commit 63).
+- Git reconciliation (Codex, 2026-11-10): HEAD is `e09a624` (commit 66), which commits S16 and S17 corrections, S19, and S20. S21 is in the working tree.
 
 ## Current Goal
 
-- S01–S20 are built and reviewed. Next is the S21 spec (turn UI and read-only mode), which restores in-browser editing.
-- Still unverified in a browser with two accounts: S16, S17, S18, and S20.
+- S22 passed code review in `specs/22-turn-robustness-review.md` and awaits the user's commit.
+- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, and S22.
 
 ## Completed
 
@@ -29,11 +29,11 @@ Update this file after every meaningful implementation change. It records the **
 - S13: Workspace join / leave (approved 2026-11-06 by Codex after cleanup corrections, committed with S12 as `5d0340e`).
 - S14: Server commit handler and sync (approved 2026-11-07 by Codex after the lifecycle correction, committed as `cc1f681`).
 - S15: Client sync wiring (approved 2026-11-07 by Codex after the recovery correction, committed as `cc1f681`).
-- S16: Drag and resize previews (approved 2026-11-09 by Claude after Nemotron's corrections and Grok's test clock fix; first committed in `cc1f681`, corrections go into commit 66).
-- S17: Participants (approved 2026-11-09 by Claude after Grok's corrections; first committed in `f6ecdbd`, corrections go into commit 66).
+- S16: Drag and resize previews (approved 2026-11-09 by Claude after Nemotron's corrections and Grok's test clock fix; first committed in `cc1f681`, corrections committed in `e09a624`).
+- S17: Participants (approved 2026-11-09 by Claude after Grok's corrections; first committed in `f6ecdbd`, corrections committed in `e09a624`).
 - S18: Live cursors (approved 2026-11-08 by Codex after Claude Sonnet's corrections, committed as `f6ecdbd`, together with S17). Browser verification limitations remain outstanding.
-- S19: Turn state machine (approved 2026-11-09 by Claude, marked Committed for commit 66).
-- S20: Turn events and enforcement (approved 2026-11-09 by Claude after one test and readme correction, marked Committed for commit 66).
+- S19: Turn state machine (approved 2026-11-09 by Claude, committed in `e09a624`).
+- S20: Turn events and enforcement (approved 2026-11-09 by Claude after one test and readme correction, committed in `e09a624`).
 
 ## In Progress
 
@@ -41,8 +41,8 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Next Up
 
-- Carry-forward to the S21 spec: read `turn` from the join ack and from `turn:state` (`classifyJoin` only accepts it so far), and make `selectCanEdit` require this tab to hold the turn, comparing `userId` and `tabId`, which replaces today's role-only gate.
-- User makes commit 66 and fills in its hash here. Claude writes the S21 spec, and the user chooses its implementer. After S21, do one full two-account browser walk of S16 to S21. It needs the second account added to a project's `members` by hand, because invitations arrive in S26 and S28. The 320px check needs six or more other accounts, so it waits for S29.
+- The user handles the S21 and S22 commits.
+- The shared-project browser walkthrough of S16–S22 waits until S26/S28 provide membership and sharing. The 320px participant-stack check with six other accounts stays in S29.
 
 ## Slice Status
 
@@ -65,13 +65,13 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S13 | Workspace join / leave | both | S01, S06, S12 | ✓ | Committed | Grok | `5d0340e` |
 | S14 | Commit handler | server | S13 | ✓ | Committed | Grok | `cc1f681` |
 | S15 | Client sync wiring | client | S14 | ✓ | Committed | Grok | `cc1f681` |
-| S16 | Drag / resize previews | both | S15 | ✓ | Approved | Nemotron; Grok clock fix | `cc1f681`; corrections in commit 66 |
-| S17 | Participants | both | S13 | ✓ | Approved | Grok | `f6ecdbd`; corrections in commit 66 |
+| S16 | Drag / resize previews | both | S15 | ✓ | Committed | Nemotron; Grok clock fix | `cc1f681`; corrections `e09a624` |
+| S17 | Participants | both | S13 | ✓ | Committed | Grok | `f6ecdbd`; corrections `e09a624` |
 | S18 | Live cursors | both | S17 | ✓ | Committed | Grok; Claude Sonnet corrections | `f6ecdbd` |
-| S19 | Turn state machine | server | — | ✓ | Committed | Grok | commit 66 (hash pending) |
-| S20 | Turn events + enforcement | server | S14, S16, S19 | ✓ | Committed | Grok | commit 66 (hash pending) |
-| S21 | Turn UI + read-only mode | client | S20 | | Todo | | |
-| S22 | Turn robustness | client | S21 | | Todo | | |
+| S19 | Turn state machine | server | — | ✓ | Committed | Grok | `e09a624` |
+| S20 | Turn events + enforcement | server | S14, S16, S19 | ✓ | Committed | Grok | `e09a624` |
+| S21 | Turn UI + read-only mode | client | S20 | ✓ | Approved | Grok | |
+| S22 | Turn robustness | client | S21 | ✓ | Approved | Grok | |
 | S23 | Project messages API + typing relay | server | S13 | | Todo | | |
 | S24 | Chat panel | client | S23 | | Todo | | |
 | S25 | Undo / redo for the turn holder | both | S22 | | Todo | | |
@@ -1235,6 +1235,143 @@ Added client and server cursor support:
 
 **Status (Claude, 2026-11-09):** S19 and S20 are marked Committed at the user's direction, ahead of commit 66 planned for 2026-11-10.
 
+### S21 — Turn UI and read-only mode
+
+**Planning (Codex, 2026-11-10):** `specs/21-turn-ui-read-only.md` is the implementation contract. Grok implements and Claude reviews. Baseline is commit 66, `e09a624`; the application working tree was clean. The spec covers validated public turn state, an attempt-scoped pre-ack event buffer, exact userId/tabId ownership, guarded request/release/cancel/reclaim actions, a responsive TurnBar, and a local turn-granted chime. Existing canvas components inherit the common edit gate. Existing tests that assume any editor can write must use real holding-tab join fixtures.
+
+**Boundary:** S22 still owns already-queued unsent edits on turn loss, resync, pagehide release, connection banners, and idle countdown. Copied sessionStorage tab identities retain S20 semantics; S21 does not change tabId.js. Initial/rejoin snapshots do not notify; a genuine live transition to holding does. Browser checks must distinguish different tab identities.
+
+**Verification:** Source and existing test harnesses inspected; `git diff --check` is the planning check. No production implementation, test execution, live server, database writes, or browser checks during planning. S21 remains Todo until Grok starts it. No commit, push, or branch.
+
+**Implementation (Grok, 2026-11-10): Ready for review.** The client reads the public turn, shows it in `TurnBar`, and allows new canvas edits only while this exact tab holds it. `turn: null` stays unknown and read-only. A live transition into this tab toasts `It's your turn` and plays the local chime once. Join, rejoin, and a buffered pre-ack grant do not. S22 was not started.
+
+**Changed:**
+- `src/collaborate/lib/turnState.js`: new pure `normalizeTurn` and `sameTurnTab`. No imports, clock, or mutation.
+- `src/collaborate/lib/turnSound.js`: new `playTurnSound`. Two notes, 880 then 1174.66. Copied from the chat chime pattern and not imported from chat.
+- `src/collaborate/components/workspace/TurnBar.jsx`: new bar. It reads store selectors and actions only.
+- `src/collaborate/routes/WorkspacePage.jsx`: mounts `TurnBar` inside the existing `<main>`, after `WorkspaceCanvas`.
+- `src/collaborate/store/useWorkspaceStore.js`: `turn: null` on the empty workspace, join normalization, one `turn:state` listener, an attempt-scoped pre-ack buffer installed before the ready publish, `selectIsHolder`, `selectCanEdit` requiring that holder, and `requestTurn`, `releaseTurn`, `cancelTurnRequest`, and `reclaimTurn`.
+- `test/turnState.test.mjs`: new suite for normalization, the join gate, the buffer, live events, actions, dispatch and preview, the chime, Web Audio, and rendered rows.
+- `test/workspaceSync.test.mjs` and `test/canvasPreview.test.mjs`: edit-authorized joins now hold the tab id captured on `workspace:join`. Empty and null turns stay on the unknown and viewer paths.
+- `test/participants.test.mjs` and `test/cursorPresence.test.mjs`: no fixture change. Their joins still use `turn: null`.
+- `context/6-progress-tracker.md`: this note and the status lines.
+
+**Verification commands, each run on its own, all exit 0:**
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, 0 cancelled, `duration_ms` 780.7774.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, `duration_ms` 678.0342.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, `duration_ms` 661.9668.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, `duration_ms` 753.3156. An earlier overlap with the cursor suite printed `WebSocket server error: Port 24678 is already in use` and still passed 6; the separate rerun did not print it.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, `duration_ms` 743.1759.
+- `npm test` from `server/`: 201 pass, 0 fail, 0 cancelled, `duration_ms` 8856.991. The process exited on its own.
+- `npm run build` from the repo root: 4264 modules, built in 9.87s. `WorkspacePage-B7YlCVIh.js` is 257.38 kB, gzip 82.54 kB. The existing chunk-size warning is the only warning.
+- `git diff --check`: exit 0. The only messages were LF-to-CRLF notices on `WorkspacePage.jsx`, `test/canvasPreview.test.mjs`, and `test/workspaceSync.test.mjs`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and `MongoDB connected` to `3dfolio`. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was then stopped. No project, canvas, message, or user document was written.
+
+**Deviations:** `context/2-architecture.md` still says the client gates editing by role and does not read the turn until S21. The spec's allowed-files list excludes that file, so the sentence was left as written. Vite's SSR export of `playTurnSound` is not configurable, so the suite cannot replace it with `Object.defineProperty`. Chime counts use a throwing `AudioContext` constructor, and the synthesis test calls the real function against a fake context. `renderToStaticMarkup` escapes the apostrophe in `You're editing` as `&#x27;`; the assertion decodes that before matching the spec string. Browser Duplicate Tab can copy `sessionStorage` `collab:tabId`. S20 treats the same `userId` and `tabId` as one identity. `tabId.js` was not changed, and distinct-tab behavior was not checked in a browser.
+
+**Browser checklist, not run:** No browser tools are connected in this session. A second account was not invented and no environment file was changed. These items are unverified: two accounts seeing commits and previews; editor queue position, release, toast, and chime; cancel; owner Take control queued and unqueued; a fresh distinct tab staying read-only with the right queue position; a viewer pan, zoom, select, and cursor with no turn buttons; a label draft closing on turn loss and no blur commit; a gesture ending after loss; no hidden toolbar, resize, drop, connect, or Delete/Backspace mutation from a non-holder; keyboard focus on the bar buttons; the bar wrapping at 320px without horizontal overflow; pan and zoom outside the bar; no canvas cursor published over the bar; reload and rejoin without a second toast or chime; `/blog` and `/chat` smoke. Markup checks do not establish pointer or keyboard behavior. This slice is not approved and not launch-ready.
+
+**S22 carry-forward:** Dropping already-queued unsent edits on turn loss, resynchronizing them, `pagehide` release, connection banners, and the idle countdown stay in S22. The sync pump, replay, and pending-commit rules were not changed. A commit accepted before the turn changes can still settle afterward. S21 does not finish reconnect or turn-loss robustness. The 320px participant-stack check with six other accounts stays in S29.
+
+**Review (Codex): Changes requested.** See `specs/21-turn-ui-review.md` and the corrected S21 spec. The original spec gave pre-ack turn packets precedence over the ack even though the server takes its snapshot immediately before sending the ack. The store can retain an old holder as a result. A quick loss and regrant also lets a queued preview from the previous turn send. Both regressions reproduced independently. The review records the required lifecycle tests, harness cleanup, and the architecture doc correction. All 338 existing automated tests and the production build passed. Browser and two-account checks remain open.
+
+**Corrections (Grok, 2026-11-10): Ready for review.** The join no longer keeps a turn buffer. A `turn:state` packet that arrives while joining is deferred as a microtask. An earlier packet runs before the ack continuation, sees that the workspace is not ready, and is dropped. The ack's turn is installed first. A packet that arrives after the ack, including one that arrives before the ack continuation runs, applies afterward and can notify. Losing this tab's turn cancels the preview throttle, so a sample queued from the previous turn does not send if the tab is granted the turn again inside the 50 ms window. A finished canvas recovery publishes its snapshot and leaves the latest turn in place. An obsolete turn listener captured from a replaced binding cannot overwrite the new one. The React `useSyncExternalStore` patch is restored in teardown. `context/2-architecture.md` now describes the S20 client gap and the S21 gate and packet order. Already queued canvas commits remain S22.
+
+**Verification, each process exiting 0:**
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, `duration_ms` 825.85.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, `duration_ms` 696.1748.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, `duration_ms` 672.8847.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, `duration_ms` 805.1332.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, `duration_ms` 732.958.
+- The four suites after the turn suite were started one after another in one shell, each as its own `node --test`. None printed a Vite port warning.
+- `npm test` from `server/`: 201 pass, 0 fail, 0 cancelled, `duration_ms` 345.8012.
+- `npm run build`: 4264 modules, built in 7.84s. `WorkspacePage-DIh6qqcs.js` is 257.44 kB, gzip 82.55 kB. The existing chunk-size warning is the only warning.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `WorkspacePage.jsx`, `test/canvasPreview.test.mjs`, and `test/workspaceSync.test.mjs`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and `MongoDB connected` to `3dfolio`. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was stopped. No database writes.
+
+**Deviations:** None in the corrected contract. The sound export is still read-only under Vite SSR, so chime counts still use a throwing `AudioContext`, which the corrected spec allows. `renderToStaticMarkup` still escapes the apostrophe in `You're editing`. Duplicate Tab can still copy `collab:tabId`, and that shared identity was not checked in a browser.
+
+**Browser checklist, still not run:** No browser tools are connected. A second account was not invented and no environment file was changed. Unverified: two-account edits and previews; queue position, release, toast, and chime; cancel; Take control queued and unqueued; a fresh distinct tab; viewer pan, zoom, select, and cursor with no turn buttons; label-draft close on loss; a gesture ending after loss; hidden toolbar, resize, drop, connect, and Delete/Backspace paths; keyboard focus; the 320px wrap; cursor suppression over the bar; reload without a second toast; `/blog` and `/chat`. This slice is not approved and not launch-ready.
+
+**S22 carry-forward:** Dropping already-queued unsent edits on turn loss, resynchronizing them, `pagehide` release, connection banners, and the idle countdown stay in S22. The sync pump, replay, and pending-commit rules were not changed. S21 does not finish reconnect or turn-loss robustness.
+
+**Second review (Codex): Changes requested.** The original findings are addressed. All 338 automated tests, the build, and `git diff --check` passed independently. A focused fake-socket check found that a live packet can overtake an earlier packet deferred during the same join and leave the older holder installed. Deferring while the join remains in flight passed the focused check in a temporary copy. The review file records the reproduction and correction. Browser and two-account checks remain open.
+
+**Packet-order correction (Grok, 2026-11-10): Ready for review.** `onTurn` defers every turn packet while `binding.inFlight` is set. That includes the interval after the ack has marked the workspace ready and before the existing `finally` clears the attempt. Packets from that join therefore stay in arrival order. `deferTurn` still requires the captured attempt, the current connection, a ready workspace, and the matching project. The ready fast path requires the matching project as well. The existing join-order test resolves the ack, schedules packet B with `queueMicrotask`, then delivers packet A synchronously. Both packets use `serverNow` 5. The published order is the ack, then A (`TAB_B`), then B (`TAB_C`). The join snapshot stays silent. Presence buffering is unchanged. A finished canvas recovery still leaves the latest turn in place. Losing this tab's turn still cancels the preview throttle. No server behavior, S22 work, dependency, or protected route changed.
+
+**Verification, each process exiting 0:**
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, `duration_ms` 776.4849. The mixed schedule is inside `lets the join acknowledgement beat an older turn packet`.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, `duration_ms` 744.5817.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, `duration_ms` 679.5234.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, `duration_ms` 762.509.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, `duration_ms` 724.5166.
+- Those four suites ran one after another in one shell, each as its own `node --test`. None printed a Vite port warning.
+- `npm test` from `server/`: 201 pass, 0 fail, 0 cancelled, `duration_ms` 344.5106.
+- `npm run build`: 4264 modules, built in 27.13s. `WorkspacePage-BJDuxVBz.js` is 257.48 kB, gzip 82.56 kB. The existing chunk-size warning is the only warning.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `WorkspacePage.jsx`, `test/canvasPreview.test.mjs`, and `test/workspaceSync.test.mjs`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and `MongoDB connected` to `3dfolio`. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was stopped. A follow-up check printed STOPPED and port 3000 was free. No database writes.
+
+**Deviations:** None in the second-review contract. This pass edits `useWorkspaceStore.js`, `test/turnState.test.mjs`, and this tracker note. The sound export is still read-only under Vite SSR, so chime counts still use a throwing `AudioContext`. `renderToStaticMarkup` still escapes the apostrophe in `You're editing`. Duplicate Tab can still copy `collab:tabId`, and that shared identity was not checked in a browser.
+
+**Browser checklist, still not run:** No browser tools are connected. A second account was not invented and no environment file was changed. Unverified: two-account edits and previews; queue position, release, toast, and chime; cancel; Take control queued and unqueued; a fresh distinct tab; viewer pan, zoom, select, and cursor with no turn buttons; label-draft close on loss; a gesture ending after loss; hidden toolbar, resize, drop, connect, and Delete/Backspace paths; keyboard focus; the 320px wrap; cursor suppression over the bar; reload without a second toast; `/blog` and `/chat`. This slice is not approved and not launch-ready.
+
+**S22 carry-forward:** Dropping already-queued unsent edits on turn loss, resynchronizing them, `pagehide` release, connection banners, and the idle countdown stay in S22. The sync pump, replay, and pending-commit rules were not changed. S21 does not finish reconnect or turn-loss robustness.
+
+**Final code review (Codex): Approved.** The mixed delivery regression passes with the submitted packet-order correction and fails with the previous branch order in a temporary copy. All 338 tests, the production build, and `git diff --check` passed independently. Browser and two-account verification remains open for launch readiness. See `specs/21-turn-ui-review.md`.
+
+### S22 — Turn robustness
+
+**Planning (Codex):** `specs/22-turn-robustness.md` defines pending-edit recovery on turn loss, connection feedback and retries, best-effort release on pagehide, and the holder's idle countdown. The approved S21 changes were in the working tree on top of `e09a624` at planning time. The spec keeps the server protocol and S21 behavior, and defers the shared-project browser walkthrough until the sharing flow is available. S22 remains Todo. Planning verification was source inspection and `git diff --check`.
+
+**Implementation (Grok, 2026-11-10): Ready for review.** Baseline is still HEAD `e09a624` (commit 66). The approved S21 tree was preserved. S23 was not started. No commit, push, branch, or deploy.
+
+A live loss of this tab publishes the new turn and cancels the queued preview before recovery. Pending batches are dropped, one toast says `Your turn ended before some edits could be sent`, and the existing `canvas:sync` path installs the server snapshot. An in-flight commit with nothing waiting still settles on its ack. `pump` returns before taking batches when `selectCanEdit` is false. Disconnect with pending work or an in-flight commit toasts `Connection lost. Some edits may not have been saved` once, then rejoins from the snapshot and does not resubmit those edits. A clean disconnect stays silent.
+
+The banner is a full-width warning strip with `role="status"`. Initial loading and a manual retry show a spinner, then `Waking the server…` after 3 seconds. A connect followed by its first join shares that interval. A drop after ready shows `Reconnecting…` immediately, and the connected rejoin switches to the waking copy only after its own 3 seconds. Join success and canvas-only recovery clear the notice. `socket.active === false` clears it and shows the existing error card for a terminal disconnect, a terminal `connect_error`, and a socket that is already inactive when bound. Retry calls `socket.connect()` once only when the socket is disconnected and inactive. `pagehide` emits volatile `turn:release` for this live holder, including during canvas recovery, and removes that exact packet if the emit buffered it. The ordinary Release button still uses the normal emit. Each accepted turn stores the `performance.now()` sample taken before deferral. The holder countdown is `Name is waiting — passes in m:ss unless you edit`, outside the polite region. At `0:00` the client does not release or pass the turn.
+
+`connectionNotice` stays out of `emptyWorkspace` so the reconnect text survives the loading reset. `turnReceivedAt` clears with the turn.
+
+**Files:** `useWorkspaceStore.js`, `workspaceSync.js`, `turnState.js`, `ConnectionBanner.jsx`, `TurnBar.jsx`, `WorkspacePage.jsx`, `test/turnRobustness.test.mjs`, `context/2-architecture.md`, and this tracker. The existing `turnState` and `workspaceSync` suites kept their S21 assertions and were not edited for S22.
+
+**Verification:**
+- `node --test test/turnRobustness.test.mjs`: 26 pass, 0 fail, duration_ms 1021.4522.
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, duration_ms 769.3998.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, duration_ms 690.1701.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, duration_ms 677.3756.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, duration_ms 819.0426.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, duration_ms 767.0753.
+- `npm test` from `server/`: 201 pass, 0 fail, duration_ms 335.7832.
+- `npm run build` at the repo root: 4265 modules, built in 8.11s. `WorkspacePage-CQ421nhA.js` is 262.02 kB, gzip 84.00 kB. The existing chunk-size warning is the only warning.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `workspaceSync.js`, `WorkspacePage.jsx`, `canvasPreview.test.mjs`, and `workspaceSync.test.mjs`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and MongoDB connected to `3dfolio`. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. A follow-up read showed the task cancelled and port 3000 free. The boot log was deleted. No database writes.
+
+**Deviations:** None. `renderToStaticMarkup` does not run the countdown interval effect, so the suite moves `performance.now()` and renders again. Effect cleanup was not executed in Node. No jsdom was added.
+
+**Browser checks, still not run:** No browser tools are connected. A second account was not invented and no environment file was changed. Unverified in a browser: initial loading, reconnect feedback, the retry path, and the shared-project walkthrough. Carry these to S26/S28 and keep them separate from the automated tests: brief DevTools offline while someone else remains in the room, a queued editor receiving the turn after pagehide or grace expiry, idle countdown and activity reset, and interrupted edits recovering without duplicates. This slice is not approved and not launch-ready.
+
+**Review (Codex): Changes requested.** A loopback test with the installed Socket.IO client reproduced a heartbeat-expired commit flushing before the next workspace join. The workspace server rejects pre-join commits. S22 requires the client to discard this packet. See `specs/22-turn-robustness-review.md` for the reproduction and correction. All 364 submitted tests, the production build, and `git diff --check` passed independently. Browser verification remains open as planned.
+
+**Correction (Grok, 2026-11-10): Ready for review.** Each `canvas:commit` uses its own payload object. If Socket.IO queued that exact packet while `socket.connected` was still true, `pump` removes it from `sendBuffer` before the function returns. A packet the transport already wrote is left for its acknowledgement or a later snapshot. Unrelated buffer entries stay. The ordinary ack, timeout, and error paths are unchanged. No server handler, tab id, role rule, dependency, database, or S21 packet order changed. S23 was not started. No commit, push, branch, or deploy.
+
+The fake-socket regression buffers the commit while `connected` stays true. After reconnect the original payload is absent, a cursor packet and a different `canvas:commit` object are flushed, and the store installs the server snapshot. A late ack for the removed commit does not change that snapshot. The real-client loopback used the submitted store, the installed Socket.IO client, and a loopback Socket.IO server with no account and no database. The heartbeat check was forced immediately before dispatch, then the engine closed and the client reconnected inside the commit timeout. The server received `join`, then `join`.
+
+**Correction verification:**
+- `node --test test/turnRobustness.test.mjs`: 28 pass, 0 fail, duration_ms 1112.7479. This includes the fake-socket regression and the loopback check above.
+- `node --test test/turnState.test.mjs`: 10 pass, 0 fail, duration_ms 1038.8756.
+- `node --test test/workspaceSync.test.mjs`: 13 pass, 0 fail, duration_ms 935.0766.
+- `node --test test/canvasPreview.test.mjs`: 39 pass, 0 fail, duration_ms 931.1748.
+- `node --test test/participants.test.mjs`: 6 pass, 0 fail, duration_ms 1055.5644.
+- `node --test test/cursorPresence.test.mjs`: 69 pass, 0 fail, duration_ms 997.4842.
+- `npm test` from `server/`: 201 pass, 0 fail, duration_ms 424.0819.
+- Combined: 366 pass, 0 fail.
+- `npm run build` at the repo root: 4265 modules, built in 7.80s. `WorkspacePage-D2QW4qBn.js` is 262.23 kB, gzip 84.07 kB. The existing chunk-size warning is the only warning.
+- `git diff --check`: exit 0. LF-to-CRLF notices on `workspaceSync.js`, `WorkspacePage.jsx`, `canvasPreview.test.mjs`, and `workspaceSync.test.mjs`.
+- `npm run dev` from `server/`: `Server is up and running on PORT: 3000` and MongoDB connected to `3dfolio`. No Mongoose warning. `GET /health` returned 200 `{"ok":true}`. That process was killed. Port 3000 was free afterward. The boot log was deleted. No database writes.
+
+**Deviations:** None. Suites that started together printed Vite's existing port 24678 conflict and still passed. Browser and two-account checks remain deferred to S26/S28. This slice is not approved and not launch-ready.
+
+**Final code review (Codex): Approved.** The targeted cleanup preserves unrelated Socket.IO packets, and the real-client regression sees `join`, `join`. The test fails with the cleanup disabled in a temporary copy. All 366 automated tests, the production build, and `git diff --check` passed independently. Browser and shared-project verification remain scheduled for S26/S28. See `specs/22-turn-robustness-review.md`.
+
 ### S29 — Mobile and accessibility
 
 **Carry-forward from S08:** the shape panel is HTML5 drag-only. Add touch and keyboard/click alternatives in S29; no such handlers were added in S08.
@@ -1264,7 +1401,12 @@ Added client and server cursor support:
 
 ## Session Notes
 
-- Stopping point, 2026-11-09: S16 and S17 corrections, S19, and S20 are in the working tree for commit 66, and all were reviewed by Claude with every suite rerun: server 201, sync 13, participants 6, cursor 69, canvasPreview 39, build passing. After S20 the server refuses browser edits until S21 adds the turn UI, so do not deploy S20 without S21.
+- Stopping point, 2026-11-10: S21 and S22 passed code review in the working tree on HEAD `e09a624` and await the user's commits. Browser and two-account checks are carried to S26/S28. The implementer stopped the API after `GET /health` returned 200, with no database writes.
+- Stopping point, 2026-11-10: S22 has one change requested in the working tree on HEAD `e09a624`. S21 remains approved and uncommitted. Browser and two-account checks remain open and are carried to S26/S28. The implementer stopped the API after `GET /health` returned 200, with no database writes.
+- Stopping point, 2026-11-10: S21 passed final code review in the working tree on HEAD `e09a624` and awaits the user's commit. Browser and two-account checks remain open. The implementer stopped the API after `GET /health` returned 200, with no database writes.
+- Stopping point, 2026-11-10: S21 has one change requested after the second review on HEAD `e09a624`. Browser and two-account checks remain open. The implementer stopped the API after `GET /health` returned 200, with no database writes.
+- Stopping point, 2026-11-10: S21 has changes requested in the working tree on HEAD `e09a624`. Browser and two-account checks remain open. The implementer stopped the API after `GET /health` returned 200, with no database writes.
+- Stopping point, 2026-11-10: commit 66 is `e09a624`. Codex wrote the S21 spec and reconciled the tracker; no application code changed and no tests ran during planning. S21 implementation is next. Browser/two-account evidence for S16–S20 remains outstanding. Do not deploy S20 without S21.
 - Outside `/collaborate`, not fixed: `clerk.webhook.js` passes `new: true` to `findOneAndUpdate`, which Mongoose 9 deprecates in favor of `returnDocument: "after"`. It still works, and it should print a warning when the webhook fires.
 - Outside `/collaborate`, not fixed: `server/src/webhooks/clerk.webhook.js` imports `@clerk/backend/webhooks`, but `@clerk/backend` isn't declared in `server/package.json`. It resolves only as a transitive dependency of `@clerk/express`. Also, a file type multer rejects returns `500` instead of `400`, because the error carries no `status`.
 - S01 installed `server/node_modules`. `server/.env` was added by the user on 2026-11-01 (live values, per Q2), and the server boots against the live `3dfolio` database.

@@ -2,15 +2,19 @@ import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import WorkspaceCanvas from "../components/canvas/WorkspaceCanvas";
+import ConnectionBanner from "../components/workspace/ConnectionBanner";
+import TurnBar from "../components/workspace/TurnBar";
 import WorkspaceNavbar from "../components/workspace/WorkspaceNavbar";
 import { useSessionStore } from "../store/useSessionStore";
 import { useWorkspaceStore } from "../store/useWorkspaceStore";
 
 // Same spinner as CollaborateLoader. It stays local so the dashboard module
 // does not have to export a piece only the workspace uses.
+const spinnerClass = "h-8 w-8 animate-spin rounded-full border-2 border-[var(--collab-border-strong)] border-t-[var(--collab-accent-2)]";
+
 const WorkspaceLoader = () => (
   <div className="flex min-h-[100dvh] items-center justify-center">
-    <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--collab-border-strong)] border-t-[var(--collab-accent-2)]" />
+    <div className={spinnerClass} />
   </div>
 );
 
@@ -54,22 +58,32 @@ const WorkspacePage = () => {
   const { projectId } = useParams();
   const socket = useSessionStore((s) => s.socket);
   const status = useWorkspaceStore((s) => s.status);
+  const connectionNotice = useWorkspaceStore((s) => s.connectionNotice);
   const bindWorkspace = useWorkspaceStore((s) => s.bindWorkspace);
 
   useEffect(() => {
     return bindWorkspace(socket, projectId);
   }, [socket, projectId, bindWorkspace]);
 
-  if (status === "idle" || status === "loading") return <WorkspaceLoader />;
   if (status === "notFound") return <NotFoundCard />;
   if (status === "error") return <ErrorCard />;
+
+  if ((status === "idle" || status === "loading") && !connectionNotice) return <WorkspaceLoader />;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
       <WorkspaceNavbar />
-      <main className="relative min-h-0 flex-1">
-        <WorkspaceCanvas />
-      </main>
+      <ConnectionBanner />
+      {status === "idle" || status === "loading" ? (
+        <main className="flex min-h-0 flex-1 items-center justify-center">
+          <div className={spinnerClass} />
+        </main>
+      ) : (
+        <main className="relative min-h-0 flex-1">
+          <WorkspaceCanvas />
+          <TurnBar />
+        </main>
+      )}
     </div>
   );
 };

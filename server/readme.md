@@ -100,6 +100,7 @@ server/
 │   │   ├── roles.js                  # resolveRole — Clerk claim, webhook-mirrored fallback
 │   │   ├── imagekit.js               # Lazily built ImageKit client; DM folder /chat, project folder /collaborate
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
+│   │   ├── projectMembership.js      # Invite/member validation, email normalization, response shapes, snapshot guard
 │   │   ├── projectMessages.js        # Project chat query, text, paging, and response whitelist
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
@@ -118,6 +119,7 @@ server/
 │   │   ├── comment.controller.js     # Comment list, add, and delete handlers
 │   │   ├── message.controller.js     # Message history, conversations, and send + emit
 │   │   ├── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
+│   │   ├── projectMember.controller.js # Invitations and members: create, revoke, list, accept, decline, role, remove
 │   │   └── projectMessage.controller.js # Project chat history and send, then room broadcast
 │   ├── models/
 │   │   ├── user.model.js             # Mongoose User model — shared identity for blog, DMs, and workspace
@@ -247,6 +249,13 @@ All requests to `/api/projects` require a valid Clerk session.
 | DELETE | `/api/projects/:id` | Owner                             | Delete the project, its canvas, and its chat |
 | GET    | `/api/projects/:id/messages` | Member (any role)          | One page of project chat, oldest first  |
 | POST   | `/api/projects/:id/messages` | Member (any role)          | Send text and/or one image or video     |
+| POST   | `/api/projects/:id/invites` | Owner | Invite an email as editor or viewer |
+| DELETE | `/api/projects/:id/invites/:inviteId` | Owner | Revoke one pending invitation |
+| GET    | `/api/projects/invites/mine` | Any signed-in user | The caller's own pending offers |
+| POST   | `/api/projects/invites/:inviteId/accept` | The invited email | Join with the invitation's role |
+| POST   | `/api/projects/invites/:inviteId/decline` | The invited email | Decline one offer |
+| PATCH  | `/api/projects/:id/members/:userId` | Owner | Change a member's role |
+| DELETE | `/api/projects/:id/members/:userId` | Owner removing a member, or that member leaving | Remove a member or leave |
 
 A non-member, or a request with an invalid id, gets `404`, so a project's existence never leaks. A member without permission gets `403`.
 
@@ -271,6 +280,38 @@ A file is uploaded only after that text check. Missing ImageKit configuration re
 The save is awaited, the sender is populated with `_id fullName img`, and the whitelist above is built. Only then does the server emit a non-volatile `project:message` to `project:<projectId>`, including the sender's own sockets in that room. Sockets in another project, and sockets that are only in a per-user room, do not receive it. Sending does not create a workspace room. The HTTP response is `201` and `{ message }` with that same resource. A validation, upload, or save failure emits nothing. An upload or save that throws reaches the central error handler.
 
 Owner delete still requires the manage permission and a `deleteOne` that matches the owner. Only after that delete removes a row does the handler delete the canvas and then `projectmessages` for that project. A missing canvas or an empty history is still success. The response is `200` with `{ "message": "Project deleted" }`. A non-owner, an outsider, an invalid id, or a delete that matches nothing does not delete messages. If message cleanup throws, the handler does not return success. Removing people from the room, and deleting a Clerk user's messages, stay later work.
+
+### Invitations and Members (S26)
+
+These seven routes sit on the same router, behind `protectRoute`. Identity is the synced user, `req.user._id` and `req.user.email`, never a body, query or header. The static `/invites/...` paths are registered before the generic `/:id` routes.
+
+**Resources.** An `Invite` is exactly `{ _id, email, role, invitedBy, createdAt }` (`invitedBy` is a user id). An `OfferedInvite` is exactly `{ _id, project: { _id, name }, role, invitedBy: { _id, fullName, img } | null, createdAt }`, where `_id` is the invitation id, not the project id, and `invitedBy` is `null` when the inviter's account no longer exists. Ids are canonical strings and dates are ISO timestamps. No other field is returned: no email of anyone else, no `clerkId`, no `__v`, no roster, no other pending invitation and no canvas.
+
+| Route | Success |
+| ----- | ------- |
+| `POST /:id/invites` | `201 { invite }` |
+| `DELETE /:id/invites/:inviteId` | `200 { "message": "Invitation revoked" }` |
+| `GET /invites/mine` | `200 { invites: [OfferedInvite] }`, newest first, ties by invitation id descending, `[]` when none |
+| `POST /invites/:inviteId/accept` | `200 { projectId, role }` |
+| `POST /invites/:inviteId/decline` | `200 { "message": "Invitation declined" }` |
+| `PATCH /:id/members/:userId` | `200 { member: { userId, role } }` |
+| `DELETE /:id/members/:userId` | `200 { "message": "Member removed" }` (owner) or `{ "message": "Project left" }` (self) |
+
+**Order of checks.** Project routes validate the project id, then read the project scoped to the caller, then check the role, then validate the target and body. An outsider, a missing project and a malformed id are all `404 Project not found` before any body or target is examined. An editor or viewer attempting an owner operation is `403 Only the project owner can do that` before any body error. A member removing someone else is also `403` before the target's existence is revealed; removing yourself is allowed. After authorization, a malformed or absent invitation is `404 Invitation not found` and a malformed or absent member is `404 Member not found`. Admin users have no project privilege.
+
+**Invitation recipients** are not members, so they are the one narrow exception to membership scoping. Reads and writes are scoped in the database to a **single** `invites` element that holds both the invitation id and the caller's normalized email (`$elemMatch`). A second invitation for the same person in the same project cannot authorize someone else's. A wrong email, missing, revoked or already-consumed invitation is `404 Invitation not found` with no metadata. Holding an invitation grants the offer and accept/decline only, not project detail, chat, canvas or sockets.
+
+**Email.** A primitive string, trimmed, lowercased whole, at most 254 characters, matching `^[^\s@]+@[^\s@]+\.[^\s@]+$`, with no ASCII control characters. Plus tags and dots are preserved and provider aliases are not folded. Arrays, objects, numbers and `null` are never coerced. The caller's own account email is normalized the same way; if it is invalid, list/create/accept/decline answer `400 Your account needs a valid email address` (create only after owner authorization). This is a bounded product check, not email verification.
+
+**Create invitation.** Body `{ email, role }` with `role` exactly `editor` or `viewer`; every other key is ignored. Errors, in order: `400 Email must be a valid address`, `400 Role must be editor or viewer`, `400 You cannot invite yourself`, `400 This person is already a member` (compared case-insensitively against the stored emails of this project's own member users only), `400 This email is already invited`, and `400 A project can have at most 10 members and pending invites`. Members and pending invitations share the ten seats, so a pending invitation reserves a seat even for someone who has not signed up. No account is created and no member is added.
+
+**Accept.** Grants the role stored on the invitation; the request body is ignored. It removes the invitation and adds the member in one update, so a project that already uses ten seats can still accept (the invitation's seat is swapped for the member's). `400 Owner cannot join as a member` and `400 You are already a member` are refused. No socket room is joined and no turn is granted.
+
+**Change role / remove.** The target is a stored member's user id, not an invitation id, a Clerk id or an email. `400 Owner role cannot be changed`; changing to the current role is a matched success. The owner cannot be removed and cannot leave (`400 Owner cannot leave the project`). Removing a member does not delete their messages or the canvas, and does not remove invitations by email.
+
+**Concurrency.** Every membership write is a single atomic update on the Project document. The handler reads the project, decides, and then repeats in the write filter the authority it relied on (the owner or member, or the exact invitation element) plus a snapshot of the exact `members` and `invites` arrays, expressed as `$size` plus one `$elemMatch` per element, so ObjectIds and dates stay values and an empty array is `$size: 0`. A request that raced a newer change matches nothing and is not retried. It is classified by one fresh scoped read into the specific `404`/`403`/`400`, or else `400 Project membership changed. Please try again.` Of two requests that consume the same invitation exactly one succeeds, and a stale role change cannot recreate a removed member. A rename or description change does not invalidate a membership request. This was verified against an in-memory model that evaluates the real filters and updates; **no live MongoDB race test was run.**
+
+**Rollout limit.** These routes change stored membership only. **They do not make removal or demotion live**: a member already joined to the project's Socket.IO room keeps their room, cached role, cursor/typing/turn permissions and broadcasts until S27 adds live enforcement, and there is no Share UI until S28. Do not treat membership management as complete or deploy it as such before S27.
 
 ## Authorization
 
@@ -315,6 +356,8 @@ Handlers live in per-feature modules under `src/sockets/`, registered from `src/
 The server is created as an `http.Server` rather than through `app.listen()`, so Express handles REST and Socket.io handles WebSockets over the same port and process.
 
 Sockets authenticate exactly like REST requests: the client sends its Clerk session token in `handshake.auth.token`, the server verifies it and resolves it to the synced MongoDB user. Every socket joins a room named for its user id, so emits reach all of that user's open tabs.
+
+
 
 ### Client to Server
 

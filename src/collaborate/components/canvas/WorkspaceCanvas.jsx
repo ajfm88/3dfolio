@@ -10,6 +10,7 @@ import ShapeNode from "./ShapeNode";
 import { PresenceCursors } from "./PresenceCursors";
 import { createCursorPointerHandlers } from "../../lib/cursorPresence";
 import { createShapeNode, SHAPE_DRAG_TYPE } from "../../lib/shapeDrag";
+import { shouldFocusCanvas, useCanvasShortcuts, useGestureCancel } from "../../lib/canvasShortcuts";
 
 const nodeTypes = { shape: ShapeNode };
 const edgeTypes = { link: LinkEdge };
@@ -21,7 +22,7 @@ const Flow = () => {
   const onNodesChange = useWorkspaceStore((s) => s.onNodesChange);
   const onEdgesChange = useWorkspaceStore((s) => s.onEdgesChange);
   const canEdit = useWorkspaceStore(selectCanEdit);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, zoomIn, zoomOut } = useReactFlow();
   const dispatch = useWorkspaceStore((s) => s.dispatch);
   const commitNodePositions = useWorkspaceStore((s) => s.commitNodePositions);
   const deleteElements = useWorkspaceStore((s) => s.deleteElements);
@@ -29,16 +30,29 @@ const Flow = () => {
   const onNodeDrag = useWorkspaceStore((s) => s.onNodeDrag);
   const moveCursor = useWorkspaceStore((s) => s.moveCursor);
   const leaveCursor = useWorkspaceStore((s) => s.leaveCursor);
+  const beginGesture = useWorkspaceStore((s) => s.beginGesture);
+  const endGesture = useWorkspaceStore((s) => s.endGesture);
+  const cancelGestures = useWorkspaceStore((s) => s.cancelGestures);
+  const gestureActive = useWorkspaceStore((s) => Boolean(s.history?.gesture));
+  useGestureCancel(gestureActive, cancelGestures);
 
   const wrapperRef = useRef(null);
 
+  // A gesture ends before its final commit is dispatched, so the commit's own
+  // queue state, not a stale gesture flag, decides when undo is available.
   const onConnect = useCallback((connection) => {
+    endGesture("connect");
     connectNodes(connection);
-  }, [connectNodes]);
+  }, [connectNodes, endGesture]);
+
+  const onConnectStart = useCallback(() => beginGesture("connect"), [beginGesture]);
+  const onConnectEnd = useCallback(() => endGesture("connect"), [endGesture]);
+  const onNodeDragStart = useCallback(() => beginGesture("drag"), [beginGesture]);
 
   const onNodeDragStop = useCallback((_event, _node, nodes) => {
+    endGesture("drag");
     commitNodePositions(nodes);
-  }, [commitNodePositions]);
+  }, [commitNodePositions, endGesture]);
 
   const onDelete = useCallback((elements) => {
     deleteElements(elements);
@@ -66,10 +80,30 @@ const Flow = () => {
     getWrapper: () => wrapperRef.current,
   }), [screenToFlowPosition, moveCursor, leaveCursor]);
 
+  // Zoom stays on the canvas for every role. The handler is attached to the
+  // surface element itself, so keys typed in a portaled editor never reach it.
+  const actionsRef = useRef(null);
+  actionsRef.current = {
+    undo: () => useWorkspaceStore.getState().undo(),
+    redo: () => useWorkspaceStore.getState().redo(),
+    zoomIn: () => { zoomIn({ duration: 200 }); return true; },
+    zoomOut: () => { zoomOut({ duration: 200 }); return true; },
+  };
+  useCanvasShortcuts(wrapperRef, actionsRef);
+
+  const onPointerDown = useCallback((event) => {
+    const surface = wrapperRef.current;
+    if (surface && shouldFocusCanvas(event, surface.ownerDocument)) surface.focus({ preventScroll: true });
+  }, []);
+
   return (
     <div
       ref={wrapperRef}
-      className="absolute inset-0"
+      tabIndex={0}
+      role="application"
+      aria-label="Diagram canvas"
+      className="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--collab-accent)]"
+      onPointerDown={onPointerDown}
       onPointerMove={pointer.onPointerMove}
       onPointerLeave={pointer.onPointerLeave}
       onPointerCancel={pointer.onPointerCancel}
@@ -81,10 +115,13 @@ const Flow = () => {
         onEdgesChange={onEdgesChange}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeDrag={onNodeDrag}
         onDelete={onDelete}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}

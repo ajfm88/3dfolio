@@ -511,6 +511,81 @@ export function applyOps(canvas, ops) {
   return { ok: true, canvas: { nodes: state.nodes, edges: state.edges }, ops: normalized };
 }
 
+// Builds the ops that put a canvas back to what it was before `ops` ran. The
+// forward batch is validated by applyOps itself, so an op the server would
+// refuse is refused here with the same message and index. Each op's inverse is
+// read from the graph as it stood immediately before that op, then the groups
+// are emitted in reverse. A group keeps its own order: a removed node returns
+// before the edges its removal actually cascaded, so every restored edge finds
+// both endpoints. The sequence can be longer than MAX_OPS_PER_COMMIT. Callers
+// replay it in chunks; it is never one oversized commit.
+export function invertOps(canvas, ops) {
+  const forward = applyOps(canvas, ops);
+  if (!forward.ok) return { ok: false, error: forward.error, index: forward.index };
+
+  let state = workingCanvas(canvas);
+  const groups = [];
+
+  for (const op of forward.ops) {
+    const group = [];
+    switch (op.type) {
+      case "node.add":
+        group.push({ type: "node.remove", id: op.node.id });
+        break;
+      case "node.update": {
+        const previous = state.nodeById.get(op.id);
+        const patch = {};
+        if (Object.hasOwn(op.patch, "position")) {
+          patch.position = { x: previous.position.x, y: previous.position.y };
+        }
+        if (Object.hasOwn(op.patch, "width")) patch.width = previous.width;
+        if (Object.hasOwn(op.patch, "height")) patch.height = previous.height;
+        if (Object.hasOwn(op.patch, "data")) {
+          patch.data = {};
+          for (const key of Object.keys(op.patch.data)) patch.data[key] = previous.data[key];
+        }
+        group.push({ type: "node.update", id: op.id, patch });
+        break;
+      }
+      case "node.remove": {
+        group.push({ type: "node.add", node: cloneNode(state.nodeById.get(op.id)) });
+        // Only edges still present are cascaded by this removal. One that an
+        // earlier op already dropped belongs to that op's group.
+        for (const edge of state.edges) {
+          if (edge.source === op.id || edge.target === op.id) {
+            group.push({ type: "edge.add", edge: cloneEdge(edge) });
+          }
+        }
+        break;
+      }
+      case "edge.add":
+        group.push({ type: "edge.remove", id: op.edge.id });
+        break;
+      case "edge.update":
+        group.push({
+          type: "edge.update",
+          id: op.id,
+          patch: { data: { label: state.edgeById.get(op.id).data.label } },
+        });
+        break;
+      case "edge.remove":
+        group.push({ type: "edge.add", edge: cloneEdge(state.edgeById.get(op.id)) });
+        break;
+      default:
+        return { ok: false, error: "Unknown change type", index: -1 };
+    }
+    groups.push(group);
+
+    // forward already proved this op applies, so the step cannot fail.
+    const step = applyOps({ nodes: state.nodes, edges: state.edges }, [op]);
+    state = workingCanvas(step.canvas);
+  }
+
+  const inverse = [];
+  for (let index = groups.length - 1; index >= 0; index -= 1) inverse.push(...groups[index]);
+  return { ok: true, ops: inverse };
+}
+
 export function normalizeCanvas(raw) {
   if (!isPlainObject(raw)) return { nodes: [], edges: [] };
 

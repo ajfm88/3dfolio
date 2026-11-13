@@ -22,10 +22,12 @@ import {
   sanitizeNode,
   sanitizeEdge,
   applyOps,
+  invertOps,
   normalizeCanvas,
 } from "../src/shared/canvasOps.js";
 
 const EXPORTS = [
+  "invertOps",
   "NODE_SHAPES",
   "HANDLE_IDS",
   "NODE_COLORS",
@@ -794,5 +796,211 @@ describe("module boundary", () => {
       .join("\n");
     assert.equal(/^\s*import\b/m.test(code), false);
     assert.equal(code.includes("require("), false);
+  });
+});
+
+// Graph equality by id and fields. Array order and versions are not part of
+// the round-trip contract.
+function graphKey(canvas) {
+  const nodes = canvas.nodes.map((n) => JSON.stringify(n)).sort();
+  const edges = canvas.edges.map((e) => JSON.stringify(e)).sort();
+  return { nodes, edges };
+}
+
+function applyChunked(canvas, ops) {
+  let current = canvas;
+  let commits = 0;
+  for (let at = 0; at < ops.length; at += MAX_OPS_PER_COMMIT) {
+    const chunk = ops.slice(at, at + MAX_OPS_PER_COMMIT);
+    const result = applyOps(current, chunk);
+    assert.equal(result.ok, true, result.ok ? "" : `${result.error} (chunk at ${at}, index ${result.index})`);
+    current = result.canvas;
+    commits += 1;
+  }
+  return { canvas: current, commits };
+}
+
+function roundTrip(before, ops) {
+  const forward = assertOk(applyOps(before, ops));
+  const inverse = assertOk(invertOps(before, ops));
+  const back = applyChunked(forward.canvas, inverse.ops);
+  assert.deepEqual(graphKey(back.canvas), graphKey(normalizeCanvas(before)));
+  return { forward, inverse, back };
+}
+
+function seeded() {
+  return {
+    nodes: [node({ id: "a" }), node({ id: "b", position: { x: 10, y: 20 } }), node({ id: "c" })],
+    edges: [
+      edge({ id: "ab", source: "a", target: "b" }),
+      edge({ id: "bc", source: "b", target: "c", data: { label: "calls" } }),
+      edge({ id: "loop", source: "c", target: "c", sourceHandle: "top", targetHandle: "bottom" }),
+    ],
+  };
+}
+
+describe("invertOps", () => {
+  it("inverts each op type", () => {
+    const before = seeded();
+    roundTrip(before, [{ type: "node.add", node: node({ id: "d" }) }]);
+    roundTrip(before, [{ type: "node.remove", id: "b" }]);
+    roundTrip(before, [{ type: "edge.remove", id: "ab" }]);
+    roundTrip(before, [{ type: "edge.update", id: "bc", patch: { data: { label: "new" } } }]);
+    roundTrip(before, [{ type: "edge.add", edge: edge({ id: "ac", source: "a", target: "c" }) }]);
+    roundTrip(before, [{ type: "node.update", id: "a", patch: { position: { x: 5, y: 6 } } }]);
+  });
+
+  it("restores exactly the patched node fields, including nested data", () => {
+    const before = seeded();
+    const patches = [
+      { position: { x: 1, y: 2 } },
+      { width: 300 },
+      { height: 90 },
+      { data: { label: "x" } },
+      { data: { shape: "circle" } },
+      { data: { color: "#112233", textColor: "#445566" } },
+      { position: { x: 3, y: 3 }, width: 100, height: 100, data: { label: "all", shape: "pill", color: "#000000", textColor: "#FFFFFF" } },
+    ];
+    for (const patch of patches) {
+      const { inverse } = roundTrip(before, [{ type: "node.update", id: "b", patch }]);
+      assert.equal(inverse.ops.length, 1);
+      assert.deepEqual(Object.keys(inverse.ops[0].patch).sort(), Object.keys(patch).sort());
+    }
+    const data = roundTrip(before, [{ type: "node.update", id: "b", patch: { data: { label: "x" } } }]);
+    assert.deepEqual(Object.keys(data.inverse.ops[0].patch.data), ["label"]);
+  });
+
+  it("restores a removed node before the edges its removal cascaded", () => {
+    const before = seeded();
+    const { inverse } = roundTrip(before, [{ type: "node.remove", id: "c" }]);
+    assert.deepEqual(inverse.ops.map((op) => op.type), ["node.add", "edge.add", "edge.add"]);
+    assert.equal(inverse.ops[0].node.id, "c");
+  });
+
+  it("restores a self-loop once", () => {
+    const before = { nodes: [node({ id: "a" })], edges: [edge({ id: "s", source: "a", target: "a" })] };
+    const { inverse } = roundTrip(before, [{ type: "node.remove", id: "a" }]);
+    assert.equal(inverse.ops.filter((op) => op.type === "edge.add").length, 1);
+  });
+
+  it("handles two removed nodes that share an edge", () => {
+    const before = {
+      nodes: [node({ id: "a" }), node({ id: "b" })],
+      edges: [edge({ id: "ab", source: "a", target: "b" })],
+    };
+    const ops = [{ type: "node.remove", id: "a" }, { type: "node.remove", id: "b" }];
+    const { inverse } = roundTrip(before, ops);
+    // The edge was cascaded by the first removal only, so it is restored once,
+    // after both endpoints exist again.
+    assert.equal(inverse.ops.filter((op) => op.type === "edge.add").length, 1);
+    const edgeAt = inverse.ops.findIndex((op) => op.type === "edge.add");
+    const adds = inverse.ops.map((op, index) => (op.type === "node.add" ? index : -1)).filter((i) => i >= 0);
+    assert.ok(adds.every((index) => index < edgeAt));
+  });
+
+  it("handles repeated updates, add/update/remove and remove/re-add of one id", () => {
+    const before = seeded();
+    roundTrip(before, [
+      { type: "node.update", id: "a", patch: { data: { label: "one" } } },
+      { type: "node.update", id: "a", patch: { data: { label: "two" } } },
+      { type: "node.update", id: "a", patch: { position: { x: 9, y: 9 } } },
+    ]);
+    roundTrip(before, [
+      { type: "node.add", node: node({ id: "t", data: { label: "t" } }) },
+      { type: "node.update", id: "t", patch: { width: 222 } },
+      { type: "node.remove", id: "t" },
+    ]);
+    roundTrip(before, [
+      { type: "node.remove", id: "b" },
+      { type: "node.add", node: node({ id: "b", position: { x: 77, y: 77 }, data: { label: "again" } }) },
+      { type: "edge.add", edge: edge({ id: "ab", source: "a", target: "b" }) },
+    ]);
+    roundTrip(before, [
+      { type: "edge.update", id: "ab", patch: { data: { label: "x" } } },
+      { type: "edge.update", id: "ab", patch: { data: { label: "y" } } },
+      { type: "edge.remove", id: "ab" },
+    ]);
+    roundTrip(before, [
+      { type: "edge.add", edge: edge({ id: "ac", source: "a", target: "c" }) },
+      { type: "node.remove", id: "c" },
+    ]);
+  });
+
+  it("works with special ids", () => {
+    const before = {
+      nodes: [node({ id: "__proto__" }), node({ id: "constructor" })],
+      edges: [edge({ id: "toString", source: "__proto__", target: "constructor" })],
+    };
+    roundTrip(before, [{ type: "node.remove", id: "__proto__" }]);
+    roundTrip(before, [{ type: "node.update", id: "constructor", patch: { data: { label: "k" } } }]);
+    assert.equal(Object.prototype.polluted, undefined);
+  });
+
+  it("returns applyOps validation failures with the same index and no inverse", () => {
+    const before = seeded();
+    const bad = [
+      { type: "node.update", id: "a", patch: { data: { label: "ok" } } },
+      { type: "node.remove", id: "nope" },
+    ];
+    const forward = applyOps(before, bad);
+    const inverse = invertOps(before, bad);
+    assert.equal(inverse.ok, false);
+    assert.equal(inverse.error, forward.error);
+    assert.equal(inverse.index, forward.index);
+    assert.equal("ops" in inverse, false);
+    assert.equal(invertOps(before, []).ok, false);
+    assert.equal(invertOps(before, "x").ok, false);
+    assert.equal(invertOps(before, new Array(MAX_OPS_PER_COMMIT + 1).fill({ type: "node.remove", id: "a" })).ok, false);
+  });
+
+  it("uses normalized forward ops and drops display fields", () => {
+    const before = seeded();
+    const messy = node({ id: "d", data: { color: "#abcdef" } });
+    messy.selected = true;
+    const { inverse } = roundTrip(before, [{ type: "node.add", node: messy }]);
+    assert.deepEqual(inverse.ops, [{ type: "node.remove", id: "d" }]);
+    const display = { ...node({ id: "z" }), selected: true };
+    const removeInverse = assertOk(invertOps({ nodes: [display], edges: [] }, [{ type: "node.remove", id: "z" }]));
+    assert.equal("selected" in removeInverse.ops[0].node, false);
+  });
+
+  it("does not mutate input and returns detached objects", () => {
+    const before = deepFreeze(seeded());
+    const ops = deepFreeze([{ type: "node.remove", id: "b" }, { type: "edge.update", id: "loop", patch: { data: { label: "q" } } }]);
+    const snapshot = JSON.stringify(before);
+    const first = assertOk(invertOps(before, ops));
+    assert.equal(JSON.stringify(before), snapshot);
+    first.ops[1].node.data.label = "mutated";
+    first.ops[1].node.position.x = 999;
+    const second = assertOk(invertOps(before, ops));
+    assert.notEqual(second.ops[1].node.data.label, "mutated");
+    assert.notEqual(second.ops[1].node, before.nodes[1]);
+    assert.notEqual(second.ops[1].node.position, before.nodes[1].position);
+  });
+
+  it("round-trips a no-op patch to an equivalent graph", () => {
+    const before = seeded();
+    roundTrip(before, [{ type: "node.update", id: "a", patch: { width: before.nodes[0].width } }]);
+  });
+
+  it("restores a node incident to 600 edges in 13 legal chunks", () => {
+    const nodes = [node({ id: "hub" }), node({ id: "other" })];
+    const edges = [];
+    for (let index = 0; index < MAX_EDGES; index += 1) {
+      const kind = index % 3;
+      edges.push(edge({
+        id: `x${index}`,
+        source: kind === 1 ? "other" : "hub",
+        target: kind === 0 ? "other" : "hub",
+      }));
+    }
+    const before = { nodes, edges };
+    const forward = assertOk(applyOps(before, [{ type: "node.remove", id: "hub" }]));
+    assert.equal(forward.canvas.edges.length, 0);
+    const inverse = assertOk(invertOps(before, [{ type: "node.remove", id: "hub" }]));
+    assert.equal(inverse.ops.length, 1 + MAX_EDGES);
+    const back = applyChunked(forward.canvas, inverse.ops);
+    assert.equal(back.commits, 13);
+    assert.deepEqual(graphKey(back.canvas), graphKey(before));
   });
 });

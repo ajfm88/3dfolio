@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { applyOps, NODE_COLORS, createEdgeId, normalizeCanvas } from "@shared/canvasOps.js";
 import { getTabId } from "../lib/tabId";
 import { createSyncController, createSyncState, invalidateSession } from "../lib/workspaceSync.js";
+import { createCanvasHistory, prepareFrame, prepareReplay } from "../lib/canvasHistory.js";
 import { throttle } from "../lib/throttle.js";
 import { createPreviewOverlayController } from "../lib/canvasPreview.js";
 import { normalizeParticipants } from "../lib/participants.js";
@@ -78,8 +79,14 @@ function emptyWorkspace(status) {
     cursors: {},
     turn: null,
     turnReceivedAt: null,
+    history: IDLE_HISTORY,
   };
 }
+
+// What the controls render. The frames themselves live on the binding; these
+// counts and flags are mirrored here so a subscriber sees every change. Every
+// workspace reset puts this back to idle.
+const IDLE_HISTORY = Object.freeze({ undo: 0, redo: 0, busy: false, replay: null, gesture: false });
 
 // Who this binding is. The component reads it while rendering the queue, and
 // a fresh object here would retrigger the subscription on every pass.
@@ -105,7 +112,7 @@ export const selectIsHolder = (state) => {
 // Recovery and a disconnected binding refuse even when this tab holds the
 // turn. The socket is read at call time so sign-out can remove listeners,
 // and therefore skip the disconnect handler, without leaving a dispatch path open.
-export const selectCanEdit = (state) => {
+function holderCanEdit(state) {
   if (state.status !== "ready" || state.syncStatus === "syncing") return false;
   if (state.role !== "owner" && state.role !== "editor") return false;
   const binding = activeBinding;
@@ -114,7 +121,40 @@ export const selectCanEdit = (state) => {
   if (!socket?.connected) return false;
   if (!binding.sync?.joinedConnectionId || socket.id !== binding.sync.joinedConnectionId) return false;
   return selectIsHolder(state);
-};
+}
+
+// holderCanEdit is the permission the sync pump uses. It stays true during an
+// undo or redo replay, which has to keep sending its own chunks. The UI and
+// every public store action use this stricter form: a replay in progress
+// refuses new ordinary mutations and previews.
+export const selectCanEdit = (state) => holderCanEdit(state) && !state.history?.replay;
+
+// The session socket and the account that authenticated it must still own the
+// joined connection. A session change is not a disconnect, so this is read at
+// call time rather than trusted from an earlier render.
+function sessionOwnsBinding(binding) {
+  const socket = binding.socket;
+  const session = useSessionStore.getState();
+  if (!session.socket || session.socket !== socket) return false;
+  const accountId = selfUserId();
+  return Boolean(accountId)
+    && accountId === connectionAccount(socket)
+    && accountId === binding.joinedAccountId;
+}
+
+function historyReady(state, stack) {
+  const history = state.history;
+  if (!history || history.replay || history.busy || history.gesture || history[stack] === 0) return false;
+  if (!selectCanEdit(state)) return false;
+  const binding = activeBinding;
+  if (!binding || binding.disposed || !sessionOwnsBinding(binding)) return false;
+  const session = binding.sync;
+  if (!session || session.recovering || session.commit || session.pending.length > 0) return false;
+  return !hasGesture(binding);
+}
+
+export const selectCanUndo = (state) => historyReady(state, "undo");
+export const selectCanRedo = (state) => historyReady(state, "redo");
 
 // Chat stays available to every project role without a turn, including while
 // the canvas is syncing or recovering. The account id is the one that
@@ -144,9 +184,104 @@ export function revokeJoinedAccount(socket) {
   const binding = activeBinding;
   if (!binding || binding.disposed || binding.socket !== socket) return;
   binding.joinedAccountId = "";
+  if (!retireUnownedWork(binding)) invalidateHistory(binding, "account");
 }
 
-syncDeps.canEdit = () => selectCanEdit(syncDeps.get());
+// Session ownership of the joined connection is gone, so anything still queued
+// or in flight for it (a replay's remaining chunks included) must never leave
+// on that connection. The session is invalidated rather than paused: its epoch
+// moves, so a late ack cannot pump another chunk or republish the optimistic
+// graph, and restoring the old socket or account later cannot resurrect it.
+// The workspace goes back to loading, the same state a disconnect produces,
+// and only a fresh join on a valid current binding brings it back.
+function retireUnownedWork(binding) {
+  const session = binding.sync;
+  if (!session || !(session.commit || session.pending.length > 0 || binding.replay)) return false;
+  binding.attempt += 1;
+  binding.inFlight = null;
+  binding.presenceBuffer = null;
+  invalidateSession(session);
+  binding.joinedAccountId = "";
+  clearPreviews(binding);
+  clearBindingCursors(binding);
+  syncDeps.set(emptyWorkspace("loading"));
+  return true;
+}
+
+const NO_GESTURE = Object.freeze({ drag: false, resize: false, connect: false });
+const UNDO_INTERRUPTED = "Undo interrupted. Some changes may have been saved.";
+const REDO_INTERRUPTED = "Redo interrupted. Some changes may have been saved.";
+
+function hasGesture(binding) {
+  const gesture = binding.gesture;
+  return Boolean(gesture && (gesture.drag || gesture.resize || gesture.connect));
+}
+
+// Mirrors the binding's history into store state, only when something changed.
+function publishHistory(binding) {
+  if (activeBinding !== binding || binding.disposed) return;
+  const session = binding.sync;
+  const next = {
+    undo: binding.history.undo.length,
+    redo: binding.history.redo.length,
+    busy: Boolean(session && (session.commit || session.pending.length > 0 || session.recovering)),
+    replay: binding.replay ? binding.replay.kind : null,
+    gesture: hasGesture(binding),
+  };
+  const current = syncDeps.get().history;
+  if (
+    current && current.undo === next.undo && current.redo === next.redo
+    && current.busy === next.busy && current.replay === next.replay && current.gesture === next.gesture
+  ) return;
+  syncDeps.set({ history: next });
+}
+
+// Called from every path that makes the retained inverses untrustworthy. The
+// generation moves, so a late ack, drain or timer that captured the old value
+// cannot restore frames or finish a replay that no longer exists.
+function invalidateHistory(binding, reason) {
+  if (!binding.history) return;
+  const interrupted = binding.replay;
+  binding.history.clear();
+  binding.replay = null;
+  binding.gesture = NO_GESTURE;
+  // A multi-commit replay is not atomic on the server, so a saved prefix can
+  // remain. Say so once, and only while the workspace is still on screen.
+  if (interrupted && (reason === "recovery" || reason === "turn")
+      && activeBinding === binding && !binding.disposed) {
+    toast.error(interrupted.kind === "undo" ? UNDO_INTERRUPTED : REDO_INTERRUPTED);
+  }
+  publishHistory(binding);
+}
+
+// The queue changed. A fully drained queue while a replay is waiting means its
+// last chunk was acknowledged, which is the only moment the stacks may move.
+function onQueueSettled(binding) {
+  const session = binding.sync;
+  const idle = session && !session.commit && session.pending.length === 0 && !session.recovering;
+  const replay = binding.replay;
+  if (idle && replay) {
+    binding.replay = null;
+    const current = replay.generation === binding.history.generation && replay.epoch === session.epoch;
+    if (!current || !binding.history.transfer(replay.kind, replay.frame)) invalidateHistory(binding, "stale");
+  }
+  publishHistory(binding);
+}
+
+function installHistoryHooks(binding) {
+  binding.sync.hooks = {
+    invalidate: (reason) => invalidateHistory(binding, reason),
+    queue: () => onQueueSettled(binding),
+  };
+}
+
+syncDeps.canEdit = () => holderCanEdit(syncDeps.get());
+syncDeps.ownsConnection = (binding) => {
+  const accountId = selfUserId();
+  return Boolean(accountId)
+    && accountId === binding.joinedAccountId
+    && accountId === connectionAccount(binding.socket);
+};
 
 // React Flow owns selected and measured. A rebuild that dropped them would
 // deselect nodes and force a re-measure on every edit. The canonical object
@@ -282,7 +417,12 @@ function publishTurn(set, binding, turn, live, receivedAt) {
   set({ turn, turnReceivedAt: turn ? receivedAt : null });
   // A sample queued while this tab held the turn must not leave after a
   // later grant. The throttle would otherwise see the new permission and send it.
-  if (wasHolding && !nowHolding) binding.previewThrottle?.cancel();
+  if (wasHolding && !nowHolding) {
+    binding.previewThrottle?.cancel();
+    // Even with an empty queue: the next grant to this tab starts with
+    // nothing to undo.
+    invalidateHistory(binding, "turn");
+  }
   // The turn is already published, so a recovery snapshot cannot be edited
   // under the holder that just lost it.
   if (live && wasHolding && !nowHolding) {
@@ -559,6 +699,8 @@ function disposeBinding(set, binding) {
   if (binding.cursorController) binding.cursorController.dispose();
   binding.unsubscribe?.();
   binding.unsubscribe = null;
+  binding.unsubscribeSession?.();
+  binding.unsubscribeSession = null;
   binding.unlisten?.();
   binding.unlisten = null;
   binding.removePageHide?.();
@@ -605,6 +747,52 @@ function settleResizeEnd(change, nodes) {
   };
 }
 
+// Undo and redo share the ordinary publish and enqueue path. Nothing goes
+// through the public dispatch, so a replay never records history of its own.
+function runReplay(set, get, kind) {
+  const binding = activeBinding;
+  if (!binding || binding.disposed) return false;
+  const state = get();
+  const hasFrames = binding.history.undo.length > 0 || binding.history.redo.length > 0 || binding.replay;
+  if (hasFrames && !sessionOwnsBinding(binding)) {
+    invalidateHistory(binding, "account");
+    return false;
+  }
+  // The stack is read from the binding as well as from the mirrored counts,
+  // so a stale render cannot authorize an action.
+  const stack = kind === "undo" ? binding.history.undo : binding.history.redo;
+  if (stack.length === 0 || !historyReady(state, kind)) return false;
+
+  const frame = stack[stack.length - 1];
+  const prepared = prepareReplay(state.canvas, kind === "undo" ? frame.inverse : frame.forward);
+  if (!prepared.ok) {
+    invalidateHistory(binding, "preflight");
+    toast.error(`Could not ${kind}. History was cleared.`);
+    return false;
+  }
+
+  binding.replay = {
+    kind,
+    frame,
+    generation: binding.history.generation,
+    epoch: binding.sync.epoch,
+  };
+  // The optimistic graph sits at the last confirmed version, like any edit.
+  const canvas = {
+    nodes: prepared.canvas.nodes,
+    edges: prepared.canvas.edges,
+    version: state.canvas.version,
+  };
+  set({
+    canvas,
+    rfNodes: displayNodes(binding, canvas.nodes, state.canvas.nodes, state.rfNodes),
+    rfEdges: toDisplayEdges(canvas.edges, state.rfEdges),
+  });
+  publishHistory(binding);
+  sync.enqueueMany(binding, prepared.chunks);
+  return true;
+}
+
 export const useWorkspaceStore = create((set, get) => {
   syncDeps.get = get;
   syncDeps.set = set;
@@ -647,6 +835,10 @@ export const useWorkspaceStore = create((set, get) => {
       disposed: false,
       unlisten: null,
       sync: createSyncState(),
+      history: createCanvasHistory(),
+      replay: null,
+      gesture: NO_GESTURE,
+      unsubscribeSession: null,
       previewThrottle: throttle(({ projectId, nodes }) => {
         if (activeBinding !== binding || binding.disposed) return;
         if (projectId !== binding.projectId || !selectCanEdit(get())) return;
@@ -671,12 +863,22 @@ export const useWorkspaceStore = create((set, get) => {
       wasReady: false,
       removePageHide: null,
     };
+    installHistoryHooks(binding);
     activeBinding = binding;
     syncDeps.get = get;
     syncDeps.set = set;
     set(emptyWorkspace("loading"));
     // Failure transitions reached through the sync helper (error, notFound,
     // emptyWorkspace) bypass this file, so the binding watches status itself.
+    // A session socket or account change is not a disconnect, so nothing else
+    // would tell this binding that its retained inverses lost their owner.
+    binding.unsubscribeSession = useSessionStore.subscribe(() => {
+      if (activeBinding !== binding || binding.disposed) return;
+      if (sessionOwnsBinding(binding)) return;
+      if (retireUnownedWork(binding)) return;
+      if (binding.history.undo.length === 0 && binding.history.redo.length === 0 && !hasGesture(binding)) return;
+      invalidateHistory(binding, "account");
+    });
     binding.unsubscribe = useWorkspaceStore.subscribe((state) => {
       if (state.status !== "ready") {
         clearBindingCursors(binding);
@@ -945,13 +1147,51 @@ export const useWorkspaceStore = create((set, get) => {
       edges: result.canvas.edges,
       version: state.canvas.version,
     };
+    // The frame is installed before enqueue, which can fail synchronously into
+    // recovery and clear it. It stays unusable until the queue fully drains.
+    const binding = activeBinding;
+    const prepared = prepareFrame(state.canvas, result.ops, result.canvas);
+    if (prepared.frame) binding.history.record(prepared.frame);
+    else if (prepared.changed) binding.history.clear();
     set({
       canvas,
-      rfNodes: displayNodes(activeBinding, canvas.nodes, state.canvas.nodes, state.rfNodes),
+      rfNodes: displayNodes(binding, canvas.nodes, state.canvas.nodes, state.rfNodes),
       rfEdges: toDisplayEdges(canvas.edges, state.rfEdges),
     });
-    sync.enqueue(activeBinding, result.ops);
+    publishHistory(binding);
+    sync.enqueue(binding, result.ops);
     return true;
+  },
+
+  undo: () => runReplay(set, get, "undo"),
+  redo: () => runReplay(set, get, "redo"),
+
+  // Drag, resize and connection gestures block undo while they are in
+  // progress. Only the turn holder's edit gestures count; panning does not.
+  beginGesture: (kind) => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed || !(kind in NO_GESTURE)) return;
+    if (!holderCanEdit(get())) return;
+    binding.gesture = { ...binding.gesture, [kind]: true };
+    publishHistory(binding);
+  },
+
+  // An interaction that was cancelled never delivers its end event: React Flow
+  // aborts a drag on a second touch, or when the dragged node disappears,
+  // without calling onNodeDragStop. The canvas calls this when the pointer
+  // sequence is over. It only clears flags; it never dispatches the gesture.
+  cancelGestures: () => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed || !hasGesture(binding)) return;
+    binding.gesture = NO_GESTURE;
+    publishHistory(binding);
+  },
+
+  endGesture: (kind) => {
+    const binding = activeBinding;
+    if (!binding || binding.disposed || !(kind in NO_GESTURE) || !binding.gesture[kind]) return;
+    binding.gesture = { ...binding.gesture, [kind]: false };
+    publishHistory(binding);
   },
 
   // onNodeDragStop's third argument is every node that gesture moved.

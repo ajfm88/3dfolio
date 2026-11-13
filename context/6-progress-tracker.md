@@ -4,13 +4,13 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase G: Project chat complete in code. S01–S22 are committed. S23 and S24 passed Codex review and remain approved/uncommitted on HEAD `43eb732`.
-- Git reconciliation (Codex, 2026-11-11): HEAD is `43eb732` (commit 67), which commits the approved S21 and S22 implementations and reviews. The working tree was clean before S23 planning.
+- Phase I: S26 invitations/members API is **Approved** (Codex, 2026-11-12), uncommitted on HEAD `9b47c77`. S25 is also Approved/uncommitted; preserve both. S01–S24 are committed; browser/shared-project QA remains outstanding.
+- Git reconciliation (Codex, 2026-11-12): HEAD `9b47c77` (commit 68) commits approved S23/S24. The current working tree contains Approved/uncommitted S25/S26 plus planning/review/context documents; it is not clean. It was clean before S25 planning. This final reconciliation changes documentation only, preserving all application/test changes.
 
 ## Current Goal
 
-- Work stopped at the user's request after S23/S24. Preserve the approved tree; the user handles commits. Tomorrow's agent starts from `HANDOFF.md` and writes the S25 spec before implementation. S25 planning was interrupted before a spec was written; no S25 implementation exists.
-- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, and S24.
+- Stop for today at the user's explicit request after S26 review. Preserve Approved/uncommitted S25 and S26; user handles commits. Do not plan/specify/implement S27 today. No S27 spec or implementation exists.
+- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24 and S25. S26's manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25/S26.
 
 ## Completed
 
@@ -36,17 +36,19 @@ Update this file after every meaningful implementation change. It records the **
 - S20: Turn events and enforcement (approved 2026-11-09 by Claude after one test and readme correction, committed in `e09a624`).
 - S21: Turn UI and read-only mode (approved by Codex after corrections, committed with S22 as `43eb732`).
 - S22: Turn robustness (approved by Codex after the Socket.IO buffer correction, committed with S21 as `43eb732`).
-- S23: Project messages API and typing relay (approved by Codex after the empty-cursor correction; uncommitted).
-- S24: Project chat panel (approved by Codex after two correction rounds; uncommitted). Browser and live-media checks remain open.
+- S23: Project messages API and typing relay (approved by Codex after the empty-cursor correction; committed as `9b47c77`).
+- S24: Project chat panel (approved by Codex after two correction rounds; committed as `9b47c77`). Browser and live-media checks remain open.
+- S25: Undo/redo for the turn holder (Approved by Codex after second correction, 2026-11-12; uncommitted).
+- S26: Invitations and members REST API (Approved by Codex, 2026-11-12; uncommitted). Live socket enforcement and UI remain later work.
 
 ## In Progress
 
-- None. The user ended work for today. S23 and S24 are approved and uncommitted.
+- None. S25 and S26 are Approved and uncommitted. Work is stopped for today at the user's request.
 
 ## Next Up
 
-- Next session: read `HANDOFF.md`, reconcile git state, and write the S25 undo/redo spec before implementing. Grok implements and Codex reviews unless reassigned. S25 remains Todo, with no spec or implementation; this documentation update does not start it.
-- The shared-project browser walkthrough of S16–S24 waits until S26/S28 provide membership and sharing. The 320px participant-stack check with six other accounts stays in S29.
+- No further work today: user explicitly requested no S27 planning after S26 review. Reconcile git/handoff only when the user resumes. No S27 spec/implementation, S28 UI or drawDB work has started.
+- The shared-project walkthrough through S25 and S26 membership needs the later live-enforcement/UI work and configured test accounts/data; it was not performed today. The 320px participant-stack check with six other accounts stays in the existing S29 roadmap. No new future-slice plan was written.
 
 ## Slice Status
 
@@ -76,16 +78,187 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S20 | Turn events + enforcement | server | S14, S16, S19 | ✓ | Committed | Grok | `e09a624` |
 | S21 | Turn UI + read-only mode | client | S20 | ✓ | Committed | Grok | `43eb732` |
 | S22 | Turn robustness | client | S21 | ✓ | Committed | Grok | `43eb732` |
-| S23 | Project messages API + typing relay | server | S13 | ✓ | Approved | Grok | |
-| S24 | Chat panel | client | S23 | ✓ | Approved | Grok | |
-| S25 | Undo / redo for the turn holder | both | S22 | | Todo | | |
-| S26 | Invites + members API | server | S03 | | Todo | | |
+| S23 | Project messages API + typing relay | server | S13 | ✓ | Committed | Grok | `9b47c77` |
+| S24 | Chat panel | client | S23 | ✓ | Committed | Grok | `9b47c77` |
+| S25 | Undo / redo for the turn holder | both | S22 | ✓ | Approved | Claude Sonnet | Approved after second correction; uncommitted on `9b47c77` |
+| S26 | Invites + members API | server | S03 | ✓ | Approved | Claude Sonnet | Approved 2026-11-12 on HEAD `9b47c77`; uncommitted |
 | S27 | Live membership enforcement + cleanup | server | S20, S26 | | Todo | | |
 | S28 | Share dialog + invitations UI | client | S24, S27 | | Todo | | |
 | S29 | Hardening pass | both | S28 | | Todo | | |
 | S30 | Launch | client + docs | S29 | | Todo | | |
 
 ## Slice Notes
+
+### Final context reconciliation — 2026-11-12
+
+**Author:** Codex · **User request:** update all context files after completing today's S25/S26 reviews; do not plan S27.
+
+- Reconciled all six context files, AGENTS.md, HANDOFF.md and the build-plan checkpoints to Approved/uncommitted S25/S26 on HEAD `9b47c77` (commit68). Removed stale current Ready for review/planned-only labels and the old S23/S24-uncommitted checkpoint. Historical slice notes, original requirements and review findings remain history; final reviews and status table define current approval.
+- Architecture/standards now distinguish ordinary dispatch from undo/redo replay, document the accepted S26 size/element snapshot guard and implemented invitation authority, and retain the live-socket enforcement gap. UI docs record capture-phase cancellation and that S26 adds no invitations/share UI. Workflow docs record REST-based membership, controlled verification, remaining live/manual QA and today's stop.
+- Final independent verification remains the S26 review: **542 passed** (283 server, 259 client), build 8.44 s, workspace 303.85 kB / gzip 96.09 kB, existing chunk-size warning only, diff check passes with line-ending notices. No suite/build/API/browser check was repeated for documentation reconciliation. No live-data writes or application/test/dependency changes.
+- Separate drawDB follow-up preferences were recorded as discussion only: cloud storage, version history and public sharing; skip AI, MCP and GitHub integration. Original nine editor-integration slices remain unstarted and unchanged in scope; no follow-up phase was sliced or implemented. MongoDB remains the current stack; no database migration is authorized by that discussion.
+- Stop for today. No S27 spec/planning/implementation, commit, push, branch or deployment. Final document/path/whitespace checks are recorded in HANDOFF.md; every edit in this reconciliation was to Markdown documentation.
+
+### S26 planning — 2026-11-12
+
+**Spec author / reviewer:** Codex · **Assigned implementer:** Claude Sonnet
+
+- Created `specs/26-invites-members-api.md` and updated the S26 build-plan entry. Baseline remains HEAD `9b47c77`; S25 is Approved and uncommitted, preserved with all existing planning/code/test changes. No commit is required to satisfy S26's already Committed S03 dependency.
+- Inspected actual Project/User models, projectAccess and project controllers/routes, protectRoute/webhook identity, server readme, S03/S26–S28 plans and existing helper/loopback test patterns. Defined exact seven-endpoint resources/errors, own-invite privacy scope, case normalization without User/schema changes, ten reserved seats, guarded atomic accept and snapshot conflicts across all membership mutations. S27 live enforcement and S28 UI remain separate.
+- Planning-only no-I/O check with installed Mongoose verified exact snapshot-array query casting preserves ObjectIds/dates and empty-array guards; no database connection or writes. No test suite/build/API/browser QA ran for planning; the last independent S25 baseline remains492 passing tests and build. Final documentation/path/whitespace checks are recorded in HANDOFF.md.
+- Clarified the architecture/standards' narrow invitation-recipient authorization exception, explicitly marked the S26 contract planned/unimplemented, updated assignments and current handoff. S26 stays **Todo**. No application/test/dependency edit, live-data mutation, commit, push, branch, deployment, S27/S28 or drawDB work.
+
+### S25 planning — 2026-11-12
+
+**Spec author / reviewer:** Codex · **Assigned implementer:** Claude Sonnet
+
+- User requested the next slice's plan/spec and a prompt for Sonnet, with Codex reviewing afterward. Created `specs/25-undo-redo.md` and expanded the S25 build-plan entry.
+- Reconciled S23/S24 as committed in `9b47c77` (commit 68); the working tree was clean before this documentation-only planning session. Updated the active handoff, overview and assignment instructions. Historical slice/review notes below retain their original baselines.
+- Settled the handoff questions: intermediate-state inverse groups; ordered replay chunks without raising the 50-op limit; saved-prefix recovery on interruption; per-dispatch memory history with a 100-frame cap; settled-queue undo/redo and replay gates; epoch/account invalidation; graph equivalence excluding array order/version; canvas-scoped shortcuts preserving text editing and browser zoom.
+- Added the planned contract to architecture/UI docs, explicitly marked unimplemented. Sonnet must replace planned descriptions with actual implementation/evidence.
+- Verification: inspected current shared op semantics, sync pump/recovery, workspace lifecycle/turn/account ownership, canvas controls/labels/resize hooks, existing test harnesses, final S23/S24 reviews, git status and log. No application code changed, no tests/build/API boot/browser QA ran during planning. `git diff --check` is recorded in the planning handoff after the final documentation check.
+- S25 stays **Todo**; no implementation, commit, push, branch, deployment or S26 work occurred. Browser/two-account limitations remain open.
+
+### S25 — Undo / redo for the turn holder
+
+**Implementer:** Claude Sonnet (2026-11-12) · **Reviewer:** Codex · **Baseline:** HEAD `9b47c77` (commit 68), working tree held only the uncommitted Codex planning documents (AGENTS.md, context files, the S25 spec, build plan), which were preserved. Nothing committed, pushed, branched or deployed. S26 and drawDB not started.
+
+**Changed:**
+- `server/src/shared/canvasOps.js`: pure `invertOps` (reuses `applyOps` validation; intermediate pre-states; reversed groups; cascaded edges restored once, after their node).
+- `server/test/canvasOps.test.js`: `invertOps` added to the strict export list; 12 new tests (each op type, every patch field, cascade order, self-loop, shared edge, repeated/id-reuse sequences, special ids, error and index parity, immutability and detached results, 600-edge cascade in 13 chunks).
+- `src/collaborate/lib/canvasHistory.js` (new): `sameGraph`, `chunkOps`, `prepareFrame`, `prepareReplay`, `createCanvasHistory` (100-frame cap, generation, identity-checked transfer).
+- `src/collaborate/lib/canvasShortcuts.js` (new): `classifyShortcut`, editable-context checks, `handleCanvasKey`, `attachCanvasShortcuts`, `shouldFocusCanvas`, `useCanvasShortcuts`.
+- `src/collaborate/lib/workspaceSync.js`: optional `session.hooks` (`invalidate`, `queue`) called from `invalidateSession`, every `beginRecovery`, an accepted non-duplicate remote update, after enqueue, after each accepted commit and after recovery completes; `enqueueMany`; pump checks optional `deps.ownsConnection`.
+- `src/collaborate/store/useWorkspaceStore.js`: `holderCanEdit` (pump gate) vs `selectCanEdit` (adds replay refusal); `selectCanUndo` / `selectCanRedo`; `undo` / `redo` / `beginGesture` / `endGesture`; binding-owned history, replay and gesture state; `history` store field; frame recording in `dispatch`; turn-loss, account and session-store invalidation; `ownsConnection` for the pump.
+- `CanvasControls.jsx` (Undo/Redo, replay status), `WorkspaceCanvas.jsx` (focusable named surface, scoped shortcuts, pane focus, drag/connect gesture tracking), `ShapeNode.jsx` (resize gesture start/end only).
+- `test/canvasHistory.test.mjs` (26 tests) and `test/canvasShortcuts.test.mjs` (37 tests), new.
+- Docs: architecture, UI context, standards, overview, AGENTS.md, this tracker, HANDOFF.md. `collaborate.css`, `server/readme.md`, manifests and all server socket/controller/model code are unchanged (no protocol change).
+
+**Verified (all run 2026-11-12, root suites separately and sequentially):**
+
+| Command | Result |
+| --- | ---: |
+| `cd server && npm test` | 233 passed (221 + 12 new), 0 failed |
+| `node --test test/workspaceSync.test.mjs` | 13 |
+| `node --test test/canvasPreview.test.mjs` | 39 |
+| `node --test test/participants.test.mjs` | 6 |
+| `node --test test/cursorPresence.test.mjs` | 69 |
+| `node --test test/turnState.test.mjs` | 10 |
+| `node --test test/turnRobustness.test.mjs` | 28 |
+| `node --test test/projectChat.test.mjs` | 14 |
+| `node --test test/projectChatUi.test.mjs` | 5 |
+| `node --test test/canvasHistory.test.mjs` | 26 (new) |
+| `node --test test/canvasShortcuts.test.mjs` | 37 (new) |
+| **Total** | **480** (233 server, 247 client; baseline was 405) |
+
+`npm run build` passed: 4277 modules, 36.76s; `WorkspacePage-BFoGRBQz.js` 302.67 kB (gzip 95.79 kB), up from 292.98 kB. Only the existing chunk-size warning. `git diff --check` reported only LF-to-CRLF notices, no whitespace errors. All pre-existing assertions are unchanged; the only edit to an existing test file is adding `invertOps` to the export list, as the spec allows.
+
+Spec requirements covered by automated tests: every op type and patch field; forward-error and index parity; the 600-edge cascade restored in 13 sequential commits with monotonic versions and then redone; add, move, recolor, delete then four undos and four redos with holder and authoritative graphs equal; coalesced dispatches undoing separately; pending saves disabling commands while ordinary edits still queue; redo cleared only by a graph-changing edit; refused and no-change dispatches; the 100-frame cap; replay blocking dispatch, label, move and previews but not chat readiness, cursors or selection; gestures blocking replay; viewer refusal; reject after a saved prefix (no resend, one notice, recovery to the prefix graph), timeout, synchronous throw, preflight failure, redo notice; turn loss with queued chunks, with only an in-flight chunk and with an empty queue, and a later grant starting empty; disconnect, retry, project change, disposal; null or replaced session socket and an account change on an unchanged connection; late acks after invalidation and after a newer binding; foreign, duplicate and accepted remote events; the full key matrix, editable and portal boundaries, native zoom, viewer zoom, disabled-button and replay-status markup, and a mounted component (StrictMode) whose real keydown reaches the production store action and whose listener is removed on unmount.
+
+**Not verified / limitations (nothing below is claimed as passed):**
+- No real browser, two-account or live-project run: the manual walkthrough (holder edits and four undo/redo with a watcher, >50-edge restore interrupted by hand-off or offline, second tab and viewer, pan/zoom/selection, chat and label native text undo and IME, Ctrl/Cmd browser zoom, narrow-screen controls, `/blog` and `/chat`) was not run. It stays with S26/S28 (shared projects), S29 (mobile and accessibility) and S30 (deployed QA). No temporary membership routes were added and no live data was written.
+- API boot (`npm run dev`) and `GET /health` were not repeated for this slice (no server code changed); the S24 evidence is inherited, not new.
+- The mounted-wiring test uses a hand-written minimal DOM, not a browser: real CSS selector matching, real focus and `composedPath`, IME and React Flow's own pointer events were exercised only through fakes or not at all. Pane click focusing (`shouldFocusCanvas`) is unit-tested but not click-tested on the real React Flow pane. React Flow's `onNodeDragStart` / `onConnectStart` / `onResizeStart` wiring is by inspection, not run.
+- Interrupted replays are not atomic: a saved prefix can remain, history is cleared and the canvas recovers authoritatively.
+
+**Deviations / decisions to review:**
+- `selectCanEdit` now includes `!state.history?.replay`; the pump uses a new internal `holderCanEdit`. This is the spec's two-gate split, but it changes what the exported selector means during a replay.
+- Availability uses the session socket and account check from `selectCanChat` (not only the holder gate), and the store subscribes to the session store per binding to drop history at once on a socket or account change.
+- The pump's new `ownsConnection` check compares only the signed-in account against the account that authenticated the connection (it does not require the session socket), so existing suites that never set a session socket keep passing.
+- A gesture flag that never receives its end event (React Flow normally always fires it) would keep undo disabled until a turn loss, join or other invalidation clears it.
+- The Undo/Redo interrupted notice is a `toast.error`, to match the other notices, and also shows if the very first emit throws before anything was sent.
+- `useCanvasShortcuts` lives in `canvasShortcuts.js` (imports `useEffect`) so the production hook is what the mounted test exercises.
+
+**Review (Codex, 2026-11-12): Changes requested.** Independently reran all 480 submitted tests (233 server, 247 client; root suites separately/sequentially), build (Vite 7.3.5, 4277 modules, 7.65s, workspace 302.67 kB/gzip 95.79 kB; existing chunk warning) and diff check (line-ending notices only); all pass. Additional production-store tests fail: clearing/replacing the session socket while commit 2 of a 600-edge undo is held still sends all 12 unsent chunks after its ack (14 total commits, 600 restored edges). Actual installed XYDrag also aborts a multitouch drag without onNodeDragStop, leaving history.gesture true and undo disabled after touches end. Fix only these two findings with lifecycle/cancellation regressions; full details are in `specs/25-undo-redo-review.md`. Temporary reproduction files were removed; no application/submitted test code changed. API boot/health, real-browser/two-account/live-project/media and other-route runtime checks remain unverified. No database writes, commits, pushes, branches, deployments, S26 or drawDB work.
+
+**Correction (Claude Sonnet, 2026-11-12): Ready for review.** Fixes only the two findings in `specs/25-undo-redo-review.md`; the review file, spec and planning documents are untouched.
+
+1. *Session socket/account ownership loss left replay writes running.* `useWorkspaceStore.js` now has `retireUnownedWork`, called from the binding's session-store subscription and from `revokeJoinedAccount`. When ownership of the joined connection is lost and a commit is in flight, chunks are queued or a replay is active, it invalidates the sync session (epoch, queue, callbacks, `joinedConnectionId`), clears previews and cursors, bumps the join attempt and returns the workspace to `loading`. A late ack then pumps nothing, cannot re-enable edits and cannot republish the retired optimistic graph, and restoring the old socket or account later does not resurrect it. With no pending work only history is cleared, and an unrelated session change that leaves ownership intact does nothing. The pump's account check is unchanged.
+2. *Cancelled gestures left undo disabled.* New store action `cancelGestures`; new `attachGestureCancel` / `useGestureCancel` in `canvasShortcuts.js`, mounted in `WorkspaceCanvas.jsx` only while a gesture is active: touchend/touchcancel once no touch remains, mouse/pen release, `pointercancel` and window blur (touch `pointerup` defers to `touchend`). It clears flags only and never dispatches. `ShapeNode.jsx` ends its own resize if it unmounts mid-resize (tracked by a ref, so another node's newer gesture is never cleared). Normal end-event commit order and cursor handling are unchanged.
+
+**Tests added (all fail without the fix where applicable):** `canvasHistory.test.mjs` +5 (held 13-chunk undo with the session socket removed, replaced by a new socket carrying the same account, and the account changed then restored, each proving no commit beyond the one in flight, `loading` status, no resurrection and no replay notice; an unrelated session change keeps ordinary work; `cancelGestures` re-enables undo and leaves unrelated state alone). I confirmed the three ownership tests fail with `retireUnownedWork` disabled. `canvasShortcuts.test.mjs` +3 (multitouch abort sequence with no stop callback, every other cancel path, and the production listener wired to the real store with active and disposal paths).
+
+**Verified (2026-11-12, root suites separately and sequentially):** server 233; workspaceSync 13; canvasPreview 39; participants 6; cursorPresence 69; turnState 10; turnRobustness 28; projectChat 14; projectChatUi 5; canvasHistory 31; canvasShortcuts 40. **Total 488 (233 server, 255 client), 0 failed.** `npm run build` passed: 4277 modules, 7.97s, `WorkspacePage-DIFn7SYE.js` 303.76 kB (gzip 96.06 kB), existing chunk-size warning only. `git diff --check`: only LF-to-CRLF notices.
+
+**Limitations:** the multitouch regression reproduces the abort as an event sequence against the production cancel adapter and store. I did not drive the installed `XYDrag` module itself (the reviewer's temporary check did), so the real React Flow touch path is still covered by inspection only. No browser, two-account, live-project, `/blog` or `/chat` check and no API boot were run; those stay with S26/S28, S29 and S30. A retired binding stays at `loading` until the route rebinds or the user retries; I did not add a new UI for that state.
+
+**Re-review (Codex, 2026-11-12): Changes requested, one remaining Medium finding.** Session-retirement correction accepted; held-replay socket removal/replacement/account-roundtrip regressions pass. Independently reran all 488 submitted tests (233 server, 255 client; root suites sequentially), build (Vite 7.3.5, 4277 modules, 7.90s, workspace 303.76 kB/gzip 96.06 kB; existing warning) and diff check (line-ending notices only); all pass. An additional actual-XYDrag plus production-cancellation-adapter test with propagation fails: d3 touchend stops at the target, window's bubble listener never runs, no onNodeDragStop occurs on abort, and history.gesture stays true after both fingers lift. Direct fakeWindow.fire tests bypass this condition. Details and a narrow correction handoff are appended to `specs/25-undo-redo-review.md`. Temporary reproduction removed; application/submitted test code and dependencies unchanged. No API boot, database/media writes, browser/two-account checks, commit, push, branch, deployment or S26/drawDB work.
+
+**Second correction (Claude Sonnet, 2026-11-12): Ready for review.** Fixes only the one remaining finding in the Re-review section of `specs/25-undo-redo-review.md`; the session-retirement fix, the review file, the spec and the planning documents are untouched.
+
+*Cause (confirmed in the installed code):* d3-drag, under React Flow's `XYDrag`, calls `stopImmediatePropagation` on the touchend/touchcancel of any touch it tracks, and `XYDrag` skips `onNodeDragStop` on an aborted multitouch drag. `attachGestureCancel` listened on `window` in the bubble phase, so it never saw the one event that ends such a drag.
+
+*Fix:* `attachGestureCancel` in `src/collaborate/lib/canvasShortcuts.js` now registers its listeners in the capture phase (add and remove use the same flag), which reaches `window` before the target's handler. It only reads events and never stops them. Behavior kept: a touch release is ignored while another finger is still down; touch `pointerup` defers to `touchend`; cleanup clears flags only and never dispatches. Because a capture listener also sees every element's `blur`, blur now counts only when its target is the window itself, so a label editor blurring mid-drag does not end the drag. Normal end-then-commit order is unchanged: on a completed drag the capture listener clears the flag first, `onNodeDragStop` then runs `endGesture` (a no-op) and the commit dispatches as before.
+
+*Tests (`canvasShortcuts.test.mjs` 40 to 44):* new `gesture cancellation through the installed XYDrag` suite drives the real `XYDrag` from `@xyflow/system` and its d3-drag with a fake DOM target that honours window capture, target listeners in registration order, `stopImmediatePropagation` and window bubble, plus the production adapter and store.
+- Multitouch abort: two fingers start on the node, a two-finger move aborts the drag, the first touchend (one finger left) keeps the gesture and Undo disabled, the last touchend clears it and enables Undo, with zero `onNodeDragStop` calls and nothing dispatched. Both touchends are asserted to be stopped by d3-drag.
+- Harness proof: the same sequence with a bubble-only adapter (the first correction's behavior) leaves `history.gesture` true.
+- Normal path: a completed single-touch drag reports its stop, the gesture is already over when the commit is dispatched, and the move reaches the server.
+- Blur: another element's blur does not cancel; the window's does; listeners are removed.
+I confirmed the multitouch test fails with the capture flag switched off and passes with it.
+
+**Verified (2026-11-12, root suites separately and sequentially):** server 233; workspaceSync 13; canvasPreview 39; participants 6; cursorPresence 69; turnState 10; turnRobustness 28; projectChat 14; projectChatUi 5; canvasHistory 31; canvasShortcuts 44. **Total 492 (233 server, 259 client), 0 failed.** `npm run build` passed: 4277 modules, 7.72s, `WorkspacePage-9VQR8OGU.js` 303.85 kB (gzip 96.09 kB), existing chunk-size warning only. `git diff --check`: only LF-to-CRLF notices.
+
+**Limitations:** the XYDrag test uses the real installed modules but a fake DOM and a store subscription standing in for the `useGestureCancel` effect that attaches the listeners while a gesture is active; it is not a browser, so real touch hardware, React Flow's full pointer plumbing, focus and layout are unverified. Only the node-drag abort was reproduced against `XYDrag`; resize and connection cancellation rely on their own end events, the window listeners and unmount cleanup. No browser, two-account, live-project, `/blog` or `/chat` check and no API boot were run; those stay with S26/S28, S29 and S30.
+
+**Final code review (Codex, 2026-11-12): Approved after second correction.** Capture-phase listener observation resolves the target-stopped touchend/touchcancel finding. Actual installed XYDrag/d3 tests verify the abort cleanup, bubble-only failing-behavior control, normal end-then-commit order and blur/listener cleanup. Session retirement remains accepted. Independent full verification passes: 492 tests (233 server, 259 client: 13, 39, 6, 69, 10, 28, 14, 5, 31, 44; root suites separately/sequentially), server 965.1554ms; production build Vite 7.3.5, 4277 modules, 7.71s, `WorkspacePage-9VQR8OGU.js` 303.85 kB/gzip 96.09 kB, existing chunk warning only; diff check passes with LF-to-CRLF notices. No remaining code findings. Approval does not establish browser/touch-hardware/two-account/live-project/media or /blog and /chat runtime QA; API boot/health was not repeated. Full evidence/limitations are in `specs/25-undo-redo-review.md`. Reviewer changed documentation only, with no application/test/dependency edits, live writes, commit, push, branch, deployment, S26 or drawDB work. S25 is Approved and uncommitted; user handles commits.
+
+### S26 — Invitations and members API
+
+**Implementer:** Claude Sonnet (2026-11-12) · **Reviewer:** Codex · **Baseline:** HEAD `9b47c77` (commit 68). The working tree held Approved, uncommitted S25 and the Codex planning documents; all were preserved and S25 files were not modified. Nothing committed, pushed, branched or deployed. S27, S28 and drawDB not started.
+
+**Changed (only the spec's allowed files):**
+- `server/src/lib/projectMembership.js` (new): `parseObjectId`, `normalizeEmail`, `parseRole`, `parseInviteBody`, `parseRoleBody`, response shapers (`shapeInvite`, `shapeOfferedInvite`), `compareOffers`, seat/lookup helpers, and `snapshotGuard`.
+- `server/src/controllers/projectMember.controller.js` (new): `createInvite`, `revokeInvite`, `listMyInvites`, `acceptInvite`, `declineInvite`, `updateMemberRole`, `removeMember`.
+- `server/src/routes/project.route.js`: seven routes added; `/invites/mine` and both `/invites/:inviteId/...` POSTs registered before the generic `/:id` routes; `protectRoute` unchanged.
+- `server/test/projectMembership.test.js` (new, 20 tests) and `server/test/projectMember.api.test.js` (new, 30 tests).
+- `server/readme.md` (structure tree, endpoint table, new Invitations and Members section), `context/2-architecture.md` (planned section replaced by the actual contract), `context/4-code-standards.md`, this tracker, `HANDOFF.md`.
+- Unchanged: `projectAccess.js`, `project.controller.js`, models, auth/middleware/webhook, `index.js`, sockets, all client code, manifests, config and environment files, existing test assertions, installed dependencies.
+
+**How the risky parts work:**
+- *Authorization/privacy.* Project routes: validate project id, scoped read, role, `can(role, "manage")`, then target and body. Outsider, missing project and malformed id are all `404 Project not found` before any body error; editor/viewer on an owner operation is `403` before body or target errors; a non-owner removing someone else is `403` before target existence is revealed. Admin users gain nothing. Responses are explicit whitelists; an invitee sees only the offered project id/name, role, a minimal inviter and the date.
+- *Same-element invitation matching.* Accept/decline authorize with `invites: { $elemMatch: { _id, email } }` in the read and again in the write filter, so an invite id paired with another person's email in a different element never authorizes anything. Test: one invite has the requested id but another email, a second belongs to the caller; neither accept nor decline touches the wrong one and nothing leaks.
+- *Normalized emails.* Primitive strings only, trim and lowercase, 254 maximum, bounded pattern, no control characters, plus tags kept, aliases not folded. The caller's email is normalized the same way. Existing-member detection reads only `_id` and `email` of this project's member users and compares normalized values in code (the stored `User.email` is case-sensitive).
+- *Reserved seats.* Members plus pending invites share the ten seats; a pending invite reserves one even without an account or a User row; accept swaps an invitation for a member and succeeds at ten.
+- *Atomic snapshot guards.* Each mutation is one `findOneAndUpdate` whose filter repeats the authority (owner, member, or the invitation element) and `snapshotGuard`: `$size` plus one `$elemMatch` per element for both arrays. I chose element-wise matching over a literal array comparison because the latter depends on subdocument field order. The cast check confirms ObjectIds, Dates and empty arrays survive Mongoose casting. A miss is never retried; one fresh scoped read yields the specific error or `400 Project membership changed. Please try again.` Role change uses `arrayFilters`.
+
+**Verified (2026-11-12, root suites separately and sequentially):**
+
+| Command | Result |
+| --- | ---: |
+| `cd server && npm test` | 283 passed (233 + 50 new), 0 failed/skipped/cancelled, about 2.0s, exits on its own |
+| of which `projectMembership.test.js` / `projectMember.api.test.js` | 20 / 30 |
+| `node --test test/workspaceSync.test.mjs` | 13 |
+| `node --test test/canvasPreview.test.mjs` | 39 |
+| `node --test test/participants.test.mjs` | 6 |
+| `node --test test/cursorPresence.test.mjs` | 69 |
+| `node --test test/turnState.test.mjs` | 10 |
+| `node --test test/turnRobustness.test.mjs` | 28 |
+| `node --test test/projectChat.test.mjs` | 14 |
+| `node --test test/projectChatUi.test.mjs` | 5 |
+| `node --test test/canvasHistory.test.mjs` | 31 |
+| `node --test test/canvasShortcuts.test.mjs` | 44 |
+| **Total** | **542** (283 server, 259 client; the S25 baseline was 492) |
+
+`npm run build` passed: 4277 modules, 7.49s, `WorkspacePage-9VQR8OGU.js` 303.85 kB (gzip 96.09 kB), identical to S25 and existing chunk-size warning only. `git diff --check`: only LF-to-CRLF notices.
+
+Automated coverage: strict id, email, role and body validation (trim and case, plus tags, 254 boundary, control characters, arrays/objects/null/operator payloads, extra fields ignored); 401, unsynced 404, owner/editor/viewer/outsider/invited nonmember/admin matrix with authorization-before-validation; the real router (production `protectRoute` with Clerk's branded `req.auth`) dispatching `/invites/mine` before `/:id`; creation for a nonexistent account; mixed-case caller and member emails; canonical duplicates; capacity 9 to 10, rejection at 10, a member with no User row; list privacy, tie order and missing inviter; the same-element trap; accept with the stored role despite a malicious body, accept at ten seats, repeat accept, owner-self and existing-member refusal; decline and revoke freeing a seat; owner-only revoke scoped to its project; role change (addedAt kept, no-op success, owner target, invitation-id target, ownership immovable); removal and self-leave; the full lifecycle read through the existing GET; zero writes on rejected requests and zero User writes; and controlled races staged with a read barrier against filters the fake actually evaluates (same-email invites, tenth seat, double accept, accept versus decline and revoke, different-invite accepts, role versus removal, create versus accept, an unrelated rename surviving, stale snapshot not overwriting). A persistence error surfaces as 500, never a false 2xx. Casting is checked with the real Project schema and no I/O.
+
+**Not verified / limitations (nothing below is claimed as passed):**
+- **No live MongoDB race test.** The model fake is single-threaded and evaluates only the operators these handlers use; real concurrent writers, real index behavior and Atlas were not exercised.
+- No API boot or `/health` check was run for this slice, to avoid connecting to the configured live `3dfolio` database; no invitation, member or project was created, and no live data was written. `/blog` and `/chat` runtime checks were not run.
+- The manual REST cycle (invite, accept, change role, remove) against isolated accounts and data was not run: none was available, and no temporary membership route was added.
+- No browser or two-account walkthrough; there is no client for these routes (S28).
+- **S26 does not make removal or demotion live.** A member already in a project's socket room keeps their room, role cache and turn/cursor/typing permissions until S27. It must not be presented or deployed as completed membership management before S27.
+
+**Deviations / decisions to review:**
+- Snapshot equality is `$size` plus per-element `$elemMatch` (order-insensitive element equality), not a literal array comparison.
+- Order of checks for role change is target id (malformed gives 404), then body (400), then owner target (400), then membership (404). The spec lists target and body together without ordering them.
+- For `DELETE .../members/:userId` a non-owner whose target is malformed or someone else's gets 403 (not 404) so target existence is never revealed; a repeat leave by a former member is 404 Project not found.
+- The invalid account email check for create runs after the body is validated and the owner is authorized, before any semantic rule.
+- The mounted tests inject Clerk's request shape (branded `req.auth`) at the test boundary; no production auth hook was added.
+
+**Final code review (Codex, 2026-11-12): Approved.** No blocking code findings. Authorization/privacy, same-element invitation scoping, normalized emails, ten reserved seats, one-consumer acceptance and snapshot race handling follow the S26 contract. Accepted the order-insensitive size/element snapshot guard for API-maintained unique member/invite entries and the documented validation-order choices. Independently reran all 542 tests (283 server, 259 client; root suites separately/sequentially), server 2047.3789ms; build passes (Vite 7.3.5, 4277 modules, 8.44s, workspace 303.85 kB/gzip 96.09 kB, unchanged S25 chunk, existing warning only); diff check passes with line-ending notices. No live MongoDB race/index/Atlas test, API boot/health, manual isolated-account REST cycle, browser/two-account/media or /blog and /chat runtime check was performed. S26 does not supply live socket revocation or UI. Full review/evidence: `specs/26-invites-members-api-review.md`. Reviewer changed documentation only; no application/test/dependency edits, live writes, commit, push, branch or deployment. The user requested stopping after this review today: no S27 planning/spec/implementation and no drawDB work. S25/S26 remain Approved/uncommitted for the user.
 
 <!-- One block per slice, added by the implementer when it reaches Ready for review:
 
@@ -1499,11 +1672,15 @@ A connection id keeps the account that authenticated it. `retryWorkspace` and a 
 - 2026-10-31: Canvas op semantics live in one pure module (`server/src/shared/canvasOps.js`) that both the server and the client import, so validation and application can't drift between implementers.
 - 2026-10-31: Turns belong to a tab (`userId` + `tabId`), not a user, so a second tab is read-only and a reconnecting tab keeps its turn through the grace period.
 - 2026-10-31: Project chat uses a new `projectmessages` collection rather than extending `messages`, so 1:1 DMs are untouched whatever Q1 decides.
-- 2026-10-31: Spec files are written just in time, one per slice, from `specs/00-build-plan.md`, so each spec reflects the code as it actually is. Originally assigned to Claude; current user assignment is Codex writing specs/reviewing and Grok implementing.
+- 2026-10-31: Spec files are written just in time, one per slice, from `specs/00-build-plan.md`, so each spec reflects the code as it actually is. Originally assigned to Claude; Grok later implemented several slices. For S25/S26 on 2026-11-12, the user assigned Codex to specify/review and Claude Sonnet to implement. Future assignments remain user-directed; no S27 work is started today.
 
 ## Session Notes
 
-- **Latest handoff, 2026-11-11:** User ended work after S23/S24. Both passed Codex review and remain uncommitted on HEAD `43eb732`. Final independent verification: 405 tests, build, and diff check pass. S25 is Todo with no spec or implementation. Read `HANDOFF.md` next session; preserve the approved tree and write the S25 spec before implementing. Documentation reconciled at the user's request after stopping. No application code, environment, DB data, commits, branches, pushes, or deployments changed in this reconciliation. Earlier stopping points below are historical and superseded by this entry.
+- **Latest handoff, 2026-11-12 (final S26 review/context reconciliation):** S25/S26 are Approved by Codex and uncommitted on HEAD `9b47c77`; user handles commits. Independently verified 542 tests (283 server,259 client), build and diff check. Manual/live QA remains open, including API boot/health, real MongoDB concurrency, browser/two-account/media and /blog,/chat runtime checks. User requested stopping here and no S27 planning today. No S27 spec exists; preserve the tree and read HANDOFF.md on a user-directed resume. Final reconciliation changes documentation only. Earlier notes below are historical and superseded.
+- **Earlier implementer handoff, 2026-11-12 (S26):** S26 invitations/members API was Ready for review (Claude Sonnet), uncommitted on HEAD `9b47c77`, alongside Approved/uncommitted S25. Implementer reported 542 tests/build/diff check; final independent review above supersedes its pending-review status.
+- **Earlier handoff, 2026-11-12 (after the second correction): S25 is Ready for review again with the capture-phase cancellation fix; 492 tests, the build and the diff check passed (see the S25 second correction note); browser, two-account and API-boot checks still not run.**
+- **Earlier handoff, 2026-11-12 (after review corrections):** S25 is Ready for review again with both Codex findings fixed; 488 tests, the build and the diff check passed (see the S25 correction note); browser, two-account and API-boot checks still not run. Earlier entry, superseded: S25 undo/redo is Ready for review (Claude Sonnet), uncommitted on HEAD `9b47c77`, with the Codex planning documents preserved. 480 automated tests, the build and the diff check passed; no browser, two-account or API-boot checks were run. Codex reviews next. S26 and drawDB were not started. This entry supersedes the 2026-11-11 one below.
+- **Previous handoff, 2026-11-11:** User ended work after S23/S24. Both passed Codex review and remain uncommitted on HEAD `43eb732`. Final independent verification: 405 tests, build, and diff check pass. S25 is Todo with no spec or implementation. Read `HANDOFF.md` next session; preserve the approved tree and write the S25 spec before implementing. Documentation reconciled at the user's request after stopping. No application code, environment, DB data, commits, branches, pushes, or deployments changed in this reconciliation. Earlier stopping points below are historical and superseded by this entry.
 - Stopping point, 2026-11-11: S24's second correction is Ready for review on HEAD `43eb732`. It is not approved. A retried connection stays with the account that authenticated it, and a scroll after an earlier-page error is not pulled back by the old anchor. 405 automated tests, the production build, and `git diff --check` passed. The API was stopped after `GET /health` returned 200, with no database writes. Browser checks remain open. S23 remains approved. S25 was not started. No commit, push, branch, or deploy.
 - Stopping point, 2026-11-11: S24 remains Changes requested after the second Codex review on HEAD `43eb732`. Fix the two remaining retry/account-ownership and user-scroll sequences in `specs/24-project-chat-panel-review.md`. All 404 submitted tests/build/diff check passed independently, while targeted follow-up reproductions failed. S23 remains approved and S25 has not started.
 - Stopping point, 2026-11-11: S24 corrections are Ready for review on HEAD `43eb732`. They are not approved. Account and socket changes drop the old chat authority, Load earlier Retry keeps its scroll anchor, and late media growth is observed on the message content. 404 automated tests, the production build, and `git diff --check` passed. The API was stopped after `GET /health` returned 200, with no database writes. Browser checks remain open. S23 remains approved. S25 was not started. No commit, push, branch, or deploy.

@@ -11,7 +11,9 @@ Build `/collaborate` incrementally with a spec-driven workflow:
 
 Implement exactly what the spec says, no more and no less. Don't infer or invent behavior.
 
-Implementers and reviewers are assigned by the user slice by slice. The current arrangement is Grok implementing and Codex writing specs/reviewing; the tracker records actual assignments and approvals. The user handles commits. Read HANDOFF.md for the latest stopping point.
+Implementers and reviewers are assigned by the user slice by slice. For S25/S26, the user assigned Claude Sonnet to implement and Codex to write the spec and review (2026-11-12); earlier assignments remain historical. The tracker records actual assignments and approvals. The user handles commits. Read HANDOFF.md for the latest stopping point.
+
+**Current stopping point (2026-11-12):** S25 and S26 are Approved and uncommitted on HEAD `9b47c77`. The user requested stopping after S26 review and no S27 planning today. The final context reconciliation is documentation-only; it does not reopen implementation or authorize a new slice. Do not commit, push, branch or deploy. Reconcile git/context when the user resumes.
 
 ## The Cycle
 
@@ -73,8 +75,10 @@ Don't modify these unless the current slice's spec explicitly names them:
 - Server: `cd server && npm install` (first time), then `npm run dev`, with `server/.env` holding the values Render uses.
 - Frontend: `npm run dev`, with `.env` setting `VITE_API_URL=http://localhost:3000/api` while you work on server slices.
 - Multi-user checks: a normal window plus an incognito window signed into a second Clerk account. Both accounts must already be synced to MongoDB.
-- Until invitations ship (S26, S28), a second account can open a project only if it is added to that project's `members` by hand in MongoDB. Local runs also need `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL` for the frontend, and `CLIENT_URL=http://localhost:5173` for the server.
+- S26 invitation/member REST endpoints now exist and are code-approved; S28 invitations/sharing UI is not implemented. A configured isolated-account REST walkthrough can establish membership through those endpoints; no manual MongoDB membership edit or temporary backdoor is required. Live removal/demotion for existing socket rooms is still incomplete until later enforcement work. Local runs also need `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL` for the frontend, and `CLIENT_URL=http://localhost:5173` for the server.
 - Test data goes to the database `MONGO_URI` names (see Q2 in the tracker). Collaborate only writes `projects`, `canvases`, and `projectmessages`.
+- Current local configuration targets the live `3dfolio` database. S25/S26 automated suites use controlled sockets, loopback HTTP/model fakes and no-I/O casting; they do not connect to it. No live data writes, API boot/health or manual REST/browser/two-account checks were performed for these approvals. Do not create live projects/invites/members to complete a checklist; retain these as explicit QA gaps until suitable isolated data/accounts are available.
+- Distinguish code approval from runtime/launch verification. The final S25/S26 reviews accept code with enumerated manual QA gaps; do not rewrite an unperformed check as passed or treat the later launch checklist as complete. No tests/build are rerun solely to edit documentation unless a new inconsistency warrants it.
 
 ## Before Moving to the Next Slice
 

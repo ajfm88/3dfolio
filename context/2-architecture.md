@@ -1,5 +1,7 @@
 # Architecture Context
 
+**Current checkpoint (2026-11-12):** implemented through S26; S25/S26 are code-approved and uncommitted on `9b47c77`. The existing S27–S30 roadmap remains future work; no S27 spec has been written. Runtime/manual QA and live membership revocation are not established. Stop after today's documentation reconciliation; see HANDOFF.md and the final S25/S26 reviews.
+
 ## Stack
 
 | Layer | Technology | Role |
@@ -28,6 +30,7 @@ server/src/
 │   ├── workspaceRooms.js           S13  in-memory room registry + serial write queue
 │   ├── turns.js                    S19  pure turn state machine
 │   ├── projectMessages.js          S23  history cursor, text rules, message whitelist
+│   ├── projectMembership.js        S26  invite/member validation, resources, snapshot guards
 │   └── rateLimit.js                S29  per-socket token bucket
 ├── shared/
 │   └── canvasOps.js                S06  PURE canvas op semantics, imported by server AND client
@@ -41,13 +44,13 @@ server/src/
     ├── chat.socket.js              S01  existing chat presence + typing, moved verbatim
     └── workspace.socket.js         S13+ join/leave, commits, previews, cursors, turns, typing
 
-server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · projectMessages · projectMessage.api · projectTyping.socket · imagekit · rateLimit (*.test.js)
+server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · projectMessages · projectMessage.api · projectTyping.socket · imagekit · projectMembership · projectMember.api (*.test.js); rateLimit remains S29
 
 src/pages/Collaborate.jsx           S04  lazy route root
 src/collaborate/
 ├── collaborate.css                 S04  scoped theme under .collab-root
-├── lib/        axios.js · projectLimits.js · tabId.js · throttle.js · userColor.js
-├── store/      useSessionStore.js · useProjectsStore.js · useWorkspaceStore.js
+├── lib/        axios.js · projectLimits.js · tabId.js · throttle.js · userColor.js · workspaceSync.js · canvasHistory.js · canvasShortcuts.js (plus presence/chat helpers)
+├── store/      useSessionStore.js · useProjectsStore.js · useWorkspaceStore.js · useProjectChatStore.js
 ├── routes/     CollaborateAuthGate.jsx · ProjectsPage.jsx · WorkspacePage.jsx
 └── components/
     ├── ui/         Dialog (S05: portaled, focus-trapped shell, reused by ShareDialog)
@@ -56,6 +59,8 @@ src/collaborate/
     ├── canvas/     WorkspaceCanvas · ShapeNode · LinkEdge · ShapePanel · ColorToolbar · CanvasControls · PresenceCursors
     └── chat/       ProjectChatPanel · ProjectMessageList · ProjectComposer
 ```
+
+The tree includes planned InvitationsList/ShareDialog (S28) and rateLimit (S29) to show their intended boundaries; these files are not implemented. S26 added REST membership only.
 
 | Boundary | Owns | Must not |
 | --- | --- | --- |
@@ -174,7 +179,25 @@ These are exported from `canvasOps.js` or `projectAccess.js`, enforced on the se
 
 - `applyOps(canvas, ops)` → `{ ok: true, canvas, ops }` or `{ ok: false, error }`. It's pure, never mutates its input, and is **atomic**: one invalid op rejects the whole batch. The returned `ops` are the normalized versions, and those are what the server broadcasts. `version` is not touched; the caller owns it.
 - `normalizeCanvas(raw)` rebuilds stored data into canonical shape. It drops invalid nodes, drops edges whose endpoints are missing, and truncates to the limits. It runs on every load.
-- `invertOps(canvas, ops)` (S25) computes inverse ops against the pre-op canvas, for undo.
+- `invertOps(canvas, ops)` (S25) computes the inverse of a batch for undo; see the S25 history contract below.
+
+### S25 history contract (implemented, Approved)
+
+Approved after second correction on 2026-11-12; see `specs/25-undo-redo-review.md`. It remains uncommitted. The later independent S26 regression run includes all S25 suites; browser/touch-hardware QA remains open.
+
+`invertOps(canvas, ops)` in `shared/canvasOps.js` validates the whole forward batch with `applyOps` and returns `{ ok: true, ops }` or `{ ok: false, error, index }` with the same message and index. It reads each op's immediate pre-state and emits the inverse groups in reverse order: `node.add` becomes `node.remove`; `node.update` restores exactly the patched fields; `node.remove` becomes `node.add` followed by `edge.add` for each edge that removal actually cascaded (an edge dropped by an earlier removal belongs to that earlier group); `edge.add`, `edge.update` and `edge.remove` invert the obvious way. The output can exceed 50 ops (a node with 600 edges inverts to 601), so `applyOps` and `MAX_OPS_PER_COMMIT` are unchanged. Round trips are equal by id and fields, not by array order or version.
+
+The client keeps history in memory on the binding (`lib/canvasHistory.js`), mirrored into the store as `history: { undo, redo, busy, replay, gesture }`; every workspace reset puts it back to idle.
+
+- **Frames.** One graph-changing public `dispatch` records one `{ forward, inverse }` frame, installed before enqueue. At most 100 undo frames; the oldest is evicted. A new graph-changing edit clears redo. Refused, invalid, no-net-change dispatches, remote ops, hydration, selection and previews record nothing and leave redo alone. The server still receives a no-net-change batch.
+- **Availability.** `selectCanUndo` / `selectCanRedo` and the `undo()` / `redo()` actions require: the holder gate (`selectCanEdit`, which now also refuses while a replay runs), the session socket and account that authenticated the joined connection (checked again inside the action), a fully drained queue (no pending, no in-flight commit, no recovery), no replay, no active drag/resize/connection gesture, and a non-empty stack.
+- **Two gates.** `holderCanEdit` is the underlying holder/connection permission the sync pump uses, so a replay can keep sending its own chunks. `selectCanEdit` is that plus `!history.replay`; the UI, every public store action and the preview throttle use it, so ordinary edits and previews are refused during a replay while chat, cursors, selection, pan, zoom and turn controls keep working. The pump also now checks `ownsConnection(binding)` (the account that authenticated the connection), so an old account's queued write is not sent after a session change.
+- **Replay.** The selected sequence (the top frame's inverse for undo, its normalized forward ops for redo) is split into contiguous chunks of at most 50 ops and every chunk is dry-run in order with `applyOps` before anything is published. If any chunk fails nothing is sent, history is cleared and a toast says so. Otherwise the fully optimistic graph is published once at the last confirmed version and all chunks are queued together (`enqueueMany`) before the first emit. The existing single-in-flight pump sends them in order, each on the previous confirmed version. Replay never goes through the public `dispatch`, so it records no history. The frame moves between stacks only when the queue is fully drained after the final successful ack, in the same generation and sync epoch.
+- **Interruption.** A multi-commit replay is not server-atomic. A reject, timeout, throw, turn loss or disconnect leaves any saved prefix in place, discards unsent chunks, clears both stacks and goes through the existing authoritative recovery. Nothing is rolled back or retransmitted. One notice, `Undo interrupted. Some changes may have been saved.` (or `Redo ...`), shows only when a replay was interrupted by recovery or turn loss while the workspace is still on screen.
+- **Invalidation.** `session.hooks.invalidate` (called from `invalidateSession`, every `beginRecovery`, and an accepted non-duplicate remote update) and `invalidateHistory` clear frames, bump a history generation, drop the replay and gestures. Also cleared on turn loss with an empty queue, `revokeJoinedAccount`, and a session-store change that stops owning the binding (the binding subscribes to the session store). Late acks, drains and timers compare binding, sync epoch and generation, so they cannot restore history or finish a retired replay. `session.hooks.queue` runs after enqueue, after each accepted commit and after a recovery completes, to refresh `busy` and complete a drained replay.
+- **Ownership loss (review correction).** When the session socket or account stops owning the joined connection (`sessionOwnsBinding` false), the binding's session subscription calls `retireUnownedWork`: if a commit is in flight, chunks are queued or a replay is active, the sync session is invalidated (epoch moves, queue and callbacks retired, `joinedConnectionId` cleared) and the workspace returns to `loading`, as on a disconnect. A late ack therefore pumps nothing and republishes nothing, and restoring the old socket or account does not resurrect the work; only a fresh join does. With no pending work only history is cleared.
+- **Gesture cancellation (review correction).** Drag, resize and connect gestures are cleared by their end events, by the store's `cancelGestures`, by `invalidateHistory`, and on disposal. React Flow aborts a drag on a second touch without `onNodeDragStop`, so while a gesture is active the canvas attaches window listeners (`attachGestureCancel`): touchend/touchcancel once no finger remains, mouse or pen release, `pointercancel` and window blur. The listeners are registered in the **capture** phase because d3-drag, which React Flow's node drag uses, calls `stopImmediatePropagation` on the touchend/touchcancel of a touch it tracks, so a bubbling window listener never sees the event that ends an aborted multitouch drag. They only read events and never stop them, ignore a release while another finger is down, and treat blur as the window's own (a field blurring mid-drag does not end it). A `ShapeNode` that unmounts mid-resize ends its own resize only.
+- No new socket event, payload, collection, backend handler or limit. No server entrypoint, handler, controller or model changed; only the shared pure `canvasOps.js` module (also run by the server) gained `invertOps`.
 
 ### Socket protocol
 
@@ -312,12 +335,24 @@ History is `GET /projects/:id/messages` with limit 50. Load earlier sends both `
 
 Unread counts a live message from another user only while the panel is closed or the document is hidden. Own messages and fetched history stay silent. The message chime uses its own AudioContext and does not replace the turn chime. Only `isSoundEnabled` persists, under `ajfm88-collaborate`. Typing emits volatile `project:typing` as `{ projectId, isTyping }`, refreshes `true` at most every 2 seconds, sends `false` after 2 seconds idle, and expires each incoming user after 5 seconds. Self, unknown users, and other projects are ignored.
 
+## S26 invitation and membership contract (implemented, Approved)
+
+Implemented in `server/src/controllers/projectMember.controller.js` and `server/src/lib/projectMembership.js`, routed in `project.route.js`; Approved by Codex on 2026-11-12, uncommitted. The full contract is `specs/26-invites-members-api.md`, the accepted choices/evidence are in `specs/26-invites-members-api-review.md`, and the endpoint reference is `server/readme.md`. No schema, model, middleware, webhook, socket, client or dependency change.
+
+- Seven REST endpoints behind `protectRoute`: owner create and revoke invitation; recipient list, accept and decline; owner change member role; owner remove member or member leave. `/invites/mine` and both `/invites/:inviteId/...` POSTs are registered before the generic `/:id` routes.
+- **Recipient authority** (the narrow exception to invariant 2): an invitee is not a member, so reads and writes are scoped in the query to ONE `invites` element containing both the invite id and the trusted caller's normalized email (`$elemMatch`). Never the id in one element and the email in another. Offers expose only project id and name, role, a minimal inviter and the date.
+- **Email:** primitive strings only, trimmed and lowercased, at most 254 characters, a bounded pattern and no control characters; plus tags and dots kept, no alias folding. Existing-member comparison reads only the `_id` and `email` of this project's own member users and compares normalized values in code, because `User.email` is case-sensitive storage. The email lookup never touches Clerk, a directory or a regex.
+- **Seats:** members plus pending invites, excluding the owner, may not exceed 10. A pending invitation reserves a seat. Accept swaps the invitation for the member and succeeds at ten.
+- **Atomic writes:** every mutation is one Project update whose filter repeats the authority used (owner, member, or the invitation element) and an exact snapshot of the unpopulated `members` and `invites` arrays (`$size` plus an `$elemMatch` per element; empty arrays are `$size: 0`; ObjectIds and Dates stay values). Accept pulls the invitation and pushes the member in one update. A role change uses a positional `arrayFilters` `$set` on the one member. A miss is never retried: a fresh scoped read yields the specific `404`/`403`/`400`, else `400 Project membership changed. Please try again.` No version field, lock or transaction. Renames and description edits do not conflict with membership changes.
+- Evidence is an in-memory model that evaluates the real filters and updates plus a no-I/O Mongoose cast check; there is no live MongoDB race test.
+- **Not live:** REST changes do not remove or demote anyone already joined to a workspace room, or clear cached cursor, typing, turn or broadcast state. That is S27, together with Clerk deletion cleanup. The UI is S28.
+
 ## Invariants
 
 1. **Identity comes from the server.** Use `req.user` from `protectRoute` or `socket.data.userId` from the handshake. Never trust a user id from a payload.
-2. **Every project read or write is scoped to membership in the query itself**, e.g. `Project.findOne({ _id, $or: [{ owner: me }, { "members.user": me }] })`. Non-members get `404`; members lacking permission get `403`.
+2. **Every project read or write is scoped to the caller's authority in the query itself.** Normal project resources require membership, e.g. `Project.findOne({ _id, $or: [{ owner: me }, { "members.user": me }] })`. Non-members get `404`; members lacking permission get `403`. The implemented S26 invitation-recipient routes instead match the trusted caller's normalized invite email and, for an addressed offer, invite id in the same element; this permits only offered metadata and accept/decline, never ordinary project access.
 3. **Only the turn holder's tab may change the canvas.** Every write check goes through one function, `canWrite(room, connection)`.
-4. **Every canvas mutation is an op.** On the client, components call `dispatch(ops)`; nothing writes `nodes`/`edges` directly. On the server, ops go through shared `applyOps`. Each op is validated, persisted, then broadcast, in that order.
+4. **Every canvas mutation is an op.** Client components call store actions: ordinary edits use `dispatch(ops)`, while undo/redo replays preflighted ops through the same canonical apply/publish and serial commit pipeline without creating new history frames. Components never write `nodes`/`edges` directly. On the server, ops go through shared `applyOps`. Each commit is validated, persisted, then broadcast, in that order.
 5. **Stored canvas data is whitelisted.** Never persist a raw client object. `applyOps` and `normalizeCanvas` rebuild every node and edge field by field.
 6. **Ephemeral state is never persisted, and durable state is never memory-only.** See Storage Model.
 7. **Every socket handler is registered through `safeHandler`** and validates its payload before use. Handlers with acks check `typeof ack === "function"`.

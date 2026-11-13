@@ -6,7 +6,7 @@
 
 ## Goals
 
-**Development checkpoint (2026-11-11):** S01-S24 are implemented and code-reviewed; S23/S24 remain approved but uncommitted on HEAD `43eb732`. `/collaborate` is still URL-only, with browser/shared-project QA outstanding. S25-S30 remain before launch. Work stopped after S24 at the user's request; the next session starts from `HANDOFF.md` and writes the S25 spec before implementation. Feature lists describe the full target, not a claim that later membership or undo features already exist.
+**Development checkpoint (2026-11-12):** S01–S24 are committed through HEAD `9b47c77` (commit 68). S25 undo/redo and S26 membership REST API are implemented by Claude Sonnet, Approved by Codex and uncommitted; see [S25's final review](specs/25-undo-redo-review.md) and [S26's review](specs/26-invites-members-api-review.md). Independent verification passes 542 tests, production build and diff check. `/collaborate` remains URL-only, with browser/shared-project QA outstanding. Four slices remain before launch: S27–S30. S26 alone does not enforce live revocation and no membership UI exists yet. The user ended today's work after S26 review; no S27 spec/planning/implementation was started. Feature lists below describe the full target, not launch readiness. [HANDOFF.md](HANDOFF.md) records the final stopping point and limitations.
 
 1. A signed-in user can create, rename, and delete projects, and see the projects shared with them.
 2. Members of a project see the same canvas, and every committed edit appears for all of them within about one second.

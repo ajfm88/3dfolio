@@ -1,61 +1,65 @@
-# Session handoff — 2026-11-11
+# Session handoff — 2026-11-12
 
-## Stop here today
+## Final stopping point
 
-The user ended work after S23 and S24. Both passed Codex code review and are **Approved, uncommitted**. HEAD at handoff is `43eb732` (commit 67). S01–S22 are committed. S25 has no spec and no implementation. Brief source inspection for S25 occurred before the user stopped work, but no design was finalized. This handoff is not an S25 spec or authorization to implement during the stopped session.
+The user explicitly requested that S26 be the last slice today and that S27 not be planned after review. S26 review is complete. The subsequent request was to reconcile all context files; that documentation-only update does not reopen slice work.
 
-Grok implements; Codex writes specs and reviews, unless the user changes assignments. Never commit, push, create branches, or deploy; the user handles commits. No application code or data changed during the final documentation reconciliation.
+**S25 and S26 are Approved by Codex, implemented by Claude Sonnet, and uncommitted.** HEAD remains `9b47c77` (commit 68), which commits S23/S24; S01–S24 are committed. The working tree contains both approved slices plus planning/review/context documents and is not clean. Preserve all existing work. The user handles commits; no commit, push, branch or deployment occurred.
 
-## Start next session
+No S27 spec/planning/implementation was started, no S28 work was done, and drawDB remains unstarted. Stop here today. On a future user-directed resume, first read AGENTS.md and the six context files, then reconcile git status/log because the user may have committed this tree.
 
-1. Read AGENTS.md and the six context files it lists, then this handoff. Check git status/log: the user may have committed S23/S24 since this snapshot. Preserve all existing work and do not treat the large uncommitted S23/S24 diff as unfinished implementation.
-2. Read the final sections of `specs/23-project-messages-api-review.md` and `specs/24-project-chat-panel-review.md`. Earlier findings are historical and resolved; the tracker table and final reviews define current approval.
-3. Plan S25 from `specs/00-build-plan.md` (Undo / redo for the turn holder, lane both, dependency S22 Committed). Create its complete just-in-time spec before implementation. Do not assume an S25 spec already exists.
-4. Grok implements only the approved S25 scope, verifies it, marks Ready for review, and stops. Codex independently reviews. Keep membership S26–S28 and hardening S29 separate.
+## Approved S25 — undo and redo
 
-## Approved work to preserve
+Contract: [25-undo-redo.md](specs/25-undo-redo.md). Final review: [25-undo-redo-review.md](specs/25-undo-redo-review.md). Approved after second correction, with no remaining code findings.
 
-**S23:** ProjectMessage model, member-only paged history/send REST, text plus one image/video, `/collaborate` upload folder with `/chat` default preserved for DMs, project room message broadcast, completed-join typing relay, and message cleanup on project delete. Empty `?before=` correctly returns 400 for members, before any message query; outsiders still get 404 first. Use both `before` and `beforeId` when paging.
+- Shared `invertOps` validates forward ops, uses intermediate pre-states and reverses inverse groups while restoring removed nodes before their actually cascaded edges. Keep the existing 50-op commit limit; a 600-edge inverse restores in 13 ordered commits.
+- Binding-owned, memory-only history retains at most 100 per-dispatch undo frames. Commands wait for settled saves. Replay blocks ordinary canvas edits/previews while chat, cursors, viewport and turn controls remain available. Stack transfer happens only after the final successful ack. Versions/array order are not part of graph-equivalence assertions.
+- Multi-commit replay is not server-atomic: a saved prefix may remain after interruption. Discard unsent work/history and recover authoritatively; never automatically resend uncertain chunks or roll back saved ones.
+- Preserve `retireUnownedWork`: session account/socket ownership loss during pending work invalidates the sync epoch/queue/callbacks, clears the old binding and returns to loading. Late acks cannot send more chunks or republish the old optimistic graph; restoring the old socket/account cannot resurrect it.
+- Preserve capture-phase gesture cancellation. Actual XYDrag/d3 can suppress onNodeDragStop and stop touchend at the node. The fallback must observe capture, wait for the last finger, ignore field blur, preserve normal end-then-commit behavior and remove exact listeners. Controlled XYDrag regressions include a bubble-only failing-behavior control.
+- Core files: shared canvasOps.js; client canvasHistory.js, canvasShortcuts.js, workspaceSync.js and useWorkspaceStore.js; CanvasControls/WorkspaceCanvas/ShapeNode; server canvasOps tests; root canvasHistory/canvasShortcuts tests.
 
-**S24:** Separate project chat store and responsive panel, safe history/live merge and send echo deduplication, draft/file retention on failed sends or temporary disconnect, typing expiry/refresh, unread badge, and sound-only persistence under `ajfm88-collaborate`. Every role can chat without a turn and during canvas-only recovery.
+## Approved S26 — invitations and members REST API
 
-S24 review corrections are important invariants for later changes:
+Contract: [26-invites-members-api.md](specs/26-invites-members-api.md). Final review: [26-invites-members-api-review.md](specs/26-invites-members-api-review.md). Approved with no blocking findings.
 
-- `useWorkspaceStore.js` retains account ownership per Socket.IO connection id in a WeakMap. A different session account cannot gain chat by retrying/rebinding the unchanged old connection. A fresh id may establish new ownership. Null/replaced session sockets invalidate pending chat callbacks immediately.
-- Both Load earlier and Retry capture the visible row. The scroll hook observes message content for media growth, releases a stale hold when the user scrolls, and preserves the newly visible position on subsequent live appends/resizes. Do not restore the older behavior while adding shortcuts or controls.
-- `selectCanEdit`/`selectIsHolder` and server turn enforcement remain separate from `selectCanChat`. Do not gate project chat with the editing turn.
+- Seven routes behind protectRoute: owner invite/revoke, recipient list/accept/decline, owner member-role change, and owner removal/member self-leave. Static invitation routes precede generic project-id routes.
+- Project authorization precedes body/target errors. Recipient reads/writes match invite id and trusted normalized email in one embedded element. Offers expose only the whitelist, never another recipient's invitation, member roster, other-user email, Clerk id or canvas.
+- Normalize primitive email strings, including mixed-case stored User.email. Existing-member email checks read only this project's member-user ids. Pending invitations can precede signup; no User writes or directory lookup.
+- Members plus pending invites reserve at most 10 seats excluding owner. Acceptance atomically pulls one invite and pushes the caller with the stored role, including at 10 reserved seats. Never use body identity/role to accept and never permit owner transfer/demotion/removal/self-join.
+- Every mutation repeats authority and the prior member/invite content in one atomic Project filter. Accepted snapshot encoding: array size plus per-element $elemMatch guards for API-maintained unique entries, preserving ObjectId/date values without BSON field-order dependence. Conditional misses use one fresh scoped classification read, never an automatic retry. Rename/description edits are preserved.
+- Core files: server projectMembership.js helper, projectMember.controller.js, project.route.js; new projectMembership.test.js (20) and projectMember.api.test.js (30); endpoint/resource/errors are in server/readme.md.
+- **S26 is REST-only.** Existing joined rooms and cached turn/cursor/typing/broadcast permissions are not immediately revoked by removal/demotion. No invitations/share UI exists. Do not treat this as completed live membership management or launch readiness. Those are pre-existing later-roadmap gaps, not work to start today.
 
-## Last independent verification
-
-Final S24 code review reran all suites successfully, one root suite per command:
+## Last independent verification — final S26 review
 
 | Suite | Passed |
 | --- | ---: |
-| server: `npm test` in `server/` | 221 |
-| `node --test test/workspaceSync.test.mjs` | 13 |
-| `node --test test/canvasPreview.test.mjs` | 39 |
-| `node --test test/participants.test.mjs` | 6 |
-| `node --test test/cursorPresence.test.mjs` | 69 |
-| `node --test test/turnState.test.mjs` | 10 |
-| `node --test test/turnRobustness.test.mjs` | 28 |
-| `node --test test/projectChat.test.mjs` | 14 |
-| `node --test test/projectChatUi.test.mjs` | 5 |
-| **Total** | **405** |
+| server: npm test | 283 |
+| workspaceSync | 13 |
+| canvasPreview | 39 |
+| participants | 6 |
+| cursorPresence | 69 |
+| turnState | 10 |
+| turnRobustness | 28 |
+| projectChat | 14 |
+| projectChatUi | 5 |
+| canvasHistory | 31 |
+| canvasShortcuts | 44 |
+| **Total** | **542 (283 server, 259 client)** |
 
-Server duration: 1021.4669 ms. Root build passed: Vite 7.3.5, 4275 modules, 8.77s; `WorkspacePage-CNgz3832.js` 292.98 kB, gzip 92.84 kB. Existing chunk-size warning only. Diff check passed with line-ending notices. No tests/build were repeated just for the final documentation-only cleanup.
+All suites passed with zero failures/skips/cancellations, root suites separately and sequentially. Server duration 2047.3789 ms. Production build: Vite 7.3.5, 4277 modules, 8.44 s; `WorkspacePage-9VQR8OGU.js` 303.85 kB / gzip 96.09 kB, unchanged from Approved S25. Existing chunk-size warning only. Diff check passed with LF-to-CRLF notices.
 
-The implementer reported a clean API boot, MongoDB database `3dfolio`, GET /health 200, process stopped, and no database writes. Review did not repeat that live connection. No browser/two-account/live attachment, `/blog`, or `/chat` QA is claimed. Mounted-hook tests use controlled element metrics; they are not a real browser layout check. A previous isolated headless browser launch was rejected by automatic approval review as blocked by policy. The shared-project walkthrough remains scheduled for S26/S28, broader mobile/accessibility QA for S29, final deployed QA for S30. Code approval does not establish launch readiness.
+No suite/build/API/browser check was repeated merely for final context reconciliation. Documentation/path/whitespace checks pass; no application/test/dependency or live-data changes were made in that reconciliation. Original implementation requirements and historical review/slice notes remain history; final reviews/status table are authoritative for current approvals.
 
-## S25 source map and planning questions
+## Remaining verification gaps
 
-Read `server/src/shared/canvasOps.js` (pure, no imports), `server/test/canvasOps.test.js`, `src/collaborate/store/useWorkspaceStore.js`, `src/collaborate/lib/workspaceSync.js`, `src/collaborate/components/canvas/CanvasControls.jsx`, and `WorkspaceCanvas.jsx`. Existing sync/turn robustness tests are mandatory regression coverage.
+No live MongoDB concurrency/index/Atlas test, new API boot/health check, isolated-account manual REST cycle, real browser/touch hardware/two-account/live-project/media or /blog and /chat runtime check was performed for S25/S26. Model fakes use staged stale reads; XYDrag tests use controlled DOM/events and a subscription for adapter lifecycle. These are automated evidence, not real-browser or database-race evidence. Earlier API health reports remain inherited history only. Local configuration targets the live `3dfolio` database; do not write live data merely to satisfy a checklist.
 
-The build-plan goals are inverse ops including cascaded edges, this tab's undo/redo stacks, clearing history on turn loss/resync, normal committed/broadcast replay, shortcuts outside text inputs, and disabled controls when unavailable. The next spec must settle these concrete issues before Grok implements:
+Preserve approved S23/S24 behavior: same-element authority does not replace S24's connection-account WeakMap; an unchanged connection cannot be relabeled by retry. Chat remains usable for all member roles without a turn and during canvas recovery. Null/replaced sockets retire chat callbacks. History pages use paired cursors; Load earlier/Retry capture the visible row and manual scrolling releases stale holds. Media-growth anchoring remains intact. No chat/blog removal occurred.
 
-- **Large inverses:** one valid node.remove can cascade up to 600 edges, while applyOps and each canvas commit accept at most 50 ops. Define how undo restores this graph without increasing limits, inventing an event, silently omitting edges, or assuming the inverse fits one batch. Multi-commit replay and its interrupted/partial outcome need an explicit contract if selected; no solution was approved today.
-- **Op order:** inverse construction must use each operation's intermediate pre-state, reverse dependencies correctly, and restore nodes before their edges. Multiple removes can share a cascaded edge. Repeated updates, add/remove/re-add, self-loops and parallel edges need coverage.
-- **History vs sync:** history is per user dispatch/gesture, not transport batching. Decide record timing and stack transitions relative to optimistic work, acknowledgements, rejection, timeout, turn loss, disconnect/rejoin, and authoritative recovery. Never replay uncertain work or let stale callbacks resurrect cleared history.
-- **Round trips:** versions advance through real commits; node/edge arrays use append semantics. Define graph-equivalence assertions rather than accidentally requiring unchanged versions or unsupported z-order restoration.
-- **Input isolation:** Ctrl/Cmd undo/redo and zoom shortcuts must not hijack the chat composer, node/edge label editors, other editable fields, IME, or native browser zoom. Keep canvas viewport and chat behavior intact.
+## Separate deferred tracks
 
-No new dependency, backend protocol, limit, or history persistence is preauthorized by this handoff. S25–S30 are the six remaining launch slices. `/blog` and `/chat` removal is separate post-launch work; drawDB is a separate track and was not started.
+The drawDB editor integration remains D1–D9 Todo in [the separate plan](../../3dfolio_drawdb_plan.md); no files were ported. Later feature preferences discussed today: cloud storage, version history and public sharing; skip AI, MCP and GitHub integration. These are discussion preferences only: no backend follow-up phase/spec was written and no PostgreSQL migration was authorized. Existing MongoDB remains the current stack. /blog and /chat removal is still separate post-launch work; both remain in the app.
+
+Four /collaborate slices remain in the existing roadmap (S27–S30). No just-in-time S27 spec exists. Do not start or plan one today.

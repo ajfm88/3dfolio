@@ -68,6 +68,9 @@ export function createSyncState() {
     remoteHigh: null,
     remoteMalformed: false,
     denialRejoin: false,
+    // Optional history notifications, installed by the store. The controller
+    // calls them blind so helpers built without them keep working.
+    hooks: null,
   };
 }
 
@@ -96,6 +99,7 @@ export function invalidateSession(session, { keepDenial = false } = {}) {
     session.denialRejoin = false;
     session.toastRecovery = false;
   }
+  session.hooks?.invalidate?.("session");
 }
 
 function requiredVersion(session) {
@@ -203,6 +207,8 @@ export function createSyncController(deps) {
     session.recovering = false;
     session.toastRecovery = false;
     session.denialRejoin = false;
+    // The queue is empty and recovery is over, so busy state has to follow.
+    session.hooks?.queue?.();
     return true;
   }
 
@@ -309,6 +315,10 @@ export function createSyncController(deps) {
     session.pending = [];
     session.commit = null;
     session.recovering = true;
+    // Every recovery drops local undo history, including a rejection whose
+    // attached snapshot is installed immediately below. Which provisional
+    // frames reached the server is unknowable from the optimistic graph.
+    session.hooks?.invalidate?.("recovery");
     showError(session, message);
 
     const usable = snapshot && snapshot.version >= requiredVersion(session) && !session.remoteMalformed
@@ -439,6 +449,9 @@ export function createSyncController(deps) {
     }
     if (version <= confirmedVersion) return;
 
+    // A real remote change makes every retained inverse stale. Duplicates and
+    // foreign traffic returned above and leave history alone.
+    session.hooks?.invalidate?.("remote");
     noteRemote(session, version);
     if (session.pending.length > 0 || session.commit) {
       beginRecovery(binding);
@@ -475,6 +488,7 @@ export function createSyncController(deps) {
       },
     });
     pump(binding);
+    session.hooks?.queue?.();
   }
 
   function onCommitAck(binding, captured, body) {
@@ -509,6 +523,9 @@ export function createSyncController(deps) {
     // Turn loss drops the queue itself. A closed gate must not take batches
     // or emit, including when an ack pumps the next commit.
     if (!deps.canEdit()) return;
+    // A queued write belongs to the account that authenticated this
+    // connection. It is not sent if the session has moved to someone else.
+    if (deps.ownsConnection && !deps.ownsConnection(binding)) return;
 
     const ops = [];
     const batches = [];
@@ -566,6 +583,16 @@ export function createSyncController(deps) {
     if (!active(binding)) return;
     binding.sync.pending.push(ops.map((op) => structuredClone(op)));
     pump(binding);
+    binding.sync.hooks?.queue?.();
+  }
+
+  // Every batch is queued before the first emit, so a synchronous failure while
+  // pumping clears them all together and cannot leave later ones orphaned.
+  function enqueueMany(binding, batches) {
+    if (!active(binding)) return;
+    for (const ops of batches) binding.sync.pending.push(ops.map((op) => structuredClone(op)));
+    pump(binding);
+    binding.sync.hooks?.queue?.();
   }
 
   function onJoined(binding, { project, role, canvas }) {
@@ -594,5 +621,5 @@ export function createSyncController(deps) {
     session.toastRecovery = false;
   }
 
-  return { enqueue, pump, onRemote, onJoined, beginRecovery, invalidateSession };
+  return { enqueue, enqueueMany, pump, onRemote, onJoined, beginRecovery, invalidateSession };
 }

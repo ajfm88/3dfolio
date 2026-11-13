@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, NodeResizer, Position } from "@xyflow/react";
 
 import { HANDLE_IDS, NODE_SIZE_MAX, NODE_SIZE_MIN } from "@shared/canvasOps.js";
@@ -63,14 +63,29 @@ const ShapeNode = ({ id, data, selected, isConnectable }) => {
   const canEdit = useWorkspaceStore(selectCanEdit);
   const commitNodeResize = useWorkspaceStore((s) => s.commitNodeResize);
   const onNodeResize = useWorkspaceStore((s) => s.onNodeResize);
+  const beginGesture = useWorkspaceStore((s) => s.beginGesture);
+  const endGesture = useWorkspaceStore((s) => s.endGesture);
   const [editing, setEditing] = useState(false);
+  const resizing = useRef(false);
+  const onResizeStart = useCallback(() => {
+    resizing.current = true;
+    beginGesture("resize");
+  }, [beginGesture]);
   const onResizeEnd = useCallback((_event, params) => {
+    resizing.current = false;
+    endGesture("resize");
     commitNodeResize(id, params);
-  }, [commitNodeResize, id]);
+  }, [commitNodeResize, endGesture, id]);
   const onResize = useCallback((_event, params) => {
     onNodeResize(id, params);
   }, [onNodeResize, id]);
   const closeEditor = useCallback(() => setEditing(false), []);
+
+  // A node removed or rebuilt mid-resize never reports its end. Only the node
+  // that started the resize may end it, so a newer gesture is never cleared.
+  useEffect(() => () => {
+    if (resizing.current) endGesture("resize");
+  }, [endGesture]);
 
   // Losing edit permission drops the draft. Restoring it must not reopen the
   // session. Selection is left alone so a pane click can still blur-commit.
@@ -116,6 +131,7 @@ const ShapeNode = ({ id, data, selected, isConnectable }) => {
         keepAspectRatio={false}
         handleClassName="collab-resize-handle"
         lineClassName="collab-resize-line"
+        onResizeStart={onResizeStart}
         onResizeEnd={onResizeEnd}
         onResize={onResize}
       />

@@ -15,7 +15,7 @@ Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and t
 
 ## Slices
 
-**Checkpoint (2026-11-11):** S01-S24 are implemented and approved in code review. S23/S24 are uncommitted on HEAD `43eb732`; the user handles commits. S25-S30 remain. The user stopped after S24; S25 has no spec or implementation yet. Start next session from `../HANDOFF.md`, then write S25's full spec before implementation. Browser/two-account and launch QA remain open.
+**Checkpoint (2026-11-12):** S01–S24 are committed through HEAD `9b47c77` (commit 68). S25/S26 are implemented and Approved by Codex, uncommitted; the user handles commits. Latest independent verification: 542 tests, production build and diff check pass. Four slices remain before launch (S27–S30); browser/two-account/manual/live-database QA is open, and S26 has no live socket revocation or UI. The user requested stopping after S26 review today. No S27 spec, new planning or implementation has been started; resume only on the user's instruction and read `../HANDOFF.md` first.
 
 Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices in different lanes with no dependency between them can run in parallel, one agent per lane, in separate git worktrees. Suggested parallel pairs: S04∥S02, S06∥S05, S19∥S17–S18, S23∥S21–S22, S26∥S24–S25.
 
@@ -219,14 +219,17 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 ### Phase H — Editing comfort
 
 #### S25 · Undo and redo for the turn holder `both` · after S22
+- Implementation contract: `25-undo-redo.md`. Implemented by Claude Sonnet and Approved after Codex's final review on 2026-11-12; uncommitted on `9b47c77`. See `25-undo-redo-review.md`; browser/shared-project QA remains open.
 - Shared: `invertOps(canvas, ops)` in `canvasOps.js`, computing inverse ops against the pre-op canvas. A `node.remove` inverse restores the node and its cascaded edges. Tests cover round-trips (`apply(invert(x))` restores the canvas).
 - Client: undo and redo stacks of this tab's own dispatched batches, cleared on turn loss and on resync. Undo dispatches the inverse as normal ops, so it's committed and broadcast like any edit.
-- Shortcuts: Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, and Ctrl+Y, plus `+`/`-` zoom, all skipped inside inputs and textareas. Undo and redo buttons go in `CanvasControls`, disabled when unavailable.
+- Large inverses replay in ordered commits of at most 50 ops using the existing protocol; a saved prefix can remain after interruption. Clear history and recover authoritatively rather than retrying or rolling back. Undo/redo waits for pending saves; replay temporarily blocks ordinary canvas edits while chat, presence and viewport controls remain usable. History retains at most 100 undo frames in this tab's memory.
+- Shortcuts: Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, and Ctrl+Y, plus unmodified `+`/`=`/`-` canvas zoom. Scope to the focused canvas, skip editable fields/IME/repeat, and preserve Ctrl/Cmd browser zoom. Undo and redo buttons go in `CanvasControls`, disabled when unavailable.
 - **Done when:** a sequence of add, move, recolor, delete, undo ×4, and redo ×4 produces identical canvases for the holder and watchers.
 
 ### Phase I — Membership
 
 #### S26 · Invites and members API `server` · after S03
+- Implementation contract: `26-invites-members-api.md`. Implemented by Claude Sonnet and Approved by Codex on 2026-11-12, uncommitted on `9b47c77` alongside Approved S25. See `26-invites-members-api-review.md` for accepted snapshot guards, validation order and runtime QA limitations. Stop for today; this does not start S27.
 - `projectMember.controller.js`:
   - `POST /:id/invites { email, role }`: owner only. Lowercase, validate, not yourself, not already a member or invited, and under the cap.
   - `DELETE /:id/invites/:inviteId`: owner only.
@@ -235,6 +238,8 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
   - `PATCH /:id/members/:userId { role }`: owner only.
   - `DELETE /:id/members/:userId`: the owner removing anyone, or a member leaving themselves.
 - There's no user directory or search: invites are by exact email only. Email delivery is out of scope; the invitee sees the invite when they next open `/collaborate`.
+- Every mutation uses an atomic membership/invites snapshot guard plus current caller authorization, preserving the ten reserved seats under concurrent requests. Conflicting snapshots fail safely for explicit retry. Recipient operations match invite id and trusted normalized email in the same embedded invitation; new users may be invited before signup. Exact responses/privacy/errors are defined in the S26 spec.
+- S26 changes REST only. Already joined socket permissions and live removal/demotion remain S27; sharing/invitations UI remains S28. No claim of complete live revocation until those slices land.
 - Readme: endpoints.
 - **Done when:** a full invite → accept → role change → remove cycle works with two accounts. Every guard returns the right status.
 

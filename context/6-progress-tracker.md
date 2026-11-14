@@ -4,12 +4,12 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase I: S26 invitations/members API is **Approved** (Codex, 2026-11-12), uncommitted on HEAD `9b47c77`. S25 is also Approved/uncommitted; preserve both. S01–S24 are committed; browser/shared-project QA remains outstanding.
-- Git reconciliation (Codex, 2026-11-12): HEAD `9b47c77` (commit 68) commits approved S23/S24. The current working tree contains Approved/uncommitted S25/S26 plus planning/review/context documents; it is not clean. It was clean before S25 planning. This final reconciliation changes documentation only, preserving all application/test changes.
+- Phase I: S01–S26 are **Committed** through HEAD `c14a185` (commit 69, 2026-11-13). S27 live membership enforcement (GPT 6.1 Terra) is **Approved** by Claude Opus 5.5 (2026-11-13) and uncommitted. Browser/shared-project QA remains outstanding.
+- Git reconciliation (Claude Opus 5.5, 2026-11-13): HEAD `c14a185` (commit 69) commits Approved S25 and S26 with their planning/review documents. The working tree was clean before today's documentation update and S27 planning.
 
 ## Current Goal
 
-- Stop for today at the user's explicit request after S26 review. Preserve Approved/uncommitted S25 and S26; user handles commits. Do not plan/specify/implement S27 today. No S27 spec or implementation exists.
+- Two slices today (2026-11-13): S27 (live membership enforcement and cleanup), then S28 (share dialog and invitations UI). S27's spec is `specs/27-live-membership-enforcement.md`. S27 is Approved (uncommitted); S28's spec is `specs/28-share-dialog-invitations-ui.md`.
 - Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24 and S25. S26's manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25/S26.
 
 ## Completed
@@ -38,17 +38,18 @@ Update this file after every meaningful implementation change. It records the **
 - S22: Turn robustness (approved by Codex after the Socket.IO buffer correction, committed with S21 as `43eb732`).
 - S23: Project messages API and typing relay (approved by Codex after the empty-cursor correction; committed as `9b47c77`).
 - S24: Project chat panel (approved by Codex after two correction rounds; committed as `9b47c77`). Browser and live-media checks remain open.
-- S25: Undo/redo for the turn holder (Approved by Codex after second correction, 2026-11-12; uncommitted).
-- S26: Invitations and members REST API (Approved by Codex, 2026-11-12; uncommitted). Live socket enforcement and UI remain later work.
+- S25: Undo/redo for the turn holder (Approved by Codex after second correction, 2026-11-12; committed as `c14a185`, together with S26).
+- S26: Invitations and members REST API (Approved by Codex, 2026-11-12; committed as `c14a185`, together with S25). Live socket enforcement (S27) and UI (S28) remain.
 
 ## In Progress
 
-- None. S25 and S26 are Approved and uncommitted. Work is stopped for today at the user's request.
+- S27 is Approved and uncommitted (review: `specs/27-live-membership-enforcement-review.md`); browser and live-system QA remain open. S28 is Ready for review (`specs/28-share-dialog-invitations-ui.md`).
 
 ## Next Up
 
-- No further work today: user explicitly requested no S27 planning after S26 review. Reconcile git/handoff only when the user resumes. No S27 spec/implementation, S28 UI or drawDB work has started.
-- The shared-project walkthrough through S25 and S26 membership needs the later live-enforcement/UI work and configured test accounts/data; it was not performed today. The 320px participant-stack check with six other accounts stays in the existing S29 roadmap. No new future-slice plan was written.
+- S27: Approved 2026-11-13, uncommitted; the user commits.
+- S28: `specs/28-share-dialog-invitations-ui.md` is Ready for review; Claude Opus 5.5 reviews.
+- The shared-project walkthrough through S25–S28 needs configured test accounts/data; it has not been performed. The 320px participant-stack check with six other accounts stays in the existing S29 roadmap. drawDB remains unstarted.
 
 ## Slice Status
 
@@ -80,14 +81,69 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S22 | Turn robustness | client | S21 | ✓ | Committed | Grok | `43eb732` |
 | S23 | Project messages API + typing relay | server | S13 | ✓ | Committed | Grok | `9b47c77` |
 | S24 | Chat panel | client | S23 | ✓ | Committed | Grok | `9b47c77` |
-| S25 | Undo / redo for the turn holder | both | S22 | ✓ | Approved | Claude Sonnet | Approved after second correction; uncommitted on `9b47c77` |
-| S26 | Invites + members API | server | S03 | ✓ | Approved | Claude Sonnet | Approved 2026-11-12 on HEAD `9b47c77`; uncommitted |
-| S27 | Live membership enforcement + cleanup | server | S20, S26 | | Todo | | |
-| S28 | Share dialog + invitations UI | client | S24, S27 | | Todo | | |
+| S25 | Undo / redo for the turn holder | both | S22 | ✓ | Committed | Claude Sonnet | `c14a185` |
+| S26 | Invites + members API | server | S03 | ✓ | Committed | Claude Sonnet | `c14a185` |
+| S27 | Live membership enforcement + cleanup | server | S20, S26 | ✓ | Approved | GPT 6.1 Terra | Approved by Claude Opus 5.5 2026-11-13; uncommitted on `c14a185` |
+| S28 | Share dialog + invitations UI | client | S24, S27 | ✓ | Approved | GPT 6.1 Terra | Approved by Claude Opus 5.5 after one correction round, 2026-11-13; uncommitted |
 | S29 | Hardening pass | both | S28 | | Todo | | |
 | S30 | Launch | client + docs | S29 | | Todo | | |
 
 ## Slice Notes
+
+### S28 review corrections - 2026-11-13
+
+- Factored workspace exit into a shared path and made successful self-leave use it even without a socket event. Removed the dialog navigation race, removed UTF-8 BOMs, formatted the new files and listeners, added the requested comments and accessible spinner/submit attributes.
+- Verification: **304 server tests**, **259 existing client tests** in ten individual suites, and **21 membership tests** passed. Build passed with the existing large-chunk warning (WorkspacePage 313.85 kB / 98.78 kB gzip; Collaborate 23.44 kB / 6.80 kB gzip). `git diff --check` passed.
+- The two-account walkthrough (section 7), 320px navbar check, and real browser focus/layout checks were **not run**. No live data was written.
+
+### S28 implementation ? 2026-11-13
+
+- Added ShareDialog and the share store, dashboard invitation cards and store, live role/removal listeners, self-leave deduplication, redirect and one retry for superseded joins. The dashboard refreshes invitations on focus or visibility with a five-second throttle.
+- Verification: 304 server tests, 259 existing client tests (ten suites individually), and 20 new membership tests passed. Production build passed with the existing large-chunk warning: WorkspacePage 313.70 kB (gzip 98.75 kB), Collaborate dashboard chunk 23.40 kB (gzip 6.79 kB); React Flow remains in the workspace chunk. `git diff --check` passed. Existing assertions did not change. SSR tests replace portal behavior and use route/Clerk stubs; they do not establish browser layout or focus behavior.
+- Manual two-account walkthrough and 320px navbar check were **not run**; isolated accounts/data were not available. No live data was written. Approved S27 files remain as received.
+
+### S28 re-review — 2026-11-13
+
+**Reviewer:** Claude Opus 5.5 · **Verdict:** Approved.
+
+- All five corrections verified. Re-ran: server **304**, ten root suites **259**, `membershipUi` **21**, all passing; build passed (WorkspacePage 313.85 kB); `git diff --check` passed.
+- Still not run: §7 two-account walkthrough, 320px navbar, browser focus/layout. S27 and S28 are both Approved and uncommitted; the user commits. S29 is next and not yet specified.
+
+### S28 review — 2026-11-13
+
+**Reviewer:** Claude Opus 5.5 · **Verdict:** Changes requested.
+
+- Independently re-ran: server **304**, ten root suites **259**, new `membershipUi` suite **20**, all passing; build passed (WorkspacePage 313.70 kB); `git diff --check` passed; scope clean.
+- Requested: (1) a successful leave must exit the workspace through a new `exitWorkspace` store action even when no `workspace:removed` arrives (a spec ordering gap, not an implementation slip); (2) strip UTF-8 BOMs from the five new files; (3) reformat the new components and stores to the repo's multi-line style with why-comments; (4) small spinner/submit accessibility fixes; (5) keep the tracker row accurate. Details in `specs/28-share-dialog-invitations-ui-review.md`.
+- Two-account walkthrough and 320px check remain not run.
+
+### S28 planning — 2026-11-13
+
+**Spec author / reviewer:** Claude Opus 5.5 · **Assigned implementer:** GPT 6.1 Terra
+
+- Wrote `specs/28-share-dialog-invitations-ui.md` after reading the workspace store, WorkspacePage, navbar, Dialog shell, dashboard and projects store, the S26 REST responses and the root-suite harnesses. Client only: ShareDialog with share store, dashboard InvitationsList with invitations store, `workspace:removed`/`workspace:role` listeners with a `removed` status, a single deduplicated exit toast, one automatic retry for an S27-cancelled join, and invitation refresh on focus. New suite `test/membershipUi.test.mjs`. No code changed in planning. S28 stays **Todo**.
+
+### S27 review — 2026-11-13
+
+**Reviewer:** Claude Opus 5.5 · **Verdict:** Approved, no code changes requested.
+
+- Independently re-ran: server **304 passed**; ten root suites **259 passed** (one command each); production build passed (existing chunk warning); `git diff --check` passed; webhook diff has no removed lines.
+- Notes recorded in `specs/27-live-membership-enforcement-review.md`: removed sockets still receive the same-tick presence/turn broadcast (S28 must ignore project events after `workspace:removed`); index cleanup could move into a `finally` in S29; new tests use a dense style.
+- Reviewer corrected status bookkeeping only (this row, the spec status line, HANDOFF, AGENTS, workflow rules, build plan, architecture checkpoint, and this heading's dash). Two-browser, live webhook and live MongoDB checks remain not run.
+
+### S27 implementation — 2026-11-13
+
+- Implemented registry-scoped socket indexing, pending join cancellation, immediate removal and role enforcement, project room discard, REST hooks, and Clerk collaborate cleanup before the existing deletion cascade. The webhook's existing Post/Comment/Message cascade was verified by reading the diff.
+- Verification: server suite **304 passed**; ten unchanged client suites **259 passed**; production build passed with the existing large-chunk warning; `git diff --check` passed. Server booted with its configured environment and was stopped without writing live data.
+- Manual two-browser checks were **not run**. S28 client listeners are still absent. No live MongoDB mutation or webhook exercise was performed. Pre-existing documentation changes outside S27's allowed files were present at start.
+
+### S27 planning and context reconciliation — 2026-11-13
+
+**Spec author / reviewer:** Claude Opus 5.5 · **Assigned implementer:** GPT 6.1 Terra
+
+- Git: HEAD is `c14a185` (commit 69), which commits Approved S25 and S26 with their planning/review documents; the working tree was clean. Reconciled AGENTS.md, the six context files, HANDOFF.md, the build plan and the S25/S26 spec status lines from "Approved, uncommitted on `9b47c77`" to committed. Historical slice notes below keep their original wording.
+- User plan for today: two slices, S27 then S28, with GPT 6.1 Terra implementing and Claude Opus 5.5 specifying and reviewing.
+- Created `specs/27-live-membership-enforcement.md` after reading the actual workspace socket module, room registry, turn rules, project and member controllers, Clerk webhook, socket entry and the existing socket/API test harnesses. Added a planned-contract summary to `2-architecture.md`. No application or test code changed; no suites, build, API boot or browser checks ran for planning. S27 stays **Todo**.
 
 ### Final context reconciliation — 2026-11-12
 

@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { LOGO_SRC, LOGO_ALT } from "../../constants/brand";
 import { MAX_OWNED_PROJECTS } from "../lib/projectLimits";
 import { useProjectsStore } from "../store/useProjectsStore";
+import InvitationsList from "../components/projects/InvitationsList";
+import { useInvitationsStore } from "../store/useInvitationsStore";
 import ProjectCard from "../components/projects/ProjectCard";
 import { CreateProjectDialog, EditProjectDialog, DeleteProjectDialog } from "../components/projects/ProjectDialogs";
 
@@ -30,6 +32,8 @@ const ProjectsPage = () => {
   const createProject = useProjectsStore((s) => s.createProject);
   const updateProject = useProjectsStore((s) => s.updateProject);
   const deleteProject = useProjectsStore((s) => s.deleteProject);
+  const loadInvites = useInvitationsStore((s) => s.loadInvites);
+  const refreshInvites = useInvitationsStore((s) => s.refreshInvites);
   const [dialog, setDialog] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [failedProject, setFailedProject] = useState(null);
@@ -38,8 +42,24 @@ const ProjectsPage = () => {
 
   useEffect(() => {
     loadProjects();
+    loadInvites();
     setHasRequested(true);
-  }, [loadProjects]);
+    let lastRefresh = 0;
+    const refresh = () => {
+      if (Date.now() - lastRefresh < 5000) return;
+      lastRefresh = Date.now();
+      refreshInvites();
+    };
+    const visibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [loadProjects, loadInvites, refreshInvites]);
 
   // loadProjects resets the persistent store in an effect. Until that effect
   // runs, a fresh page must not render lists left over from a previous visit.
@@ -112,6 +132,7 @@ const ProjectsPage = () => {
         </div>
       ) : (
         <>
+          <InvitationsList />
           <section className="mt-10" aria-labelledby="owned-projects-title">
             <h2 id="owned-projects-title" className="mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--collab-accent-2)]">My projects <span className="text-[var(--collab-faint)]">· {owned.length}</span></h2>
             {owned.length ? (

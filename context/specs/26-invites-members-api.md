@@ -1,6 +1,6 @@
 # Slice 26 — Invitations and members API
 
-**Execution status (2026-11-12): Approved, uncommitted on `9b47c77`.** See `26-invites-members-api-review.md` for final evidence and accepted snapshot/validation choices. The planning baseline and instructions below remain the original implementation contract; they are not the current progress status. The user requested stopping after S26 review and no S27 planning today.
+**Execution status: Approved (2026-11-12); committed as `c14a185` (commit 69, 2026-11-13).** See `26-invites-members-api-review.md` for final evidence and accepted snapshot/validation choices. The planning baseline and instructions below remain the original implementation contract; they are not the current progress status.
 
 **Lane** server · **Depends on** S03 (Committed) · **Unblocks** S27, then S28
 

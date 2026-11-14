@@ -1,6 +1,6 @@
 # Slice 25 — Undo and redo for the turn holder
 
-**Execution status (2026-11-12): Approved after second correction, uncommitted on `9b47c77`.** See `25-undo-redo-review.md` for final evidence and accepted corrections. The planning baseline and instructions below remain the original implementation contract; they are not the current progress status. HANDOFF.md records today's stop after S26; do not start further slice work.
+**Execution status: Approved after second correction (2026-11-12); committed as `c14a185` (commit 69, 2026-11-13).** See `25-undo-redo-review.md` for final evidence and accepted corrections. The planning baseline and instructions below remain the original implementation contract; they are not the current progress status.
 
 **Lane** both (shared pure module and client; no server handlers) · **Depends on** S22 (Committed) · **Next** S26
 

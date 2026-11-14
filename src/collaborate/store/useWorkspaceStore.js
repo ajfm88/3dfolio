@@ -24,6 +24,15 @@ import { useSessionStore } from "./useSessionStore.js";
 // still matches this object, the socket id captured at emit, and its attempt.
 let activeBinding = null;
 
+export function markSelfLeave(projectId) {
+  const id = canonicalProjectId(projectId);
+  if (activeBinding && !activeBinding.disposed && activeBinding.projectId === id) activeBinding.selfLeave = id;
+}
+export function clearSelfLeave(projectId) {
+  const id = canonicalProjectId(projectId);
+  if (activeBinding?.selfLeave === id) activeBinding.selfLeave = null;
+}
+
 // Socket.IO authenticates at handshake. A workspace retry or route rebind on
 // the same connection id does not make that transport belong to someone else.
 const connectionAccounts = new WeakMap();
@@ -534,6 +543,32 @@ function failConnection(set, binding) {
   set(emptyWorkspace("error"));
 }
 
+// Both the socket event and a successful REST leave retire the same binding.
+function exitBinding(set, binding) {
+  clearConnectionNotice(set, binding);
+  binding.noticeMode = null;
+  binding.wasReady = false;
+  binding.attempt += 1;
+  binding.inFlight = null;
+  binding.presenceBuffer = null;
+  invalidateSession(binding.sync);
+  // Same-tick presence and turn packets must not restore a removed workspace.
+  binding.sync.joinedConnectionId = null;
+  binding.joinedAccountId = "";
+  invalidateHistory(binding, "removed");
+  binding.previewController?.clearAllOverlays();
+  binding.previewThrottle?.cancel();
+  clearBindingCursors(binding);
+  set({ ...emptyWorkspace("removed"), connectionNotice: null });
+}
+
+export function exitWorkspace(projectId) {
+  const binding = activeBinding;
+  if (!binding || binding.disposed || binding.projectId !== canonicalProjectId(projectId)) return;
+  if (syncDeps.get().status === "removed") return;
+  exitBinding(syncDeps.set, binding);
+}
+
 // Page exit is best effort. A volatile emit can still land in sendBuffer when
 // the heartbeat has expired but the transport looks writable, and that packet
 // would flush on a later connection. Drop only the object this call passed.
@@ -601,6 +636,7 @@ function startJoin(set, binding, force) {
     const result = classifyJoin(ack, projectId);
     if (!stillCurrent(binding, attempt, socket, connectionId)) return;
     if (result.ok) {
+      binding.supersededRetry = false;
       // Presence may already be buffered. The turn may not: the server samples
       // it immediately before this ack, so anything queued earlier is older.
       // Installing the ack before ready lets a later packet, deferred behind
@@ -621,6 +657,12 @@ function startJoin(set, binding, force) {
       if (!stillCurrent(binding, attempt, socket, connectionId)) return;
       const roster = bufferedParticipants ?? result.participants;
       set((state) => ({ participants: roster, cursors: pruneCursors(binding, state.cursors, roster) }));
+      return;
+    }
+    // A membership change can cancel a join once; retry to read the new access.
+    if (result.message === "Workspace request superseded" && !binding.supersededRetry) {
+      binding.supersededRetry = true;
+      startJoin(set, binding, true);
       return;
     }
     clearConnectionNotice(set, binding);
@@ -935,6 +977,27 @@ export const useWorkspaceStore = create((set, get) => {
         if (binding.socket?.active === false) failConnection(set, binding);
       };
       const onPageHide = () => releaseOnPageHide(binding);
+      const validMembership = (payload) => activeBinding === binding && !binding.disposed
+        && binding.socket?.connected && binding.socket.id === binding.sync?.joinedConnectionId
+        && isRecord(payload) && typeof payload.projectId === "string"
+        && payload.projectId.toLowerCase() === binding.projectId;
+      const onRemoved = (payload) => {
+        if (!validMembership(payload) || !["removed", "deleted"].includes(payload.reason) || get().status === "removed") return;
+        exitBinding(set, binding);
+        // REST leave and the socket event share an id to avoid duplicate toasts.
+        const options = { toastId: `workspace-exit-${binding.projectId}` };
+        if (payload.reason === "deleted") toast.error("This project was deleted", options);
+        else if (binding.selfLeave === binding.projectId) toast.success("You left the project", options);
+        else toast.error("You were removed from this project", options);
+      };
+      const onRole = (payload) => {
+        if (!validMembership(payload) || get().status !== "ready") return;
+        if (!["editor", "viewer"].includes(payload.role)) return;
+        if (!["editor", "viewer"].includes(get().role)) return;
+        if (get().role === payload.role) return;
+        set({ role: payload.role });
+        toast.info(`Your role is now ${payload.role}`, { toastId: `workspace-role-${binding.projectId}` });
+      };
       const onPresence = (payload) => {
         if (activeBinding !== binding || binding.disposed) return;
         const live = binding.socket;
@@ -1035,6 +1098,8 @@ export const useWorkspaceStore = create((set, get) => {
       socket.on("connect_error", onConnectError);
       socket.on("canvas:ops", onOps);
       socket.on("canvas:preview", onPreview);
+      socket.on("workspace:removed", onRemoved);
+      socket.on("workspace:role", onRole);
       socket.on("presence:update", onPresence);
       socket.on("turn:state", onTurn);
       socket.on("cursor:move", onCursorMove);
@@ -1049,6 +1114,8 @@ export const useWorkspaceStore = create((set, get) => {
         socket.off("connect_error", onConnectError);
         socket.off("canvas:ops", onOps);
         socket.off("canvas:preview", onPreview);
+        socket.off("workspace:removed", onRemoved);
+        socket.off("workspace:role", onRole);
         socket.off("presence:update", onPresence);
         socket.off("turn:state", onTurn);
         socket.off("cursor:move", onCursorMove);
@@ -1069,6 +1136,7 @@ export const useWorkspaceStore = create((set, get) => {
     const binding = activeBinding;
     if (!binding || binding.disposed) return;
     const socket = binding.socket;
+    binding.supersededRetry = false;
     clearConnectionNotice(set, binding);
     binding.wasReady = false;
     binding.noticeMode = null;

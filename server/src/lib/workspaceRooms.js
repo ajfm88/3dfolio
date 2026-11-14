@@ -189,7 +189,16 @@ export function createWorkspaceRegistry() {
     return open;
   }
 
-  return { acquire, retain, getRoom, addConnection, removeConnection, getParticipants, listRooms };
+  function discard(projectId) {
+    const entry = rooms.get(projectId);
+    if (!entry) return false;
+    rooms.delete(projectId);
+    entry.room?.connections.clear();
+    entry.room?.members.clear();
+    return true;
+  }
+
+  return { acquire, retain, getRoom, addConnection, removeConnection, getParticipants, listRooms, discard };
 }
 
 export const workspaceRegistry = createWorkspaceRegistry();

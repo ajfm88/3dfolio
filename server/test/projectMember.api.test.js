@@ -9,6 +9,8 @@ import Project from "../src/models/project.model.js";
 import ProjectMessage from "../src/models/projectMessage.model.js";
 import User from "../src/models/user.model.js";
 import projectRouter from "../src/routes/project.route.js";
+import { io } from "../src/lib/socket.js";
+import { workspaceRegistry } from "../src/lib/workspaceRooms.js";
 
 // The production router, protectRoute and handlers run unchanged. Only the
 // models are replaced, by an in-memory store that EVALUATES the filters and
@@ -987,4 +989,51 @@ describe("project membership routes", { concurrency: false }, () => {
     assert.equal(response.status, 500);
     assert.equal(current(project).invites.length, 0);
   });
+  it("wires successful role changes, removals and leaves to live sockets", async () => {
+    world();
+    const project=addProject(users.owner,{members:[member(users.editor,"editor"),member(users.viewer,"viewer")]});
+    const projectId=hex(project._id), editorId=hex(users.editor._id), viewerId=hex(users.viewer._id);
+    const lease=await workspaceRegistry.acquire(projectId,async()=>({nodes:[],edges:[],version:0}));
+    workspaceRegistry.addConnection(projectId,"editor-socket",{userId:editorId,tabId:"a",role:"editor"});
+    workspaceRegistry.addConnection(projectId,"viewer-socket",{userId:viewerId,tabId:"b",role:"viewer"});
+    const emits=[]; mock.method(io,"to",room=>({emit:(event,payload)=>emits.push({room,event,payload})}));
+    restores.push(()=>io.to.mock.restore());
+    try {
+      assert.equal((await call(users.owner,"PATCH",`/${projectId}/members/${editorId}`,{role:"viewer"})).status,200);
+      assert.ok(emits.some(e=>e.room==="editor-socket" && e.event==="workspace:role" && e.payload.role==="viewer"));
+      assert.equal((await call(users.editor,"DELETE",`/${projectId}/members/${editorId}`)).status,200);
+      assert.ok(emits.some(e=>e.room==="editor-socket" && e.event==="workspace:removed"));
+      assert.equal((await call(users.owner,"DELETE",`/${projectId}/members/${viewerId}`)).status,200);
+      assert.ok(emits.some(e=>e.room==="viewer-socket" && e.event==="workspace:removed"));
+    } finally { workspaceRegistry.discard(projectId); lease.release(); }
+  });
+
+  it("deleting a project emits removal and deletes canvas and messages", async () => {
+    world(); const project=addProject(users.owner), projectId=hex(project._id), calls=[];
+    mock.method(Project,"deleteOne",async filter=>{calls.push(["project",filter]); return {deletedCount:1};});
+    restores.push(()=>Project.deleteOne.mock.restore());
+    Canvas.deleteOne.mock.restore(); ProjectMessage.deleteMany.mock.restore();
+    mock.method(Canvas,"deleteOne",async filter=>calls.push(["canvas",filter]));
+    mock.method(ProjectMessage,"deleteMany",async filter=>calls.push(["messages",filter]));
+    mock.method(io,"to",room=>({emit:(event,payload)=>calls.push([event,room,payload])}));
+    restores.push(()=>io.to.mock.restore());
+    const response=await call(users.owner,"DELETE",`/${projectId}`);
+    assert.equal(response.status,200);
+    assert.deepEqual(calls.map(item=>item[0]),["project","workspace:removed","canvas","messages"]);
+    assert.equal(calls[1][2].reason,"deleted");
+  });
+
+  it("failed membership writes emit no live events", async () => {
+    world(); const project=addProject(users.owner,{members:[member(users.editor,"editor")]});
+    const projectId=hex(project._id), editorId=hex(users.editor._id), emits=[];
+    mock.method(io,"to",room=>({emit:(event,payload)=>emits.push({room,event,payload})}));
+    restores.push(()=>io.to.mock.restore());
+    assert.equal((await call(users.editor,"PATCH",`/${projectId}/members/${editorId}`,{role:"viewer"})).status,403);
+    assert.equal((await call(users.outsider,"DELETE",`/${projectId}/members/${editorId}`)).status,404);
+    const held=stageReads(1,{manual:true});
+    const pending=call(users.owner,"PATCH",`/${projectId}/members/${editorId}`,{role:"viewer"});
+    await held.arrived; current(project).invites.push(invite("race@example.com","viewer",users.owner)); held.release();
+    assert.equal((await pending).status,400); assert.deepEqual(emits,[]);
+  });
+
 });

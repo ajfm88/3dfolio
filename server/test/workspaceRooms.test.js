@@ -316,3 +316,19 @@ describe("createWorkspaceRegistry", { concurrency: false }, () => {
     assert.deepEqual(registry.getParticipants("p1"), []);
   });
 });
+
+
+it("discard clears an old room without allowing its lease to evict a replacement", async () => {
+  const registry = createWorkspaceRegistry();
+  const old = await registry.acquire("project", async () => ({ nodes: [], edges: [], version: 0 }));
+  registry.addConnection("project", "socket", { userId: "user", tabId: "tab", role: "editor" });
+  assert.equal(registry.discard("project"), true);
+  assert.equal(old.room.connections.size, 0);
+  assert.equal(old.room.members.size, 0);
+  assert.equal(registry.discard("project"), false);
+  const next = await registry.acquire("project", async () => ({ nodes: [], edges: [], version: 1 }));
+  old.release();
+  assert.equal(registry.getRoom("project"), next.room);
+  assert.notEqual(next.room, old.room);
+  next.release();
+});

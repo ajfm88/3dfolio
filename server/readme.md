@@ -311,7 +311,7 @@ These seven routes sit on the same router, behind `protectRoute`. Identity is th
 
 **Concurrency.** Every membership write is a single atomic update on the Project document. The handler reads the project, decides, and then repeats in the write filter the authority it relied on (the owner or member, or the exact invitation element) plus a snapshot of the exact `members` and `invites` arrays, expressed as `$size` plus one `$elemMatch` per element, so ObjectIds and dates stay values and an empty array is `$size: 0`. A request that raced a newer change matches nothing and is not retried. It is classified by one fresh scoped read into the specific `404`/`403`/`400`, or else `400 Project membership changed. Please try again.` Of two requests that consume the same invitation exactly one succeeds, and a stale role change cannot recreate a removed member. A rename or description change does not invalidate a membership request. This was verified against an in-memory model that evaluates the real filters and updates; **no live MongoDB race test was run.**
 
-**Rollout limit.** These routes change stored membership only. **They do not make removal or demotion live**: a member already joined to the project's Socket.IO room keeps their room, cached role, cursor/typing/turn permissions and broadcasts until S27 adds live enforcement, and there is no Share UI until S28. Do not treat membership management as complete or deploy it as such before S27.
+**Live membership.** Removing a member or leaving revokes every attached tab immediately; demoting an editor revokes its turn and queue entries. Deleting a project revokes every attached tab and discards its room. These hooks act only within the current server process, so they require the existing single-instance deployment. Client listeners and the Share UI are S28.
 
 ## Authorization
 
@@ -339,6 +339,8 @@ On a missing or invalid session the server responds with:
 ```
 
 ## User Synchronization
+
+On Clerk `user.deleted`, collaborate cleanup runs before deleting the local User: it deletes owned projects and their content, removes memberships and live socket access, removes invitations to the normalized email, and deletes the user's project messages. A failure leaves the User row for webhook retry.
 
 Clerk owns identity; MongoDB owns application data. Every Clerk user has a corresponding local `User` document, kept in sync two ways:
 
@@ -441,6 +443,8 @@ Only the tab holding the turn may commit or send a preview. A holder who disconn
 | `getOnlineUsers` | `string[]` of user ids     | Broadcast on every connect and disconnect |
 | `typing`         | `{ userId, isTyping }`     | Sent to the recipient's room only         |
 | `newMessage`     | The saved message document | Sent to the recipient's room on send      |
+| `workspace:role` | `{ projectId, role }` | Non-volatile, no ack; sent to each attached socket of the affected user. Role is `editor` or `viewer`. |
+| `workspace:removed` | `{ projectId, reason }` | Non-volatile, no ack; `removed` goes to each affected socket, `deleted` to the project room. |
 | `canvas:ops`     | `{ projectId, version, ops, by }` | After a saved commit, to the project room except the sender |
 | `canvas:preview` | `{ projectId, by, nodes }` | Volatile relay of a drag/resize sample. `by` is the authenticated Mongo userId. Sent to the project room except the sender. Overlay expires 3s after last sample; a canonical position/size update clears it immediately. Only the tab holding the turn is relayed. |
 | `turn:state`     | `{ projectId, holder, holderSince, queue, idleDeadline, graceUntil, serverNow }` | Not volatile. Sent with `io.to` to `project:<projectId>` on every turn change. `holder` is `{ userId, tabId }` or null. `queue` entries are `{ userId, tabId }`. Activity moves `idleDeadline` at most every 5 seconds, and only while someone is waiting. |

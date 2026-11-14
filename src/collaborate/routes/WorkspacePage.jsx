@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 
 import WorkspaceCanvas from "../components/canvas/WorkspaceCanvas";
 import ProjectChatPanel from "../components/chat/ProjectChatPanel.jsx";
@@ -72,6 +72,7 @@ const WorkspacePage = () => {
     };
   }, [socket, projectId, bindWorkspace]);
 
+  if (status === "removed") return <Navigate to="/collaborate" replace />;
   if (status === "notFound") return <NotFoundCard />;
   if (status === "error") return <ErrorCard />;
 

@@ -1,3 +1,5 @@
+import { io } from "../lib/socket.js";
+import { onMemberChanged } from "../sockets/workspace.socket.js";
 import mongoose from "mongoose";
 import Project from "../models/project.model.js";
 import User from "../models/user.model.js";
@@ -278,6 +280,7 @@ export async function updateMemberRole(req, res) {
   if (saved) {
     const member = (saved.members || []).find((item) => idString(item?.user) === targetId);
     if (!member) return conflict(res);
+    onMemberChanged(io, found.projectId, targetId, member.role);
     return res.status(200).json({ member: { userId: targetId, role: member.role } });
   }
 
@@ -313,6 +316,7 @@ export async function removeMember(req, res) {
     WRITE_OPTIONS,
   ).lean();
   if (saved) {
+    onMemberChanged(io, found.projectId, targetId, null);
     return res.status(200).json({ message: owner ? "Member removed" : "Project left" });
   }
 

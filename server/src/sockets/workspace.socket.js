@@ -9,6 +9,7 @@ import {
   cancelRequest,
   expire,
   reclaimTurn,
+  revokeEditRights,
   recordActivity,
   releaseTurn,
   requestTurn,
@@ -41,6 +42,34 @@ const OBJECT_ID = /^[0-9a-f]{24}$/i;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const lifecycles = new WeakMap();
+const socketIndexes = new WeakMap();
+
+function indexFor(registry) {
+  let index = socketIndexes.get(registry);
+  if (!index) { index = new Map(); socketIndexes.set(registry, index); }
+  return index;
+}
+
+function invalidate(state) {
+  state.generation += 1;
+  state.intent = null;
+  state.joinedGeneration = null;
+}
+
+function cancelPendingJoins(registry, projectId, userId) {
+  for (const socket of indexFor(registry).values()) {
+    if (userId && readUserId(socket) !== userId) continue;
+    const state = getLifecycle(socket);
+    if (state.intent?.kind === "join" && state.intent.projectId === projectId
+        && state.joinedGeneration !== state.intent.generation) invalidate(state);
+  }
+}
+
+function leaveLater(socket, projectId) {
+  if (socket) Promise.resolve().then(() => socket.leave(roomName(projectId)))
+    .catch((error) => logHandler("workspace:member", error));
+}
+
 
 const defaultDeps = {
   findProjectForMember: (projectId, userId) => projectAccess.findProjectForMember(projectId, userId),
@@ -286,6 +315,69 @@ function publishPresence(io, registry, projectId) {
   } catch (error) {
     logHandler("presence:update", error);
   }
+}
+
+export function onMemberChanged(io, project, user, role, registry = workspaceRegistry) {
+  try {
+    const projectId = String(project).toLowerCase();
+    const userId = String(user).toLowerCase();
+    if (!OBJECT_ID.test(projectId) || !OBJECT_ID.test(userId) || ![null, "editor", "viewer"].includes(role)) return;
+    cancelPendingJoins(registry, projectId, userId);
+    const room = registry.getRoom(projectId);
+    if (!room) return;
+    const sockets = [...room.connections].filter(([, connection]) => connection.userId === userId);
+    if (role === null) {
+      for (const [socketId] of sockets) {
+        try { io.to(socketId).emit("workspace:removed", { projectId, reason: "removed" }); }
+        catch (error) { logHandler("workspace:member", error); }
+        const socket = indexFor(registry).get(socketId);
+        if (socket) {
+          const state = getLifecycle(socket);
+          if (state.activeProjectId === projectId) { invalidate(state); state.activeProjectId = null; }
+        }
+        registry.removeConnection(projectId, socketId);
+        leaveLater(socket, projectId);
+      }
+      if (registry.getRoom(projectId) === room) {
+        const now = Date.now();
+        setTurn(io, projectId, room, revokeEditRights(room.turn, userId, now), now);
+      }
+      publishPresence(io, registry, projectId);
+      return;
+    }
+    const member = room.members.get(userId);
+    if (!member || member.role === role) return;
+    member.role = role;
+    for (const [socketId] of sockets) {
+      try { io.to(socketId).emit("workspace:role", { projectId, role }); }
+      catch (error) { logHandler("workspace:member", error); }
+    }
+    if (!can(role, "edit")) {
+      const now = Date.now();
+      setTurn(io, projectId, room, revokeEditRights(room.turn, userId, now), now);
+    }
+    publishPresence(io, registry, projectId);
+  } catch (error) { logHandler("workspace:member", error); }
+}
+
+export function onProjectDeleted(io, project, registry = workspaceRegistry) {
+  try {
+    const projectId = String(project).toLowerCase();
+    if (!OBJECT_ID.test(projectId)) return;
+    cancelPendingJoins(registry, projectId, null);
+    try { io.to(roomName(projectId)).emit("workspace:removed", { projectId, reason: "deleted" }); }
+    catch (error) { logHandler("workspace:member", error); }
+    const room = registry.getRoom(projectId);
+    if (room) for (const socketId of room.connections.keys()) {
+      const socket = indexFor(registry).get(socketId);
+      if (socket) {
+        const state = getLifecycle(socket);
+        if (state.activeProjectId === projectId) { invalidate(state); state.activeProjectId = null; }
+        leaveLater(socket, projectId);
+      }
+    }
+    registry.discard(projectId);
+  } catch (error) { logHandler("workspace:member", error); }
 }
 
 function tabOf(connection) {
@@ -1101,6 +1193,7 @@ export function startTurnSweeper(io, registry = workspaceRegistry) {
 export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRegistry, deps = defaultDeps) {
   // Touch the lifecycle so the queue exists before the first event.
   getLifecycle(socket);
+  indexFor(roomRegistry).set(socket.id, socket);
 
   socket.on("workspace:join", safeHandler("workspace:join", (payload, ack) => (
     onJoin(io, socket, roomRegistry, deps, payload, ack)
@@ -1154,5 +1247,7 @@ export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRe
   // including this socket's project room, and the per-user chat room stays.
   socket.on("disconnecting", safeHandler("disconnecting", () => {
     onDisconnecting(io, socket, roomRegistry);
+    const index = indexFor(roomRegistry);
+    if (index.get(socket.id) === socket) index.delete(socket.id);
   }));
 }

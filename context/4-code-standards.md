@@ -1,6 +1,6 @@
 # Code Standards
 
-**Current checkpoint (2026-11-12):** S25/S26 are Approved/uncommitted; preserve their final review corrections and tests. The latest independent baseline is 542 passing tests plus build/diff check, with manual/live QA open (HANDOFF.md). No S27 planning or code work is requested today.
+**Current checkpoint (2026-11-13):** S01–S26 are committed through `c14a185` (commit 69); preserve the S25/S26 final review corrections and tests. The latest independent baseline is 542 passing tests plus build/diff check, with manual/live QA open (HANDOFF.md). S27 and S28 are Approved and uncommitted.
 
 ## General
 

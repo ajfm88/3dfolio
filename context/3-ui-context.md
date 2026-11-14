@@ -105,7 +105,7 @@ There's no component library: components are hand-built with Tailwind and the to
   - an **Invitations** list (only when non-empty), then **My projects** and **Shared with me** as responsive card grids (1 / 2 / 3 columns)
   - empty states with a lucide icon (`h-8 w-8`), one line of copy, and a call to action
 - **Workspace (`/collaborate/:projectId`):** a full viewport (`h-[100dvh]`, following the visual viewport on phones like chat does), split into:
-  - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: back to Projects and the project name (`min-w-0 truncate`). Right: participant stack, role badge, and the Chat toggle. Share stays S28.
+  - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: back to Projects and the project name (`min-w-0 truncate`). Right: participant stack, role badge, Share, and the Chat toggle. Share is icon-only below `sm`.
   - **Main row:** at `lg` and above, a relative `min-w-0 flex-1` canvas column plus, when chat is open, one complementary panel (`lg:w-80`, left border). Below `lg` that same panel is the bottom flex child, capped at `max-h-[70%]`, with no second copy, scrim, or focus trap. The canvas column holds the canvas and `TurnBar`.
   - **Floating over the canvas:**
     - `TurnBar`: top center, glass pill
@@ -125,7 +125,7 @@ The message list is the only vertical scroller. The first load and the user's ow
 
 ## S25 controls and shortcuts (implemented, Approved)
 
-S25 passed Codex's final review on 2026-11-12 and remains uncommitted. Code/effect/controlled-XYDrag tests pass; real browser layout, focus, touch hardware, IME and two-account behavior are still unverified. S26 added no UI: ShareDialog and InvitationsList remain unimplemented future S28 work. The app remains URL-only and not launch-ready.
+S25 passed Codex's final review on 2026-11-12. Committed as `c14a185` (commit 69, 2026-11-13). Code/effect/controlled-XYDrag tests pass; real browser layout, focus, touch hardware, IME and two-account behavior are still unverified. S28 adds ShareDialog and InvitationsList; browser and shared-project checks remain open. The app remains URL-only and not launch-ready.
 
 The bottom-left `CanvasControls` glass pill now starts with labelled `Undo` and `Redo` icon buttons (lucide `Undo2` / `Redo2`, `h-5 w-5`), then a thin divider, then the existing zoom in, zoom out and fit buttons. They are always visible. When unavailable (a watcher or viewer, saves pending, a replay, a gesture, or an empty stack) they render with the real `disabled` attribute and `disabled:opacity-40`; titles are `Undo (Ctrl+Z)` and `Redo (Ctrl+Shift+Z)`. A polite `role="status"` region at the end of the pill shows `Undoing…` or `Redoing…` during a replay and is empty (hidden) otherwise. No modal, toolbar row or preference was added. While a replay runs, ordinary canvas editing becomes read-only through the existing `selectCanEdit` gate (shape panel, toolbar, handles and resizer hide); selection, pan, zoom, chat, cursors and turn controls stay usable.
 
@@ -136,3 +136,7 @@ Gesture tracking uses React Flow's drag start/stop, `NodeResizer`'s resize start
 ## Icons
 
 lucide-react (already a dependency), stroke icons only. Use `h-4 w-4` inline and in meta, `h-5 w-5` in buttons, and `h-8 w-8` for empty-state features. Every icon-only button has an `aria-label`.
+
+### S28 sharing and invitations
+
+The Share dialog uses the common dialog shell and a scrollable body. Owners see invitation controls, pending invitations and member role/removal controls; members see a read-only roster and inline leave confirmation. The dashboard shows invitation cards above project lists, wrapping actions below the details on small screens.

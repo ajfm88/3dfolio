@@ -1,6 +1,6 @@
 # Architecture Context
 
-**Current checkpoint (2026-11-12):** implemented through S26; S25/S26 are code-approved and uncommitted on `9b47c77`. The existing S27–S30 roadmap remains future work; no S27 spec has been written. Runtime/manual QA and live membership revocation are not established. Stop after today's documentation reconciliation; see HANDOFF.md and the final S25/S26 reviews.
+**Current checkpoint (2026-11-13):** implemented and committed through S26 (HEAD `c14a185`, commit 69). S27 (`specs/27-live-membership-enforcement.md`) is Approved and uncommitted; S28 client membership is implemented and Approved, uncommitted. Runtime/manual QA is not established; see HANDOFF.md.
 
 ## Stack
 
@@ -60,7 +60,7 @@ src/collaborate/
     └── chat/       ProjectChatPanel · ProjectMessageList · ProjectComposer
 ```
 
-The tree includes planned InvitationsList/ShareDialog (S28) and rateLimit (S29) to show their intended boundaries; these files are not implemented. S26 added REST membership only.
+InvitationsList and ShareDialog are implemented in S28. The tree includes planned rateLimit (S29), which is not implemented.
 
 | Boundary | Owns | Must not |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ These are exported from `canvasOps.js` or `projectAccess.js`, enforced on the se
 
 ### S25 history contract (implemented, Approved)
 
-Approved after second correction on 2026-11-12; see `specs/25-undo-redo-review.md`. It remains uncommitted. The later independent S26 regression run includes all S25 suites; browser/touch-hardware QA remains open.
+Approved after second correction on 2026-11-12; see `specs/25-undo-redo-review.md`. Committed as `c14a185` (commit 69, 2026-11-13). The later independent S26 regression run includes all S25 suites; browser/touch-hardware QA remains open.
 
 `invertOps(canvas, ops)` in `shared/canvasOps.js` validates the whole forward batch with `applyOps` and returns `{ ok: true, ops }` or `{ ok: false, error, index }` with the same message and index. It reads each op's immediate pre-state and emits the inverse groups in reverse order: `node.add` becomes `node.remove`; `node.update` restores exactly the patched fields; `node.remove` becomes `node.add` followed by `edge.add` for each edge that removal actually cascaded (an edge dropped by an earlier removal belongs to that earlier group); `edge.add`, `edge.update` and `edge.remove` invert the obvious way. The output can exceed 50 ops (a node with 600 edges inverts to 601), so `applyOps` and `MAX_OPS_PER_COMMIT` are unchanged. Round trips are equal by id and fields, not by array order or version.
 
@@ -337,7 +337,7 @@ Unread counts a live message from another user only while the panel is closed or
 
 ## S26 invitation and membership contract (implemented, Approved)
 
-Implemented in `server/src/controllers/projectMember.controller.js` and `server/src/lib/projectMembership.js`, routed in `project.route.js`; Approved by Codex on 2026-11-12, uncommitted. The full contract is `specs/26-invites-members-api.md`, the accepted choices/evidence are in `specs/26-invites-members-api-review.md`, and the endpoint reference is `server/readme.md`. No schema, model, middleware, webhook, socket, client or dependency change.
+Implemented in `server/src/controllers/projectMember.controller.js` and `server/src/lib/projectMembership.js`, routed in `project.route.js`; Approved by Codex on 2026-11-12. Committed as `c14a185` (commit 69, 2026-11-13). The full contract is `specs/26-invites-members-api.md`, the accepted choices/evidence are in `specs/26-invites-members-api-review.md`, and the endpoint reference is `server/readme.md`. No schema, model, middleware, webhook, socket, client or dependency change.
 
 - Seven REST endpoints behind `protectRoute`: owner create and revoke invitation; recipient list, accept and decline; owner change member role; owner remove member or member leave. `/invites/mine` and both `/invites/:inviteId/...` POSTs are registered before the generic `/:id` routes.
 - **Recipient authority** (the narrow exception to invariant 2): an invitee is not a member, so reads and writes are scoped in the query to ONE `invites` element containing both the invite id and the trusted caller's normalized email (`$elemMatch`). Never the id in one element and the email in another. Offers expose only project id and name, role, a minimal inviter and the date.
@@ -345,7 +345,22 @@ Implemented in `server/src/controllers/projectMember.controller.js` and `server/
 - **Seats:** members plus pending invites, excluding the owner, may not exceed 10. A pending invitation reserves a seat. Accept swaps the invitation for the member and succeeds at ten.
 - **Atomic writes:** every mutation is one Project update whose filter repeats the authority used (owner, member, or the invitation element) and an exact snapshot of the unpopulated `members` and `invites` arrays (`$size` plus an `$elemMatch` per element; empty arrays are `$size: 0`; ObjectIds and Dates stay values). Accept pulls the invitation and pushes the member in one update. A role change uses a positional `arrayFilters` `$set` on the one member. A miss is never retried: a fresh scoped read yields the specific `404`/`403`/`400`, else `400 Project membership changed. Please try again.` No version field, lock or transaction. Renames and description edits do not conflict with membership changes.
 - Evidence is an in-memory model that evaluates the real filters and updates plus a no-I/O Mongoose cast check; there is no live MongoDB race test.
-- **Not live:** REST changes do not remove or demote anyone already joined to a workspace room, or clear cached cursor, typing, turn or broadcast state. That is S27, together with Clerk deletion cleanup. The UI is S28.
+- Live socket enforcement and Clerk deletion cleanup are implemented in S27; the UI is implemented in S28.
+
+## S27 live membership enforcement
+
+Implemented in the working tree against `specs/27-live-membership-enforcement.md`; verification and review remain in progress.
+
+- `workspace.socket.js` exports `onMemberChanged(io, projectId, userId, role | null, registry)` and `onProjectDeleted(io, projectId, registry)`. Both are synchronous, never throw, and run only after a successful REST write. A registry-scoped socket index lets them find sockets and cancel joins still in flight (generation bump → `Workspace request superseded`), which closes the read-before-write join race.
+- **Removal or leave:** `workspace:removed { reason: "removed" }` to each of that user's sockets in the room; their lifecycles are invalidated, their connections removed and the adapter room left; `revokeEditRights` (no grace, never `tabLeft`); presence republished.
+- **Role change:** the cached role is updated, `workspace:role` goes to that user's sockets, a downgrade revokes the turn and the queue place, and presence is republished. Setting the same role is a no-op.
+- **Project delete:** `workspace:removed { reason: "deleted" }` to the room, every socket is invalidated and leaves, then the new `registry.discard(projectId)` drops the room.
+- New `lib/projectCleanup.js`: `deleteProjectContent` (hook, canvas, messages), used by `deleteProject`; and `deleteUserCollaborateData`, run by the Clerk `user.deleted` webhook **before** the existing user deletion so that a failure is retried. It deletes owned projects and their content, pulls the user from memberships (unguarded) with live removal, pulls pending invites to their normalized email, and deletes their project messages.
+- S27 is server only. S28 supplies the client listeners.
+
+## S28 client membership
+
+The workspace listens for role changes and removal on its current joined connection. Removal clears workspace authority and state, sets `removed`, and routes to the dashboard. Self-leave shares the `workspace-exit-<projectId>` toast id with the socket event. A superseded join retries once. The dashboard refreshes invitations on focus and visible transitions, throttled to five seconds. Share and invitation stores own REST state; the UI does not display member emails.
 
 ## Invariants
 

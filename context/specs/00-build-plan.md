@@ -15,7 +15,7 @@ Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and t
 
 ## Slices
 
-**Checkpoint (2026-11-12):** S01–S24 are committed through HEAD `9b47c77` (commit 68). S25/S26 are implemented and Approved by Codex, uncommitted; the user handles commits. Latest independent verification: 542 tests, production build and diff check pass. Four slices remain before launch (S27–S30); browser/two-account/manual/live-database QA is open, and S26 has no live socket revocation or UI. The user requested stopping after S26 review today. No S27 spec, new planning or implementation has been started; resume only on the user's instruction and read `../HANDOFF.md` first.
+**Checkpoint (2026-11-13):** S01–S26 are committed through HEAD `c14a185` (commit 69); the user handles commits. Latest independent verification: 542 tests, production build and diff check pass. Four slices remain before launch (S27–S30); browser/two-account/manual/live-database QA is open. S27 (`27-live-membership-enforcement.md`) is Approved and uncommitted; S28 (`28-share-dialog-invitations-ui.md`) is Approved and uncommitted; S29 is next. Read `../HANDOFF.md` first.
 
 Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices in different lanes with no dependency between them can run in parallel, one agent per lane, in separate git worktrees. Suggested parallel pairs: S04∥S02, S06∥S05, S19∥S17–S18, S23∥S21–S22, S26∥S24–S25.
 
@@ -219,7 +219,7 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 ### Phase H — Editing comfort
 
 #### S25 · Undo and redo for the turn holder `both` · after S22
-- Implementation contract: `25-undo-redo.md`. Implemented by Claude Sonnet and Approved after Codex's final review on 2026-11-12; uncommitted on `9b47c77`. See `25-undo-redo-review.md`; browser/shared-project QA remains open.
+- Implementation contract: `25-undo-redo.md`. Implemented by Claude Sonnet and Approved after Codex's final review on 2026-11-12; committed as `c14a185` (commit 69, 2026-11-13). See `25-undo-redo-review.md`; browser/shared-project QA remains open.
 - Shared: `invertOps(canvas, ops)` in `canvasOps.js`, computing inverse ops against the pre-op canvas. A `node.remove` inverse restores the node and its cascaded edges. Tests cover round-trips (`apply(invert(x))` restores the canvas).
 - Client: undo and redo stacks of this tab's own dispatched batches, cleared on turn loss and on resync. Undo dispatches the inverse as normal ops, so it's committed and broadcast like any edit.
 - Large inverses replay in ordered commits of at most 50 ops using the existing protocol; a saved prefix can remain after interruption. Clear history and recover authoritatively rather than retrying or rolling back. Undo/redo waits for pending saves; replay temporarily blocks ordinary canvas edits while chat, presence and viewport controls remain usable. History retains at most 100 undo frames in this tab's memory.
@@ -229,7 +229,7 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 ### Phase I — Membership
 
 #### S26 · Invites and members API `server` · after S03
-- Implementation contract: `26-invites-members-api.md`. Implemented by Claude Sonnet and Approved by Codex on 2026-11-12, uncommitted on `9b47c77` alongside Approved S25. See `26-invites-members-api-review.md` for accepted snapshot guards, validation order and runtime QA limitations. Stop for today; this does not start S27.
+- Implementation contract: `26-invites-members-api.md`. Implemented by Claude Sonnet and Approved by Codex on 2026-11-12; committed as `c14a185` (commit 69, 2026-11-13) together with S25. See `26-invites-members-api-review.md` for accepted snapshot guards, validation order and runtime QA limitations.
 - `projectMember.controller.js`:
   - `POST /:id/invites { email, role }`: owner only. Lowercase, validate, not yourself, not already a member or invited, and under the cap.
   - `DELETE /:id/invites/:inviteId`: owner only.
@@ -250,6 +250,7 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 - **Project delete:** emit `workspace:removed { reason: "deleted" }` to the room, make every socket leave, and discard the room.
 - **Clerk `user.deleted` cascade:** delete owned projects, along with their canvases and messages, notifying their rooms. Pull the user from other projects' members. Pull pending invites to their email. Delete their project messages.
 - **Done when:** removing or downgrading someone mid-session takes effect instantly in their browser. Deleting a project kicks everyone out. Existing chat and blog cascades are unchanged.
+- Implementation contract: `27-live-membership-enforcement.md` (Claude Opus 5.5, 2026-11-13). It refines the outline above: the hooks take `io` and a registry, cancel joins still in flight, and the cleanup lives in a new `lib/projectCleanup.js`. Server only; the browser half of "takes effect instantly" lands with S28's listeners.
 
 #### S28 · Share dialog and invitations UI `client` · after S24, S27
 - `ShareDialog` opens from the navbar.
@@ -258,6 +259,7 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 - `InvitationsList` on the dashboard offers accept and decline.
 - The client handles `workspace:removed` (navigate to `/collaborate` with a toast) and `workspace:role` (re-gate the UI live).
 - **Done when:** the whole membership lifecycle is doable from the UI with two accounts, without a reload.
+- Implementation contract: `28-share-dialog-invitations-ui.md` (Claude Opus 5.5, 2026-11-13). It adds a `removed` workspace status, one deduplicated exit toast (self-leave included), one automatic retry for a join S27 cancelled, and invitation refresh on window focus, since the server sends no invitation event.
 
 ### Phase J — Ship
 

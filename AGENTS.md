@@ -15,8 +15,8 @@ Update `context/6-progress-tracker.md` after each meaningful implementation chan
 
 If implementation changes the architecture, scope, or standards documented in the context files, update the relevant file before continuing.
 
-Current handoff: `context/HANDOFF.md`, reconciled after the final S26 review on 2026-11-12. S01–S24 are committed on HEAD `9b47c77` (commit 68). S25 and S26 are Approved and uncommitted; preserve both and their planning/review documents. The final independent baseline is 542 passing tests plus build/diff check, with manual/live QA still open. The user requested stopping after S26 review: do not plan/specify/implement S27 today. No S27 spec exists. Recheck git and the tracker when the user resumes.
+Current handoff: `context/HANDOFF.md`, reconciled on 2026-11-13. S01–S26 are committed through HEAD `c14a185` (commit 69). The last independent baseline is 542 passing tests plus build/diff check, with manual/live QA still open. Today's plan is two slices, S27 then S28. S27 (`context/specs/27-live-membership-enforcement.md`) is Approved and uncommitted; S28 (`context/specs/28-share-dialog-invitations-ui.md`) is Approved and uncommitted. S29 is next and not yet specified. Recheck git and the tracker before starting any slice.
 
-Never commit, push, or create branches. The user assigns implementers/reviewers and handles commits. For S25/S26, Claude Sonnet implements and Codex specifies/reviews, as assigned on 2026-11-12; historical assignments and review notes remain valid history.
+Never commit, push, or create branches. The user assigns implementers/reviewers and handles commits. For S27/S28, GPT 6.1 Terra implements and Claude Opus 5.5 specifies and reviews, as assigned on 2026-11-13; historical assignments and review notes remain valid history.
 
 For work unrelated to `/collaborate` (portfolio, blog, chat, admin), follow the existing code, `readme.md`, and `server/readme.md`. The protected-file rules in `context/5-ai-workflow-rules.md` still apply while a slice is in progress.

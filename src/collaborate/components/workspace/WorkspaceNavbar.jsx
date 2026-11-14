@@ -1,13 +1,31 @@
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, MessageSquare, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PROJECT_CHAT_PANEL_ID, PROJECT_CHAT_TOGGLE_ID, unreadBadge, unreadLabel } from "../../lib/projectChat.js";
 import { useProjectChatStore } from "../../store/useProjectChatStore.js";
 import RoleBadge from "../ui/RoleBadge";
 import ParticipantStack from "./ParticipantStack";
+import ShareDialog from "./ShareDialog";
+import { useShareStore } from "../../store/useShareStore";
 import { useWorkspaceStore } from "../../store/useWorkspaceStore";
 
 const WorkspaceNavbar = () => {
+  const [shareOpen, setShareOpen] = useState(false);
+  const projectId = useWorkspaceStore((s) => s.project?._id);
+  const status = useWorkspaceStore((s) => s.status);
+  const openShare = useShareStore((s) => s.open);
+  const closeShare = useShareStore((s) => s.close);
+  const shareStatus = useShareStore((s) => s.status);
+  useEffect(() => {
+    if (!shareOpen || !projectId) return;
+    openShare(projectId);
+    return () => closeShare();
+  }, [shareOpen, projectId, openShare, closeShare]);
+  // A 404 or completed leave closes the store independently of the button.
+  useEffect(() => {
+    if (shareOpen && shareStatus === "idle" && useShareStore.getState().status === "idle") setShareOpen(false);
+  }, [shareOpen, shareStatus]);
   const name = useWorkspaceStore((s) => s.project?.name ?? "");
   const role = useWorkspaceStore((s) => s.role);
   const chatOpen = useProjectChatStore((s) => s.isOpen);
@@ -16,8 +34,8 @@ const WorkspaceNavbar = () => {
   const badge = unreadBadge(unread);
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 overflow-hidden border-b border-[var(--collab-border)] bg-[var(--collab-panel)] px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+    <header className="flex h-14 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--collab-border)] bg-[var(--collab-panel)] px-2 sm:gap-3 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
         <Link to="/collaborate" className="inline-flex shrink-0 items-center gap-2 text-sm text-[var(--collab-accent-2)]">
           <ArrowLeft className="h-4 w-4" />
           Projects
@@ -29,6 +47,8 @@ const WorkspaceNavbar = () => {
       </div>
       <ParticipantStack />
       <RoleBadge role={role} />
+      {status === "ready" && <button type="button" aria-label="Share project" aria-haspopup="dialog" onClick={() => setShareOpen(true)} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--collab-border)] px-2 py-1 text-sm"><Users className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Share</span></button>}
+      {shareOpen && <ShareDialog open onClose={() => setShareOpen(false)} projectId={projectId} />}
       <button
         id={PROJECT_CHAT_TOGGLE_ID}
         type="button"

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
+import { FOCUSABLE, restoreTarget } from "../../lib/dialogFocus";
 
 // Mount a fresh focus scope on every open. Capture the opener during render,
 // before React's autoFocus moves focus into the newly committed portal.
 const OpenDialog = ({ onClose, labelledBy, dismissible, children }) => {
   const panel = useRef(null);
   const scrimStart = useRef(false);
+  const lastFocused = useRef(null);
+  const dismissibleWas = useRef(dismissible);
   const [opener] = useState(() => document.activeElement);
 
   useEffect(() => {
@@ -25,12 +27,21 @@ const OpenDialog = ({ onClose, labelledBy, dismissible, children }) => {
   useEffect(() => {
     // Disabling the focused input during submission sends focus to body.
     // Keep a focusable destination in the dialog while every control is locked.
+    // When the lock lifts, return to the control that was in use, not the panel.
+    const previous = dismissibleWas.current;
     if (!dismissible) panel.current.focus();
+    else if (previous === false) restoreTarget(panel.current, lastFocused.current).focus();
+    dismissibleWas.current = dismissible;
   }, [dismissible]);
 
   useEffect(() => {
     const keepFocus = (event) => {
-      if (panel.current && !panel.current.contains(event.target)) panel.current.focus();
+      if (!panel.current) return;
+      if (panel.current.contains(event.target)) {
+        if (event.target !== panel.current) lastFocused.current = event.target;
+        return;
+      }
+      panel.current.focus();
     };
     document.addEventListener("focusin", keepFocus);
     return () => document.removeEventListener("focusin", keepFocus);

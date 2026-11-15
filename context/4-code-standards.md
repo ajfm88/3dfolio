@@ -1,6 +1,6 @@
 # Code Standards
 
-**Current checkpoint (2026-11-13):** S01–S26 are committed through `c14a185` (commit 69); preserve the S25/S26 final review corrections and tests. The latest independent baseline is 542 passing tests plus build/diff check, with manual/live QA open (HANDOFF.md). S27 and S28 are Approved and uncommitted.
+**Current checkpoint (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). Runtime and manual QA are not established; see HANDOFF.md.
 
 ## General
 

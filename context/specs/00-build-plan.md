@@ -15,7 +15,7 @@ Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and t
 
 ## Slices
 
-**Checkpoint (2026-11-13):** S01–S26 are committed through HEAD `c14a185` (commit 69); the user handles commits. Latest independent verification: 542 tests, production build and diff check pass. Four slices remain before launch (S27–S30); browser/two-account/manual/live-database QA is open. S27 (`27-live-membership-enforcement.md`) is Approved and uncommitted; S28 (`28-share-dialog-invitations-ui.md`) is Approved and uncommitted; S29 is next. Read `../HANDOFF.md` first.
+**Checkpoint (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). See HANDOFF.md for evidence and limitations.
 
 Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices in different lanes with no dependency between them can run in parallel, one agent per lane, in separate git worktrees. Suggested parallel pairs: S04∥S02, S06∥S05, S19∥S17–S18, S23∥S21–S22, S26∥S24–S25.
 
@@ -263,16 +263,30 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 
 ### Phase J — Ship
 
-#### S29 · Hardening pass `both` · after S28
-- `lib/rateLimit.js`: a per-socket token bucket, with tests. Limits per second: commit 20, preview 30, cursor 30, typing 5, turn 5, join 3. Excess is silently dropped (ack `ok:false` where an ack exists).
-- Sweep every handler and route for id validation, payload checks, and membership scoping, against the invariants in `2-architecture.md`.
-- UI states: access denied, not found, join timeout with retry, empty canvas hint.
-- Mobile: the chat panel becomes a drawer below `lg`, the shape panel scrolls horizontally, and touch drag works for the holder.
-- Accessibility: icon buttons get labels, dialogs trap focus.
+S29 was split by the spec author on 2026-11-14 (Claude Fable 5.2), under the too-broad rule in `5-ai-workflow-rules.md`: it mixed a server lane with a client lane. S29a and S29b touch different files and can run in either order, but run them one at a time.
+
+#### S29a · Socket rate limits and the invariant audit `server` · after S28
+- Implementation contract: `29a-rate-limits-invariant-audit.md` (Claude Fable 5.2, 2026-11-14; Grok implements, Nemotron reviews).
+- `lib/rateLimit.js`: a pure per-socket token bucket, with tests. Limits per second: commit 20, preview 30, cursor 30, typing 5, turn 5, join 3, and sync 5 (added by the spec because `canvas:sync` reads the database). Excess is silently dropped (ack `ok:false`, `Too many requests`, where an ack exists). `workspace:leave` is never limited.
+- Sweep every handler and route for id validation, payload checks, and membership scoping, against the invariants in `2-architecture.md`. The spec author's sweep found two small fixes (socket index cleanup in a `finally`, one stale comment); anything else found is recorded, not fixed.
 - Confirm the build output keeps `@xyflow/react` and collaborate code out of the entry chunk.
 - **Done when:** every invariant in `2-architecture.md` is confirmed in the progress file, line by line, with file references.
 
-#### S30 · Launch `client` + docs · after S29
+#### S29b · Mobile, accessibility and UI states `client` · after S28
+- Implementation contract: `29b-mobile-accessibility-ui-states.md` (Claude Fable 5.2, 2026-11-14; Grok implements, Nemotron reviews). It adds a Delete selected button, because a touch screen has no Delete key, and touch-sized handles.
+- Already built in earlier slices, so only to be checked: the not-found card, the error card with Try again, the `Waking the server…` banner, the chat panel stacking below the canvas under `lg`, and the focus trap in the shared `Dialog`.
+- Still to build:
+  - An empty canvas hint.
+  - A way to add a shape without a mouse drag (carry-forward from S08). Recommended: activating a shape (click, tap, Enter or Space) adds it at the center of the visible canvas. That one mechanism covers touch and keyboard. The shape items become focusable.
+  - The shape panel scrolls horizontally on narrow screens and refuses drops on itself (S08 review nit).
+  - Check that touch drag, resize and connect work for the holder, and fix what does not.
+  - The 320px navbar check with six other participants (carried from S21).
+  - After a failed dialog submit, focus returns to the first field (S05 review nit).
+  - A label sweep over every icon-only button.
+- **Done when:** each item is verified in a real browser at 320px and at desktop width, or recorded as not run.
+
+#### S30 · Launch `client` + docs · after S29a, S29b
+- Implementation contract: `30-launch.md` (Claude Fable 5.2, 2026-11-14; Codex implemented, Nemotron reviewed and Approved on 2026-11-14). The navbar already has a Chat link, which stays (Phase K is cancelled). The desktop pill's breakpoint moves from 810px to 900px to fit the new link. The QA script is run by the user on the deployed site, not by the implementer.
 - `Navbar.jsx`: add Collaborate (desktop and mobile). Don't add a `/chat` link (Q1).
 - Root `readme.md`: introduction, features, project structure tree, routes, and the Collaborate tech.
 - `server/readme.md`: final consistency pass and the single-instance note.
@@ -280,14 +294,47 @@ Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices 
 - Reminder for the user: update the portfolio's About and project snippet in the admin panel.
 - **Done when:** QA passes end to end on the deployed site.
 
-### Phase K: Post-launch removal (planned, not yet sliced)
+### Phase K: Post-launch removal (cancelled 2026-11-14)
 
-`/blog` and `/chat` are scheduled for deletion (Q1, Q5): neither sets this app apart. They keep working through S30. After launch, Claude writes removal slices, roughly:
+The user decided on 2026-11-14 to **keep `/blog` and `/chat`**. Both are already built, and the Render backend is deployed either way, so removing them has no benefit. This reverses Q1 and Q5 in the tracker. No removal slices will be written.
 
-- **Retire `/blog`:** the client (`src/blog/`, `src/pages/Blog.jsx`, its route and navbar link) and the server's post and comment routes, controllers, models, and Clerk webhook cascades.
-- **Retire `/chat`:** the client (`src/chat/`, `src/pages/Chat.jsx`, its route) and the DM routes, controller, model, and `chat.socket.js` presence and typing, **except** any piece that proved useful to `/collaborate` (Q1's exception). Those get moved under collaborate ownership first.
-- Shared pieces stay: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer.
-- Afterward, drop invariant 10 and the "`/blog` and `/chat` still work" checks from the done rule, the workflow rules, and the QA script.
+- Invariant 10 (`/blog` and `/chat` keep working) and the matching checks in the done rule, the workflow rules and the QA script stay in force.
+- Invariant 9 (collaborate never imports from `src/chat/` or `src/blog/`) also stays. The features remain independent.
+- What `/collaborate` shares with `/chat` on the server is only generic upload plumbing: `uploadChatMedia` in `lib/imagekit.js` and `middleware/upload.middleware.js`. On the client it shares nothing.
+
+---
+
+### Phase L: Additions after the 30-slice plan
+
+#### S31 · Starter templates `client` · after S29b
+
+Implemented by Codex; Ready for review (2026-11-14). Manual checks not run.
+- Implementation contract: `31-starter-templates.md` (Claude Fable 5.2, 2026-11-14). Requested by the user on 2026-11-14; it was out of scope in the original plan.
+- Three templates matching the Ghost AI reference: Microservices, CI/CD Pipeline, Event-Driven System. Client data in `lib/canvasTemplates.js`, turned into ordinary `node.add` and `edge.add` ops.
+- A Templates button in the shape panel (holder only) opens a dialog with a preview per template. Adding one is a single `dispatch`: one commit, one undo frame. It is added beside existing content and never replaces the canvas.
+- No server change.
+- **Done when:** each template applies through the real `applyOps`, one Undo removes it, and watchers see the same canvas.
+
+#### S32 · More starter templates `client` · after S31
+
+**Implemented by Codex; review status and verification are in the tracker.**
+- Implementation contract: `32-more-starter-templates.md` (Claude Fable 5.2, 2026-11-14). Status implemented, Ready for review (Codex). The spec holds the exact data for all eight templates and a fingerprint per template; where it differs from the outline below, the spec wins. The eighth template is the Notification system; the names shown for the YouTube and Google Drive topics are Video Streaming and Cloud File Storage.
+- Agreed with the user on 2026-11-14. The outline as first recorded:
+- Data-only slice on top of S31's mechanism. Eight more templates, inspired by the topics in Alex Xu's *System Design Interview*: Scale from zero to millions of users (final architecture only), Rate limiter, URL shortener, News feed system, Chat system, YouTube, Google Drive, and a Notification system (the spec author's pick over a Web crawler; the user has not chosen). The key-value store was dropped.
+- Each is our own high-level diagram and description of the topic, using standard component names. Do not reproduce the book's figures, layout, numbering or wording.
+- Each template must stay within one commit: nodes plus edges at most 50. Expect 8 to 16 nodes each.
+- Add an optional edge `label` to the template format (edges already support labels up to 100 characters).
+- The dialog becomes grouped and scrolling, for example the three S31 templates under one heading and the new ones under another.
+- Risk: about a hundred node positions placed by estimate. Tests must prove no overlaps and that every template applies through the real `applyOps`; a person must check in a browser that each diagram reads well.
+- The Medium video-streaming article the user shared is not used; the YouTube template covers it.
+
+#### S33 · Template library: sixteen more templates and a group filter `client` · after S32
+
+**Implemented by Codex.**
+- Implementation contract: `33-template-library.md` (Claude Fable 5.2, 2026-11-14). Status implemented by Codex; verification and review status are in the tracker.
+- The user chose all sixteen offered topics on 2026-11-14: Unique ID Generator, Nearby Friends, Email Service, Object Storage, Web Crawler, Search Autocomplete, Proximity Service, Maps and Navigation, Payment System, Digital Wallet, Hotel Reservation, Stock Exchange, Distributed Message Queue, Metrics Monitoring, Ad Click Aggregation, Real-time Leaderboard. The library becomes twenty-seven templates.
+- `TEMPLATE_GROUPS` becomes seven groups (the `system-design` group is split by theme), and the dialog shows one group at a time through a row of group buttons.
+- Same mechanism as S31 and S32: client data, one dispatch per template, no server change. Exact data and a fingerprint per template are in the spec.
 
 ---
 
@@ -309,3 +356,5 @@ Use two accounts, A (owner) and B, in separate browsers.
 
 ---
 
+
+S31 implementation checkpoint (2026-11-14): implemented by Codex; Ready for review. Client-only templates added in one dispatch; manual checklist not run.

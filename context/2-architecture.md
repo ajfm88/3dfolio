@@ -1,6 +1,8 @@
 # Architecture Context
 
-**Current checkpoint (2026-11-13):** implemented and committed through S26 (HEAD `c14a185`, commit 69). S27 (`specs/27-live-membership-enforcement.md`) is Approved and uncommitted; S28 client membership is implemented and Approved, uncommitted. Runtime/manual QA is not established; see HANDOFF.md.
+**Current checkpoint (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). Runtime and manual QA are not established; see HANDOFF.md.
+
+S31 checkpoint: implemented by Codex, verification recorded in the tracker. Templates are client data inserted as ordinary ops in a single dispatch.
 
 ## Stack
 
@@ -31,7 +33,7 @@ server/src/
 │   ├── turns.js                    S19  pure turn state machine
 │   ├── projectMessages.js          S23  history cursor, text rules, message whitelist
 │   ├── projectMembership.js        S26  invite/member validation, resources, snapshot guards
-│   └── rateLimit.js                S29  per-socket token bucket
+│   └── rateLimit.js                S29a per-socket token bucket (implemented)
 ├── shared/
 │   └── canvasOps.js                S06  PURE canvas op semantics, imported by server AND client
 ├── models/
@@ -44,23 +46,23 @@ server/src/
     ├── chat.socket.js              S01  existing chat presence + typing, moved verbatim
     └── workspace.socket.js         S13+ join/leave, commits, previews, cursors, turns, typing
 
-server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · projectMessages · projectMessage.api · projectTyping.socket · imagekit · projectMembership · projectMember.api (*.test.js); rateLimit remains S29
+server/test/      projectAccess · canvasOps · workspaceRooms · turns · workspace.socket · canvas.socket · cursor.socket · turn.socket · projectMessages · projectMessage.api · projectTyping.socket · imagekit · projectMembership · projectMember.api · rateLimit · rateLimit.socket (*.test.js)
 
 src/pages/Collaborate.jsx           S04  lazy route root
 src/collaborate/
 ├── collaborate.css                 S04  scoped theme under .collab-root
-├── lib/        axios.js · projectLimits.js · tabId.js · throttle.js · userColor.js · workspaceSync.js · canvasHistory.js · canvasShortcuts.js (plus presence/chat helpers)
+├── lib/        canvasTemplates.js / axios.js · projectLimits.js · tabId.js · throttle.js · userColor.js · workspaceSync.js · canvasHistory.js · canvasShortcuts.js · dialogFocus.js (plus presence/chat helpers)
 ├── store/      useSessionStore.js · useProjectsStore.js · useWorkspaceStore.js · useProjectChatStore.js
 ├── routes/     CollaborateAuthGate.jsx · ProjectsPage.jsx · WorkspacePage.jsx
 └── components/
     ├── ui/         Dialog (S05: portaled, focus-trapped shell, reused by ShareDialog)
     ├── projects/   ProjectCard · ProjectDialogs · InvitationsList
     ├── workspace/  WorkspaceNavbar · ParticipantStack · TurnBar · ShareDialog · ConnectionBanner
-    ├── canvas/     WorkspaceCanvas · ShapeNode · LinkEdge · ShapePanel · ColorToolbar · CanvasControls · PresenceCursors
+    ├── canvas/     TemplatesDialog / WorkspaceCanvas · ShapeNode · LinkEdge · ShapePanel · ColorToolbar · CanvasControls · PresenceCursors · EmptyCanvasHint
     └── chat/       ProjectChatPanel · ProjectMessageList · ProjectComposer
 ```
 
-InvitationsList and ShareDialog are implemented in S28. The tree includes planned rateLimit (S29), which is not implemented.
+InvitationsList and ShareDialog are implemented in S28. `rateLimit.js` is implemented in S29a.
 
 | Boundary | Owns | Must not |
 | --- | --- | --- |
@@ -129,7 +131,7 @@ Display-only fields (`selected`, `measured`, `dragging`, `markerEnd`, styles) ar
 
 ### Limits
 
-These are exported from `canvasOps.js` or `projectAccess.js`, enforced on the server, and mirrored in UI inputs.
+Canvas and project limits are exported from `canvasOps.js` or `projectAccess.js`, enforced on the server, and mirrored in UI inputs. Socket rates are exported from `rateLimit.js` and are not shown in the UI.
 
 | Limit | Value |
 | --- | --- |
@@ -145,6 +147,15 @@ These are exported from `canvasOps.js` or `projectAccess.js`, enforced on the se
 | Handles | `"top" \| "right" \| "bottom" \| "left" \| null` |
 | Shapes | `rectangle, diamond, circle, pill, cylinder, hexagon` |
 | Colors | `#RRGGBB` (palette in `3-ui-context.md`, constants in `canvasOps.js`) |
+| Socket `join` | 3 per second per socket (`rateLimit.js`) |
+| Socket `commit` | 20 per second per socket |
+| Socket `sync` | 5 per second per socket |
+| Socket `preview` | 30 per second per socket |
+| Socket `cursor` | 30 per second per socket; `cursor:move` and `cursor:leave` share it |
+| Socket `typing` | 5 per second per socket |
+| Socket `turn` | 5 per second per socket; request, release, cancel, and reclaim share it |
+
+Each socket rate is both the bucket capacity and the refill per second. `workspace:leave` and `disconnecting` are not limited. Buckets live in this process and are lost on restart.
 
 ## Auth and Access Model
 
@@ -374,3 +385,7 @@ The workspace listens for role changes and removal on its current joined connect
 8. **Collaborate code stays inside its lazy chunk.** Nothing outside `src/pages/Collaborate.jsx` imports from `src/collaborate/`. React Flow and its CSS are imported inside the chunk only.
 9. **Collaborate never imports from `src/chat/` or `src/blog/`.** Patterns are copied and adapted, which keeps `/chat` removable. `src/constants/brand.js` may be shared.
 10. **`/blog` and `/chat` keep working** after every slice.
+
+S32 checkpoint: implemented by Codex; verification and review status are recorded in the tracker. Template edges may carry a label, and templates are grouped by `TEMPLATE_GROUPS`.
+
+S33 checkpoint: implemented by Codex; verification and review status are recorded in the tracker. The dialog filters by `TEMPLATE_GROUPS` and renders one group at a time.

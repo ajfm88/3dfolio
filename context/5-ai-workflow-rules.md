@@ -11,9 +11,9 @@ Build `/collaborate` incrementally with a spec-driven workflow:
 
 Implement exactly what the spec says, no more and no less. Don't infer or invent behavior.
 
-Implementers and reviewers are assigned by the user slice by slice. For S27/S28, the user assigned GPT 6.1 Terra to implement and Claude Opus 5.5 to write the spec and review (2026-11-13); earlier assignments remain historical. The tracker records actual assignments and approvals. The user handles commits. Read HANDOFF.md for the latest stopping point.
+Implementers and reviewers are assigned by the user slice by slice. On 2026-11-14 Claude Fable 5.2 wrote the S29a, S29b and S30 specs, Grok implemented S29a and S29b, Codex implemented S30, and Nemotron reviewed all three; earlier assignments remain historical. The tracker records actual assignments and approvals. The user handles commits. Read HANDOFF.md for the latest stopping point.
 
-**Current point (2026-11-13):** S01–S26 are committed through HEAD `c14a185` (commit 69). S27 is Approved (2026-11-13) and uncommitted; S28 is Approved (2026-11-13) and uncommitted. S29 is next and not yet specified. Do not commit, push, branch or deploy.
+**Current point (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). The drawDB track follows the rules in its own plan file; the cycle in this file applies to `/collaborate` slices. Do not commit, push, branch or deploy.
 
 ## The Cycle
 

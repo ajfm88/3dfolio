@@ -105,12 +105,12 @@ There's no component library: components are hand-built with Tailwind and the to
   - an **Invitations** list (only when non-empty), then **My projects** and **Shared with me** as responsive card grids (1 / 2 / 3 columns)
   - empty states with a lucide icon (`h-8 w-8`), one line of copy, and a call to action
 - **Workspace (`/collaborate/:projectId`):** a full viewport (`h-[100dvh]`, following the visual viewport on phones like chat does), split into:
-  - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: back to Projects and the project name (`min-w-0 truncate`). Right: participant stack, role badge, Share, and the Chat toggle. Share is icon-only below `sm`.
+  - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: a back link (`aria-label="Back to projects"`) and the project name (`min-w-0 truncate`). Below `sm` the word Projects is hidden, the role badge is hidden, the Chat label is hidden, and the participant stack shows two avatars plus a count. At `sm` and above the word Projects, the role, the Chat label, and up to five avatars return. Share stays icon-only below `sm`.
   - **Main row:** at `lg` and above, a relative `min-w-0 flex-1` canvas column plus, when chat is open, one complementary panel (`lg:w-80`, left border). Below `lg` that same panel is the bottom flex child, capped at `max-h-[70%]`, with no second copy, scrim, or focus trap. The canvas column holds the canvas and `TurnBar`.
   - **Floating over the canvas:**
     - `TurnBar`: top center, glass pill
     - `ShapePanel`: bottom center, glass pill, holder only
-    - `CanvasControls`: bottom left, glass pill with undo, redo, zoom, fit
+    - `CanvasControls`: bottom left, glass pill with undo, redo, Delete selected (holder only), zoom, fit
     - `ConnectionBanner`: a full-width strip under the navbar, warning-tinted
 - **Dialogs:** a centered `rounded-3xl` card on `--collab-elevated`, with a `bg-black/60 backdrop-blur-sm` scrim. Escape closes it and focus is trapped.
 - **Read-only state:** while you're not holding the turn, the canvas shows no editing affordances (no shape panel, toolbar, or resize handles). The turn bar says why, so it never looks broken.
@@ -125,7 +125,7 @@ The message list is the only vertical scroller. The first load and the user's ow
 
 ## S25 controls and shortcuts (implemented, Approved)
 
-S25 passed Codex's final review on 2026-11-12. Committed as `c14a185` (commit 69, 2026-11-13). Code/effect/controlled-XYDrag tests pass; real browser layout, focus, touch hardware, IME and two-account behavior are still unverified. S28 adds ShareDialog and InvitationsList; browser and shared-project checks remain open. The app remains URL-only and not launch-ready.
+S25 passed Codex's final review on 2026-11-12. Committed as `c14a185` (commit 69, 2026-11-13). Code/effect/controlled-XYDrag tests pass; real browser layout, focus, touch hardware, IME and two-account behavior are still unverified. S28 adds ShareDialog and InvitationsList; browser and shared-project checks remain open. S29a and S29b are Approved and uncommitted. S30 adds the portfolio navbar link and is Ready for review; launch QA remains not run.
 
 The bottom-left `CanvasControls` glass pill now starts with labelled `Undo` and `Redo` icon buttons (lucide `Undo2` / `Redo2`, `h-5 w-5`), then a thin divider, then the existing zoom in, zoom out and fit buttons. They are always visible. When unavailable (a watcher or viewer, saves pending, a replay, a gesture, or an empty stack) they render with the real `disabled` attribute and `disabled:opacity-40`; titles are `Undo (Ctrl+Z)` and `Redo (Ctrl+Shift+Z)`. A polite `role="status"` region at the end of the pill shows `Undoing…` or `Redoing…` during a replay and is empty (hidden) otherwise. No modal, toolbar row or preference was added. While a replay runs, ordinary canvas editing becomes read-only through the existing `selectCanEdit` gate (shape panel, toolbar, handles and resizer hide); selection, pan, zoom, chat, cursors and turn controls stay usable.
 
@@ -137,6 +137,30 @@ Gesture tracking uses React Flow's drag start/stop, `NodeResizer`'s resize start
 
 lucide-react (already a dependency), stroke icons only. Use `h-4 w-4` inline and in meta, `h-5 w-5` in buttons, and `h-8 w-8` for empty-state features. Every icon-only button has an `aria-label`.
 
+### S29b mobile, accessibility and empty canvas
+
+Shapes can be added by click, tap, Enter or Space as well as by drag. Activation places the shape at the center of the visible canvas, then steps it 24 flow units so the next one does not sit on the same point. The step wraps after eight. The shape row scrolls sideways if it does not fit, and a drop on the panel itself does not add a node.
+
+On a ready canvas with no nodes, a pointer-ignoring hint reads `Click a shape below to add it, drag one onto the canvas, or start from a template.` for the holder, `This canvas is empty.` for a viewer, and `This canvas is empty. Request the turn to start drawing.` for anyone else. It is not a live region.
+
+The holder sees `Delete selected` after Redo. It is disabled until a node or edge is selected. A touch screen shows connection handles on the selected node without hover, and both connection and resize handles are 16px when the pointer is coarse. Desktop sizes stay 8px.
+
+Below `sm` the navbar keeps the back icon, the project name, two avatars, a `+N` count, Share, and Chat. The words Projects and Chat, the role badge, and avatars after the second one return at `sm`.
+
+After a dialog submit fails and the controls unlock, focus returns to the control that was in use when it is still inside the dialog and enabled. Otherwise it returns to the autofocus field, then the first tabbable control.
+
 ### S28 sharing and invitations
 
 The Share dialog uses the common dialog shell and a scrollable body. Owners see invitation controls, pending invitations and member role/removal controls; members see a read-only roster and inline leave confirmation. The dashboard shows invitation cards above project lists, wrapping actions below the details on small screens.
+
+### S31
+
+The holder shape panel includes a Templates button after a divider. Starter templates opens a scrollable list of three preview cards with names, descriptions and Add to canvas actions; Close receives initial focus. Insertion adds without replacing existing content, then calls fitBounds on the new diagram.
+
+### S32
+
+The Starter templates dialog shows two groups with Eyebrow headings: group titles use `h3` and template names use `h4`. As built in S32, eleven cards shared one scrolling list under two groups; S33 below replaces that layout.
+
+### S33
+
+Seven wrapping pill group buttons use `aria-pressed` to identify the selected group. Only that group is visible; its scrolling list restarts at the top on a group change. The last group is remembered while the workspace stays open.

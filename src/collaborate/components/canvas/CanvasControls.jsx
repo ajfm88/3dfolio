@@ -1,7 +1,7 @@
 import { useReactFlow } from "@xyflow/react";
-import { Maximize, Minus, Plus, Redo2, Undo2 } from "lucide-react";
+import { Maximize, Minus, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 
-import { selectCanRedo, selectCanUndo, useWorkspaceStore } from "../../store/useWorkspaceStore";
+import { selectCanEdit, selectCanRedo, selectCanUndo, useWorkspaceStore } from "../../store/useWorkspaceStore";
 
 const buttonClass =
   "rounded-full p-2 text-[var(--collab-muted)] hover:bg-[var(--collab-elevated)] hover:text-[var(--collab-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--collab-accent)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--collab-muted)]";
@@ -15,6 +15,10 @@ const CanvasControls = () => {
   const replay = useWorkspaceStore((s) => s.history?.replay ?? null);
   const undo = useWorkspaceStore((s) => s.undo);
   const redo = useWorkspaceStore((s) => s.redo);
+  const canEdit = useWorkspaceStore(selectCanEdit);
+  const hasSelection = useWorkspaceStore(
+    (state) => state.rfNodes.some((node) => node.selected) || state.rfEdges.some((edge) => edge.selected),
+  );
 
   return (
     <div data-collab-chrome className="absolute bottom-4 left-4 z-10 flex items-center gap-1 rounded-full border border-[var(--collab-border)] bg-[var(--collab-glass)] p-1 backdrop-blur">
@@ -24,6 +28,24 @@ const CanvasControls = () => {
       <button type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={() => redo()} className={buttonClass}>
         <Redo2 className="h-5 w-5" />
       </button>
+      {canEdit ? (
+        <button
+          type="button"
+          aria-label="Delete selected"
+          title="Delete selected (Delete)"
+          disabled={!hasSelection}
+          onClick={() => {
+            const { rfNodes, rfEdges, deleteElements } = useWorkspaceStore.getState();
+            deleteElements({
+              nodes: rfNodes.filter((node) => node.selected),
+              edges: rfEdges.filter((edge) => edge.selected),
+            });
+          }}
+          className={buttonClass}
+        >
+          <Trash2 className="h-5 w-5" aria-hidden="true" />
+        </button>
+      ) : null}
       <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-[var(--collab-border)]" />
       <button type="button" aria-label="Zoom in" onClick={() => zoomIn({ duration: 200 })} className={buttonClass}>
         <Plus className="h-5 w-5" />

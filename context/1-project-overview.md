@@ -6,7 +6,7 @@
 
 ## Goals
 
-**Development checkpoint (2026-11-13):** S01–S26 are committed through HEAD `c14a185` (commit 69), including S25 undo/redo and the S26 membership REST API; see [S25's final review](specs/25-undo-redo-review.md) and [S26's review](specs/26-invites-members-api-review.md). Independent verification passes 542 tests, production build and diff check. `/collaborate` remains URL-only, with browser/shared-project QA outstanding. Four slices remain before launch: S27–S30. S27 (live membership enforcement and cleanup) and S28 (share dialog and invitations UI) are implemented and Approved, uncommitted; two-account browser QA has not been run. Feature lists below describe the full target, not launch readiness. [HANDOFF.md](HANDOFF.md) records the current stopping point and limitations.
+**Development checkpoint (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). The feature lists below describe what is built; launch readiness depends on the QA. [HANDOFF.md](HANDOFF.md) records the current stopping point and limitations.
 
 1. A signed-in user can create, rename, and delete projects, and see the projects shared with them.
 2. Members of a project see the same canvas, and every committed edit appears for all of them within about one second.
@@ -44,6 +44,7 @@
 - Six shapes (rectangle, diamond, circle, pill, cylinder, hexagon), dragged from a shape panel and dropped centered under the cursor.
 - Move (including multi-select), resize, delete, inline label editing, and an 8-color palette per node.
 - Smooth-step edges with arrows between any of four handles, with inline edge labels.
+- Twenty-seven starter templates in seven groups: Architecture patterns, Web foundations, Social and messaging, Media and storage, Search and location, Payments and booking, and Data and streaming. The turn holder can add each diagram to the canvas.
 - Undo and redo for the turn holder's own edits.
 - Server-authoritative persistence: every edit is validated and saved before anyone else sees it.
 
@@ -82,13 +83,13 @@
 - Liveblocks, Trigger.dev, Yjs, BullMQ/Redis, or any other realtime, CRDT, or background-job service.
 - Simultaneous (non-turn-based) editing.
 - AI diagram generation and AI spec writing.
-- Starter templates, PNG/SVG export, version history, comments on nodes.
+- PNG/SVG export, version history, comments on nodes.
 - Email delivery of invitations (invitees see them on their dashboard).
 - User search or a user directory. Invites are by exact email only.
 - Ownership transfer.
 - Running more than one server instance (room and turn state are in memory).
 - Migrating from MongoDB to PostgreSQL.
-- Any change to `/blog`, the portfolio, the admin panel, or `/gft`. `/blog` and `/chat` are **scheduled for deletion** in post-launch slices (Q1 and Q5 in `6-progress-tracker.md`), because neither sets this app apart. Parts of `/chat` survive only if they prove useful to `/collaborate`. Both keep working, unchanged, until then.
+- Any change to `/blog`, `/chat`, the portfolio, the admin panel, or `/gft`. `/blog` and `/chat` were scheduled for deletion after launch (Q1 and Q5 in `6-progress-tracker.md`); the user cancelled that on 2026-11-14 and both stay, unchanged.
 
 ## Success Criteria
 

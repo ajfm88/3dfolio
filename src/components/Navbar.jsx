@@ -46,13 +46,14 @@ const Navbar = () => {
         </div>
 
         {/* Desktop Nav — pill glass container.
-            Spacing tightens below 1080px because the pill turns on at 810px but
-            needs closer to 1000px to lay out at full size, and the shortfall used
+            Spacing tightens below 1080px because the pill turns on at 900px but
+            needs closer to 1080px to lay out at full size, and the shortfall used
             to be paid in wrapped labels: a two-line pill outgrows the navbar's
             fixed 65px and gets its border sliced off. Every link is nowrap so the
             failure can never take that shape again, and shrink-0 keeps the pill at
-            its content width so a squeeze lands on the logo instead. */}
-        <div className="hidden min-[810px]:flex shrink-0 items-center border border-[rgba(112,66,248,0.38)] bg-[rgba(3,0,20,0.37)] px-4 min-[1080px]:px-6 py-2.5 rounded-full gap-4 min-[1080px]:gap-8 text-gray-200">
+            its content width so a squeeze lands on the logo instead. The breakpoint
+            moved to leave room for the Collaborate link. */}
+        <div className="hidden min-[900px]:flex shrink-0 items-center border border-[rgba(112,66,248,0.38)] bg-[rgba(3,0,20,0.37)] px-4 min-[1080px]:px-6 py-2.5 rounded-full gap-4 min-[1080px]:gap-8 text-gray-200">
           {navLinks.map((nav) => (
             <a
               key={nav.id}
@@ -65,6 +66,13 @@ const Navbar = () => {
               {nav.title}
             </a>
           ))}
+          <Link
+            to="/collaborate"
+            onClick={() => setActive("")}
+            className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 whitespace-nowrap text-[13px] min-[1080px]:text-[15px] font-medium cursor-pointer"
+          >
+            Collaborate
+          </Link>
           <Link
             to="/blog"
             onClick={() => setActive("")}
@@ -82,7 +90,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile hamburger */}
-        <div className="min-[810px]:hidden flex items-center">
+        <div className="min-[900px]:hidden flex items-center">
           <img
             src={toggle ? close : menu}
             alt="menu"
@@ -107,6 +115,16 @@ const Navbar = () => {
                   {nav.title}
                 </a>
               ))}
+              <Link
+                to="/collaborate"
+                onClick={() => {
+                  setToggle(false);
+                  setActive("");
+                }}
+                className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 text-[16px] font-medium cursor-pointer"
+              >
+                Collaborate
+              </Link>
               <Link
                 to="/blog"
                 onClick={() => {

@@ -103,6 +103,22 @@
   border-style: dashed;
 }
 
+/* A touch screen never hovers, so a selected node shows its handles instead. */
+@media (hover: none) {
+  .collab-root .react-flow__node-shape.selected .react-flow__handle.connectable {
+    opacity: 1;
+  }
+}
+
+/* A finger needs a larger target than a mouse pointer does. */
+@media (pointer: coarse) {
+  .collab-root .react-flow__node-shape .react-flow__handle,
+  .collab-root .react-flow__node-shape .collab-resize-handle {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 /* The message list is the panel's only vertical scroller. Reduced motion keeps
    that scroll instant; opening the panel does not animate the canvas. */
 .collab-root .project-chat-scroll {

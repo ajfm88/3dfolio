@@ -69,7 +69,14 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside three extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`), a **blog** (`/blog`), and a **real-time chat** (`/chat`). A turn-based collaborative diagram workspace is also in development at `/collaborate`, reachable by URL only. Its project chat is implemented through S24; it is not launch-ready. See [the current handoff](context/HANDOFF.md) and [progress tracker](context/6-progress-tracker.md).
+This is the personal website of Alejandro J. Foucault (ajfm88). The home page is a 3D portfolio built with React, and four more tools live on the same domain:
+
+- a **GitHub Follower Tracker** at `/gft`
+- a **blog** at `/blog`
+- a **real-time chat** at `/chat`
+- a **collaborative system-design workspace** at `/collaborate`
+
+In the workspace, signed-in users create projects, invite other people, and draw system diagrams together on a shared canvas. One person edits at a time while everyone else watches the changes live, and each project has its own chat.
 
 ## 🚀 <a name="live-app">Live App</a>
 
@@ -78,44 +85,47 @@ Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio fron
 
 ## 🏗️ <a name="architecture">Architecture</a>
 
-The site runs on two backends, each serving the half of the app it fits.
+The site runs on two backends. Each one serves the part of the app it suits best.
 
 | Layer                         | Backend                                      | Powers                                        | Hosting |
 | ----------------------------- | -------------------------------------------- | --------------------------------------------- | ------- |
-| This root project             | Firebase — Firestore, Storage, Auth          | The 3D portfolio, `/gft`, and the admin panel | Vercel  |
-| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog`, `/chat`, and `/collaborate`         | Render  |
+| This root project             | Firebase (Firestore, Storage, Auth)          | The 3D portfolio, `/gft`, and the admin panel | Vercel  |
+| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog`, `/chat`, and `/collaborate`          | Render  |
 
-Firebase serves single-author content over plain REST calls, with no server to run or keep alive. The blog and chat need relational references between users, posts, comments, and messages, plus a WebSocket server for presence and message delivery, so they run against a separate API committed in [`server/`](server/readme.md). The blog, direct messages, and workspace share one auth system, database, and deployment.
+Firebase holds the content that only the site owner edits. It is read over plain REST calls, so there is no server to run or keep awake.
 
-Every feature route is lazy-loaded, so Clerk, Axios, Zustand, and socket.io-client never reach the main portfolio bundle. The full API surface, schema, and socket events are documented in [`server/readme.md`](server/readme.md).
+The blog and the chat need more than that: users, posts, comments and messages that reference each other, and a WebSocket server for presence and message delivery. The workspace adds project rooms, live presence, turn-taking, and canvas saves that the server validates. All three therefore use a separate API, which lives in [`server/`](server/readme.md). They share one sign-in system, one database and one deployment.
+
+Every feature route is lazy-loaded, so Clerk, Axios, Zustand, socket.io-client and React Flow never reach the main portfolio bundle. The API endpoints, database schema and socket events are documented in [`server/readme.md`](server/readme.md).
 
 ## ⚙️ <a name="tech-stack">Tech Stack</a>
 
 <div align="center">
-  <img src="./mern.png" alt="MERN stack — MongoDB, Express, React, Node" width="600">
+  <img src="./mern.png" alt="MERN stack: MongoDB, Express, React, Node" width="600">
 </div>
 
-**Frontend — core (this repo, `src/`):**
+**Frontend core (this repo, `src/`):**
 
 - ⚛️ [React](https://react.dev)
 - ⚡ [Vite](https://vitejs.dev)
 - 🧭 [React Router](https://reactrouter.com)
 - 🌬️ [Tailwind CSS](https://tailwindcss.com)
 
-**Frontend — 3D and motion:**
+**Frontend 3D and motion:**
 
 - 🔺 [Three.js](https://threejs.org)
 - 🧵 [React Three Fiber](https://r3f.docs.pmnd.rs)
 - 🔧 [React Three Drei](https://drei.pmnd.rs)
 - 🎞️ [Framer Motion](https://framer.com/motion)
 
-**Frontend — data, auth and content:**
+**Frontend data, auth and content:**
 
 - 🔥 [Firebase](https://firebase.google.com)
 - 🔐 [Clerk](https://clerk.com)
 - 🔄 [TanStack Query](https://tanstack.com/query)
 - 📡 [Axios](https://axios-http.com)
 - 🐻 [Zustand](https://zustand.docs.pmnd.rs)
+- 📐 [React Flow](https://reactflow.dev) (`@xyflow/react`)
 - 🔌 [Socket.io Client](https://socket.io)
 - ✍️ [React Quill](https://github.com/VaguelySerious/react-quill)
 - 🖼️ [ImageKit](https://imagekit.io)
@@ -133,43 +143,57 @@ Every feature route is lazy-loaded, so Clerk, Axios, Zustand, and socket.io-clie
 - 🖼️ [ImageKit](https://imagekit.io)
 - 📤 [Multer](https://github.com/expressjs/multer)
 
-Full architecture, API surface and design rationale live in **[`server/readme.md`](server/readme.md)**.
+The backend has its own readme with the full API, the schema and the reasons behind the design: **[`server/readme.md`](server/readme.md)**.
 
 ## 🔋 <a name="features">Features</a>
 
-🎨 **Interactive Experience and Work Sections:** Utilizes animations powered by Framer Motion for engaging user experience.
+🎨 **Animated Experience and Work Sections:** The experience timeline and the project cards animate into view with Framer Motion.
 
-💡 **3D Skills Section:** Showcases skills using 3D geometries through Three.js and React Three Fiber.
+💡 **3D Skills Section:** The tech stack is shown as 3D objects built with Three.js and React Three Fiber.
 
-🎬 **Animated Projects:** Features animated sections using Framer Motion for projects.
+🎬 **Animated Projects:** Each project card fades in as you scroll to it.
 
-🌍 **Contact Section with 3D Earth Model:** Integrates a rotatable 3D earth model with email functionality.
+🌍 **Contact Section with 3D Earth Model:** A 3D earth you can rotate sits next to a contact form that sends email.
 
-✨ **3D Stars:** Generates stars progressively at random positions using Three.js for background display.
+✨ **3D Stars:** A Three.js starfield fills the background, with stars placed at random positions.
 
-🎞️ **Consistent Animations:** Implements cohesive animations throughout the website using Framer Motion.
+🎞️ **Consistent Animations:** One shared set of Framer Motion variants keeps the motion consistent across the site.
 
-📱 **Responsive Design:** Ensures optimal display and functionality across all devices.
+📱 **Responsive Design:** The site works on phones, tablets and desktops.
 
-🖌️ **Tailwind CSS Styling:** Styled with Tailwind CSS for a modern and responsive design.
+🖌️ **Tailwind CSS Styling:** All styling is done with Tailwind CSS.
 
-🔥 **Firebase-Powered Admin Panel:** Edits site content from a private, Google-authenticated dashboard backed by Firestore and Firebase Storage.
+🔥 **Firebase-Powered Admin Panel:** The site owner edits the portfolio content from a private dashboard, signed in with Google and backed by Firestore and Firebase Storage.
 
-🔎 **GitHub Follower Tracker (`/gft`):** Compares snapshots of any account's followers over time to reveal new follows and unfollows, entirely client-side.
+🔎 **GitHub Follower Tracker (`/gft`):** Compares snapshots of any account's followers over time to show who followed and who unfollowed. It runs entirely in the browser.
 
-✍️ **Blog Authoring (`/blog`):** Publishes rich-text posts with cover images uploaded straight from the browser to ImageKit.
+✍️ **Blog Authoring (`/blog`):** The owner writes rich-text posts, with cover images uploaded straight from the browser to ImageKit.
 
-🗂️ **Blog Browsing:** Filters posts by category, author, search and sort — including visit-backed Popular and Trending — through shareable URLs.
+🗂️ **Blog Browsing:** Readers filter posts by category, author and search, and sort them by newest, oldest, Popular or Trending (both based on visits). Every filter lives in the URL, so a view can be shared.
 
-💬 **Blog Comments:** Opens every post to any signed-in reader, while authoring stays restricted to the owner and enforced at the API.
+💬 **Blog Comments:** Any signed-in reader can comment on a post. Writing posts stays restricted to the owner, and the API enforces it.
 
-⚡ **Real-Time Chat (`/chat`):** Delivers messages instantly between signed-in accounts over Socket.io, with no polling.
+⚡ **Real-Time Chat (`/chat`):** Signed-in users message each other instantly over Socket.io, with no polling.
 
-🖼️ **Chat Media:** Sends images and videos with optional captions, expanding inline through a lightbox or a native video player.
+🖼️ **Chat Media:** Messages can carry an image or a video with an optional caption. Images open in a lightbox and videos play in the native player.
 
-🟢 **Chat Presence and Sounds:** Tracks who is online, badges unread conversations, and chimes on arrival behind a sound toggle.
+🟢 **Chat Presence and Sounds:** The chat shows who is online, marks unread conversations with a badge, and plays a sound for new messages that can be switched off.
 
-🧩 **Lazy Feature Routes:** Loads the admin panel, blog and chat as separate bundles so none of them weigh down the 3D portfolio.
+📐 **Collaborative Workspace (`/collaborate`):** Signed-in users create projects and draw system diagrams together on a shared React Flow canvas, with six shapes, labelled connections and an eight-color palette.
+
+🔁 **Turn-Based Editing:** One browser tab edits at a time while everyone else watches live. The server enforces the turn: there is a queue, a 20-second grace period for reconnecting, and a hand-off after 2 minutes without activity when someone is waiting.
+
+👥 **Live Presence:** Participant avatars, live cursors, and live drag and resize previews show who is present and what the turn holder is changing.
+
+💬 **Project Chat:** Each project has a chat thread with history, image and video attachments, typing indicators and an unread badge.
+
+🤝 **Sharing and Roles:** Owners invite by email as editor or viewer, change roles and remove members, and every change applies live.
+
+↩️ **Undo and Redo:** The turn holder can undo and redo their own edits, and watchers see the same result.
+
+🧱 **Starter Templates:** The turn holder can drop one of twenty-seven ready-made diagrams onto the canvas, grouped by theme, from architecture patterns to system design classics such as a URL shortener, a chat system, a payment system and a web crawler.
+
+🧩 **Lazy Feature Routes:** The admin panel, blog, chat and workspace load as separate bundles, so none of them slows down the 3D portfolio.
 
 ## 🗂️ <a name="project-structure">Project Structure</a>
 
@@ -187,7 +211,7 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   ├── robots.txt
 │   ├── sitemap.xml
 │   └── skills-bg.webm
-├── server/                                 # Express + MongoDB + Socket.io API — see server/readme.md
+├── server/                                 # Express + MongoDB + Socket.io API, see server/readme.md
 ├── src/
 │   ├── admin/
 │   │   ├── AdminLogin.jsx                  # Google sign-in screen for the panel
@@ -262,6 +286,18 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   │   │   ├── useAuthStore.js             # Auth check, socket connection, presence
 │   │   │   └── useChatStore.js             # Conversations, messages, unread state
 │   │   └── chat.css                        # Chat-scoped styles
+│   ├── collaborate/                        # Turn-based system-design workspace
+│   │   ├── components/                     # Workspace UI
+│   │   │   ├── canvas/                     # Shapes, edges, controls, and live cursors
+│   │   │   ├── chat/                       # Project thread and composer
+│   │   │   ├── projects/                   # Project cards, dialogs, and invitations
+│   │   │   ├── ui/                         # Shared dialog shell and role badge
+│   │   │   └── workspace/                  # Navbar, participants, turns, sharing, connection state
+│   │   ├── hooks/                          # Chat scrolling and visual viewport height
+│   │   ├── lib/                            # Canvas sync, history, presence, and UI helpers
+│   │   ├── routes/                         # Sign-in gate, dashboard, and workspace
+│   │   ├── store/                          # Session, project, canvas, chat, and membership state
+│   │   └── collaborate.css                 # Scoped dark theme and canvas styles
 │   ├── components/
 │   │   ├── canvas/
 │   │   │   ├── Earth.jsx                   # Rotatable earth in the contact section
@@ -297,6 +333,7 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   │   ├── Admin.jsx                       # Admin panel route root, private
 │   │   ├── Blog.jsx                        # Blog route root, providers and nested routes
 │   │   ├── Chat.jsx                        # Chat route root, providers and bootstrap
+│   │   ├── Collaborate.jsx                 # Workspace route root, providers and lazy routes
 │   │   └── GithubFollowerTracker.jsx       # Follower comparison tool
 │   ├── utils/
 │   │   ├── firestoreRest.js                # Firestore REST reads for public content
@@ -307,7 +344,8 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 │   ├── index.css                           # Global styles and Tailwind directives
 │   ├── main.jsx                            # React entry point
 │   └── styles.js                           # Shared Tailwind class groups
-├── .env                                    # Environment variables
+├── test/                                   # Client store and markup suites, run one per command
+├── context/                                # Spec-driven build documents
 ├── .env.example
 ├── index.html                              # SEO, Open Graph, and Twitter card tags
 ├── mern.png
@@ -321,19 +359,25 @@ Full architecture, API surface and design rationale live in **[`server/readme.md
 
 ## 🧭 <a name="pages-and-routes">Pages and Routes</a>
 
-| Route         | Page                    | Bundle | Access    |
-| ------------- | ----------------------- | ------ | --------- |
-| `/`           | 3D portfolio            | Main   | Public    |
-| `/gft`        | GitHub Follower Tracker | Lazy   | Public    |
-| `/blog`       | Blog homepage           | Lazy   | Public    |
-| `/blog/posts` | Full post list          | Lazy   | Public    |
-| `/blog/:slug` | Single post             | Lazy   | Public    |
-| `/blog/write` | Rich-text editor        | Lazy   | Owner     |
-| `/chat`       | Real-time chat          | Lazy   | Signed in |
+| Route                     | Page                    | Bundle | Access          |
+| ------------------------- | ----------------------- | ------ | --------------- |
+| `/`                       | 3D portfolio            | Main   | Public          |
+| `/gft`                    | GitHub Follower Tracker | Lazy   | Public          |
+| `/blog`                   | Blog homepage           | Lazy   | Public          |
+| `/blog/posts`             | Full post list          | Lazy   | Public          |
+| `/blog/:slug`             | Single post             | Lazy   | Public          |
+| `/blog/write`             | Rich-text editor        | Lazy   | Owner           |
+| `/chat`                   | Real-time chat          | Lazy   | Signed in       |
+| `/collaborate`            | Projects dashboard      | Lazy   | Signed in       |
+| `/collaborate/:projectId` | Workspace               | Lazy   | Project members |
 
-Only `/` ships in the main bundle. Every other route is code-split, so a visitor who never opens the blog or chat never downloads Clerk, Axios, Zustand, or socket.io-client.
+Only `/` ships in the main bundle. Every other route is code-split, so a visitor who never opens the blog, the chat or the workspace never downloads Clerk, Axios, Zustand, socket.io-client or React Flow.
 
-`/blog` is publicly readable and any signed-in reader can comment, but authoring is restricted to the owner account and enforced by the API rather than by hiding the UI. `/chat` shows a sign-in screen to signed-out visitors.
+Who can see what:
+
+- `/blog` is open to everyone, and any signed-in reader can comment. Only the owner account can write posts, and the API enforces that; it is not just a hidden button.
+- `/chat` shows a sign-in screen to visitors who are signed out.
+- `/collaborate` also shows a sign-in screen to visitors who are signed out. A project is visible only to its owner and the people invited to it, and a viewer can watch and chat but cannot edit.
 
 ## 🤸 <a name="quick-start">Quick Start</a>
 
@@ -385,11 +429,11 @@ VITE_APP_GETFORM_DOT_IO_ENDPOINT=
 
 Where each one comes from:
 
-- **`VITE_FIREBASE_*`** — Firebase console, under **Project settings → Your apps → Web app**. Backs the admin panel and the content it serves.
-- **`VITE_CLERK_PUBLISHABLE_KEY`** — Clerk dashboard, under **Developers → API keys**. Signs users in to `/blog` and `/chat`.
-- **`VITE_API_URL`** — base URL of the [`server/`](server/readme.md) API including its `/api` prefix, either a locally-running instance or a deployed one.
-- **`VITE_IK_*`** — ImageKit dashboard, under **Developers → API keys**, plus the URL endpoint. Lets the browser upload blog cover images directly; these are the public-safe half of the same account `server/` uses, and the ImageKit **private** key stays on the backend and is never exposed here.
-- **`VITE_APP_GETFORM_DOT_IO_ENDPOINT`** — [Getform](https://getform.io) endpoint that receives the portfolio's contact form submissions.
+- **`VITE_FIREBASE_*`**: Firebase console, under **Project settings → Your apps → Web app**. Backs the admin panel and the content it serves.
+- **`VITE_CLERK_PUBLISHABLE_KEY`**: Clerk dashboard, under **Developers → API keys**. Signs users in to `/blog`, `/chat` and `/collaborate`.
+- **`VITE_API_URL`**: base URL of the [`server/`](server/readme.md) API, including its `/api` prefix. It can point at a local instance or a deployed one.
+- **`VITE_IK_*`**: ImageKit dashboard, under **Developers → API keys**, plus the URL endpoint. These let the browser upload blog cover images directly. They are the public half of the same account `server/` uses; the ImageKit **private** key stays on the backend and never appears here.
+- **`VITE_APP_GETFORM_DOT_IO_ENDPOINT`**: [Getform](https://getform.io) endpoint that receives the portfolio's contact form submissions.
 
 **Running the Project**
 
@@ -397,6 +441,20 @@ Where each one comes from:
 npm run dev
 ```
 
-This runs the frontend only — the 3D portfolio, `/gft` and the admin panel work standalone. `/blog` and `/chat` also need the separate [`server/`](server/readme.md) API reachable at `VITE_API_URL`: either run it locally (`cd server && npm install && npm run dev`, see its README for setup) or point at a deployed instance.
+This starts the frontend only. The 3D portfolio, `/gft` and the admin panel work on their own. `/blog`, `/chat` and `/collaborate` also need the [`server/`](server/readme.md) API to be reachable at `VITE_API_URL`. Either run it locally (`cd server && npm install && npm run dev`; its readme covers the setup) or point at a deployed instance.
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
+
+**Running the Tests**
+
+The server tests run with one command:
+
+```bash
+cd server && npm test
+```
+
+The client tests for `/collaborate` live in `test/` at the root. Run one suite per command, because the suites share a port:
+
+```bash
+node --test test/canvasTemplates.test.mjs
+```

@@ -4,6 +4,7 @@ import "@xyflow/react/dist/style.css";
 
 import { selectCanEdit, useWorkspaceStore } from "../../store/useWorkspaceStore";
 import CanvasControls from "./CanvasControls";
+import EmptyCanvasHint from "./EmptyCanvasHint";
 import LinkEdge from "./LinkEdge";
 import ShapePanel from "./ShapePanel";
 import ShapeNode from "./ShapeNode";
@@ -139,6 +140,7 @@ const Flow = () => {
         {canEdit && <ShapePanel />}
         <PresenceCursors />
       </ReactFlow>
+      <EmptyCanvasHint />
     </div>
   );
 };

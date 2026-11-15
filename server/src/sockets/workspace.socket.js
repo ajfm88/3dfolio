@@ -17,6 +17,7 @@ import {
   tabRejoined,
   toPublic,
 } from "../lib/turns.js";
+import { createBucket, RATE_LIMITS, takeToken } from "../lib/rateLimit.js";
 
 // REST uses the same sentence for a bad id, a missing project, and a non-member.
 const PROJECT_NOT_FOUND = { ok: false, message: "Project not found" };
@@ -28,6 +29,7 @@ const SUPERSEDED = { ok: false, message: "Workspace request superseded" };
 const UNAVAILABLE = { ok: false, message: "Unable to open workspace" };
 const UNABLE_SAVE = { ok: false, message: "Unable to save canvas" };
 const UNABLE_SYNC = { ok: false, message: "Unable to sync canvas" };
+const TOO_MANY = { ok: false, message: "Too many requests" };
 
 // A failed compare-and-set reload, or a write whose acknowledgement never
 // arrived, leaves the cache untrustworthy. The flag lives with the room
@@ -74,6 +76,8 @@ function leaveLater(socket, projectId) {
 const defaultDeps = {
   findProjectForMember: (projectId, userId) => projectAccess.findProjectForMember(projectId, userId),
   roleOf: (project, userId) => projectAccess.roleOf(project, userId),
+  rateLimits: RATE_LIMITS,
+  now: () => Date.now(),
 };
 
 function isRecord(value) {
@@ -271,6 +275,7 @@ function getLifecycle(socket) {
       // immediately; registry removal can still be waiting on the socket queue.
       joinedGeneration: null,
       queue: createSerialQueue(),
+      buckets: new Map(),
     };
     lifecycles.set(socket, state);
   }
@@ -1113,7 +1118,7 @@ function validTyping(payload) {
 }
 
 // Same completed-join gate as a cursor. Typing is not turn activity, and it
-// does not read the database: the role cached at join is enough until S27.
+// does not read the database: the cached role is updated live by onMemberChanged.
 function onTyping(socket, registry, payload) {
   const validated = validTyping(payload);
   if (!validated) return;
@@ -1190,64 +1195,104 @@ export function startTurnSweeper(io, registry = workspaceRegistry) {
   return () => clearInterval(timer);
 }
 
+// Production registers through lib/socket.js with no deps, so defaultDeps
+// limits every socket. A test that passes its own deps and omits rateLimits
+// stays unlimited: several of those suites fire more than one burst inside a
+// second. A missing table, or one that is not an object, is that off switch.
+function allowEvent(socket, deps, name) {
+  const limits = deps?.rateLimits;
+  if (!limits || typeof limits !== "object") return true;
+  const state = getLifecycle(socket);
+  const now = typeof deps.now === "function" ? deps.now() : Date.now();
+  const rate = limits[name];
+  const result = takeToken(state.buckets.get(name) ?? createBucket(rate, now), rate, now);
+  state.buckets.set(name, result.bucket);
+  return result.allowed;
+}
+
 export function registerWorkspaceHandlers(io, socket, roomRegistry = workspaceRegistry, deps = defaultDeps) {
   // Touch the lifecycle so the queue exists before the first event.
   getLifecycle(socket);
   indexFor(roomRegistry).set(socket.id, socket);
 
-  socket.on("workspace:join", safeHandler("workspace:join", (payload, ack) => (
-    onJoin(io, socket, roomRegistry, deps, payload, ack)
-  )));
+  socket.on("workspace:join", safeHandler("workspace:join", (payload, ack) => {
+    if (!allowEvent(socket, deps, "join")) {
+      if (typeof ack === "function") replyTo(socket, ack, "workspace:join")(TOO_MANY);
+      return undefined;
+    }
+    return onJoin(io, socket, roomRegistry, deps, payload, ack);
+  }));
 
   socket.on("workspace:leave", safeHandler("workspace:leave", (payload) => (
     onLeave(io, socket, roomRegistry, payload)
   )));
 
-  socket.on("canvas:commit", safeHandler("canvas:commit", (payload, ack) => (
-    onCommit(io, socket, roomRegistry, deps, payload, ack)
-  )));
+  socket.on("canvas:commit", safeHandler("canvas:commit", (payload, ack) => {
+    if (!allowEvent(socket, deps, "commit")) {
+      if (typeof ack === "function") replyTo(socket, ack, "canvas:commit")(TOO_MANY);
+      return undefined;
+    }
+    return onCommit(io, socket, roomRegistry, deps, payload, ack);
+  }));
 
-  socket.on("canvas:sync", safeHandler("canvas:sync", (payload, ack) => (
-    onSync(socket, roomRegistry, deps, payload, ack)
-  )));
+  socket.on("canvas:sync", safeHandler("canvas:sync", (payload, ack) => {
+    if (!allowEvent(socket, deps, "sync")) {
+      if (typeof ack === "function") replyTo(socket, ack, "canvas:sync")(TOO_MANY);
+      return undefined;
+    }
+    return onSync(socket, roomRegistry, deps, payload, ack);
+  }));
 
-  socket.on("canvas:preview", safeHandler("canvas:preview", (payload) => (
-    onPreview(io, socket, roomRegistry, deps, payload)
-  )));
+  socket.on("canvas:preview", safeHandler("canvas:preview", (payload) => {
+    if (!allowEvent(socket, deps, "preview")) return undefined;
+    return onPreview(io, socket, roomRegistry, deps, payload);
+  }));
 
-  socket.on("cursor:move", safeHandler("cursor:move", (payload) => (
-    onCursorMove(io, socket, roomRegistry, deps, payload)
-  )));
+  socket.on("cursor:move", safeHandler("cursor:move", (payload) => {
+    if (!allowEvent(socket, deps, "cursor")) return undefined;
+    return onCursorMove(io, socket, roomRegistry, deps, payload);
+  }));
 
-  socket.on("cursor:leave", safeHandler("cursor:leave", (payload) => (
-    onCursorLeave(io, socket, roomRegistry, deps, payload)
-  )));
+  socket.on("cursor:leave", safeHandler("cursor:leave", (payload) => {
+    if (!allowEvent(socket, deps, "cursor")) return undefined;
+    return onCursorLeave(io, socket, roomRegistry, deps, payload);
+  }));
 
-  socket.on("project:typing", safeHandler("project:typing", (payload) => (
-    onTyping(socket, roomRegistry, payload)
-  )));
+  socket.on("project:typing", safeHandler("project:typing", (payload) => {
+    if (!allowEvent(socket, deps, "typing")) return undefined;
+    return onTyping(socket, roomRegistry, payload);
+  }));
 
-  socket.on("turn:request", safeHandler("turn:request", (payload) => (
-    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => requestTurn(turn, tab, can(role, "edit") === true, now))
-  )));
+  socket.on("turn:request", safeHandler("turn:request", (payload) => {
+    if (!allowEvent(socket, deps, "turn")) return undefined;
+    return onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => requestTurn(turn, tab, can(role, "edit") === true, now));
+  }));
 
-  socket.on("turn:release", safeHandler("turn:release", (payload) => (
-    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => releaseTurn(turn, tab, now))
-  )));
+  socket.on("turn:release", safeHandler("turn:release", (payload) => {
+    if (!allowEvent(socket, deps, "turn")) return undefined;
+    return onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => releaseTurn(turn, tab, now));
+  }));
 
-  socket.on("turn:cancel", safeHandler("turn:cancel", (payload) => (
-    onTurn(io, socket, roomRegistry, payload, (turn, tab) => cancelRequest(turn, tab))
-  )));
+  socket.on("turn:cancel", safeHandler("turn:cancel", (payload) => {
+    if (!allowEvent(socket, deps, "turn")) return undefined;
+    return onTurn(io, socket, roomRegistry, payload, (turn, tab) => cancelRequest(turn, tab));
+  }));
 
-  socket.on("turn:reclaim", safeHandler("turn:reclaim", (payload) => (
-    onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => reclaimTurn(turn, tab, can(role, "reclaim") === true, now))
-  )));
+  socket.on("turn:reclaim", safeHandler("turn:reclaim", (payload) => {
+    if (!allowEvent(socket, deps, "turn")) return undefined;
+    return onTurn(io, socket, roomRegistry, payload, (turn, tab, role, now) => reclaimTurn(turn, tab, can(role, "reclaim") === true, now));
+  }));
 
   // disconnecting drops the registry entry. Socket.io removes adapter rooms itself,
   // including this socket's project room, and the per-user chat room stays.
+  // The index delete stays in finally so a throw from onDisconnecting cannot
+  // leave this socket reachable by a later membership broadcast.
   socket.on("disconnecting", safeHandler("disconnecting", () => {
-    onDisconnecting(io, socket, roomRegistry);
-    const index = indexFor(roomRegistry);
-    if (index.get(socket.id) === socket) index.delete(socket.id);
+    try {
+      onDisconnecting(io, socket, roomRegistry);
+    } finally {
+      const index = indexFor(roomRegistry);
+      if (index.get(socket.id) === socket) index.delete(socket.id);
+    }
   }));
 }

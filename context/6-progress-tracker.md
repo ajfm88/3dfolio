@@ -4,13 +4,19 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase I: S01–S26 are **Committed** through HEAD `c14a185` (commit 69, 2026-11-13). S27 live membership enforcement (GPT 6.1 Terra) is **Approved** by Claude Opus 5.5 (2026-11-13) and uncommitted. Browser/shared-project QA remains outstanding.
-- Git reconciliation (Claude Opus 5.5, 2026-11-13): HEAD `c14a185` (commit 69) commits Approved S25 and S26 with their planning/review documents. The working tree was clean before today's documentation update and S27 planning.
+- Phase J is implemented: S01–S28 are **Committed** through HEAD `efb06d9` (commit 70, 2026-11-14). S29a, S29b and S30 are **Approved** by Nemotron and uncommitted. All 30 slices are implemented. Launch QA (section `S30 — Launch QA`) is **not run**; the product is not recorded as launched.
+- Git reconciliation (Claude Fable 5.2, 2026-11-14): HEAD `efb06d9` (commit 70) commits Approved S27 and S28 with their planning/review documents. The working tree was clean before today's S29a planning. Notes below that call S27/S28 uncommitted are history from before that commit.
 
 ## Current Goal
 
-- Two slices today (2026-11-13): S27 (live membership enforcement and cleanup), then S28 (share dialog and invitations UI). S27's spec is `specs/27-live-membership-enforcement.md`. S27 is Approved (uncommitted); S28's spec is `specs/28-share-dialog-invitations-ui.md`.
-- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24 and S25. S26's manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25/S26.
+- State on 2026-11-14 after the S33 review (this line supersedes the older ones below): Phase L added three template slices after the 30-slice plan. S31, S32 and S33 are all **Approved** and uncommitted, with every manual browser check not run. No `/collaborate` slice is open. The user commits; the next implementation work is drawDB D1.
+
+- No `/collaborate` slice remains. The next work is the separate drawDB track, D1, from `../3dfolio_drawdb_plan.md`.
+- Added after that line was written (2026-11-14): the user asked for starter templates. S31 is specified in `specs/31-starter-templates.md` and Ready for review; implemented by Codex, reviewer unassigned. It is independent of drawDB D1, so the user chooses the order.
+- S30 (launch) is Approved by Nemotron (2026-11-14) and uncommitted: `specs/30-launch.md`, written by Claude Fable 5.2, implemented by Codex. Review: `specs/30-launch-review.md`.
+- S29b (mobile, accessibility and UI states) is Approved by Nemotron and uncommitted. Spec `specs/29b-mobile-accessibility-ui-states.md`.
+- S29a (socket rate limits and the invariant audit) is Approved by Nemotron and uncommitted. Spec `specs/29a-rate-limits-invariant-audit.md`.
+- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27 and S28. S26's manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25–S28.
 
 ## Completed
 
@@ -43,13 +49,19 @@ Update this file after every meaningful implementation change. It records the **
 
 ## In Progress
 
-- S27 is Approved and uncommitted (review: `specs/27-live-membership-enforcement-review.md`); browser and live-system QA remain open. S28 is Ready for review (`specs/28-share-dialog-invitations-ui.md`).
+- Nothing is in progress. S29a, S29b, S30, S31, S32 and S33 are Approved and uncommitted.
 
 ## Next Up
 
-- S27: Approved 2026-11-13, uncommitted; the user commits.
-- S28: `specs/28-share-dialog-invitations-ui.md` is Ready for review; Claude Opus 5.5 reviews.
-- The shared-project walkthrough through S25–S28 needs configured test accounts/data; it has not been performed. The 320px participant-stack check with six other accounts stays in the existing S29 roadmap. drawDB remains unstarted.
+- S29a: Approved by Nemotron. The user commits.
+- S29b: Approved by Nemotron. The user commits.
+- S30: Approved by Nemotron. The user commits, deploys, and runs the launch QA (sixteen items, all not run). After QA passes, update the portfolio's About text and project snippet in the admin panel.
+- drawDB D1 (app shell and tooling) is the next implementation work, on a committed tree.
+- S31 (starter templates): `specs/31-starter-templates.md`, Approved by opencode (2026-11-14), implemented by Codex, uncommitted. Client only, no server change.
+- S33 (template library): `specs/33-template-library.md`, **Approved** by Claude Sonnet 5.5 on 2026-11-14 (`specs/33-template-library-review.md`), implemented by Codex, uncommitted. Twenty-seven templates in seven groups with a group filter. Full verification and manual gaps are in the S33 slice note.
+- S32 (eight more starter templates): `specs/32-more-starter-templates.md`, **Approved** by Nemotron (`specs/32-more-starter-templates-review.md`), implemented by Codex, uncommitted. Eleven templates in two groups with optional edge labels. Independent of drawDB D1.
+- `/blog` and `/chat` stay. Phase K (their removal) was cancelled by the user on 2026-11-14.
+- The shared-project walkthrough through S25–S28 needs configured test accounts/data; it has not been performed. The 320px participant-stack check with six other accounts moves to S29b. drawDB remains unstarted.
 
 ## Slice Status
 
@@ -83,12 +95,259 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S24 | Chat panel | client | S23 | ✓ | Committed | Grok | `9b47c77` |
 | S25 | Undo / redo for the turn holder | both | S22 | ✓ | Committed | Claude Sonnet | `c14a185` |
 | S26 | Invites + members API | server | S03 | ✓ | Committed | Claude Sonnet | `c14a185` |
-| S27 | Live membership enforcement + cleanup | server | S20, S26 | ✓ | Approved | GPT 6.1 Terra | Approved by Claude Opus 5.5 2026-11-13; uncommitted on `c14a185` |
-| S28 | Share dialog + invitations UI | client | S24, S27 | ✓ | Approved | GPT 6.1 Terra | Approved by Claude Opus 5.5 after one correction round, 2026-11-13; uncommitted |
-| S29 | Hardening pass | both | S28 | | Todo | | |
-| S30 | Launch | client + docs | S29 | | Todo | | |
+| S27 | Live membership enforcement + cleanup | server | S20, S26 | ✓ | Committed | GPT 6.1 Terra | `efb06d9` |
+| S28 | Share dialog + invitations UI | client | S24, S27 | ✓ | Committed | GPT 6.1 Terra | `efb06d9` |
+| S29a | Socket rate limits + invariant audit | server | S28 | ✓ | Approved | Grok (reviewer: Nemotron) | |
+| S29b | Mobile, accessibility + UI states | client | S28 | ✓ | Approved | Grok (reviewer: Nemotron) | |
+| S30 | Launch | client + docs | S29a, S29b | ✓ | Approved | Codex (reviewer: Nemotron) | Launch QA not run |
+| S31 | Starter templates | client | S29b | ✓ | Approved | Codex (reviewer: opencode) | |
+| S32 | More starter templates | client | S31 | ✓ | Approved | Codex (reviewer: Nemotron) | |
+| S33 | Template library: sixteen more templates + group filter | client | S32 | ✓ | Approved | Codex (reviewer: Claude Sonnet 5.5) | |
 
 ## Slice Notes
+
+### S31 - Starter templates implementation
+
+**Status:** Approved. **Implementer:** Codex, assigned by user, 2026-11-14. **Reviewer:** opencode, 2026-11-14. HEAD remains efb06d9; earlier uncommitted slices preserved.
+
+Implemented the exact three template datasets, deeply frozen, with a pure placement/op builder; preview cards in the shared unchanged Dialog; holder-only Templates button and one dispatch per insertion, followed by fitBounds on success. Existing content stays in place. Dialog wrapper stops React event propagation. Shape items, drag handlers, addShape and refuseDrop remain unchanged. No server, store, Dialog.jsx or WorkspaceCanvas.jsx edits for S31. Only allowed files changed relative to the starting tree; git diff --stat includes the earlier uncommitted slices. No deviations.
+
+Verification (reviewer reran all):
+- node --test test/canvasTemplates.test.mjs: 10 passed. Includes real applyOps/invertOps, placement, repeated IDs, atomic limit rejection, frozen data, previews and static markup.
+- Each existing root suite ran in its own node --test command: canvasHistory 31, canvasPreview 39, canvasShortcuts 44, cursorPresence 69, membershipUi 21, mobileA11y 13, participants 6, projectChat 14, projectChatUi 5, turnRobustness 28, turnState 10, workspaceSync 13. Total 293 passed.
+- cd server; npm test: 328 passed, completed on its own.
+- npm run build: passed, 4285 modules; only existing large-chunk warning. Entry 578.23 kB (gzip 181.05), unchanged from S30; Collaborate 24.06 kB (gzip 7.00); WorkspacePage 326.06 kB (gzip 102.14).
+- git diff --check passed (only LF/CRLF notices). git diff --stat inspected. canvasTemplates.js imports only the five specified exports from @shared/canvasOps.js. No raw hex in ShapePanel or TemplatesDialog.
+- Only changed mobileA11y line: test/mobileA11y.test.mjs:238 replaces the holder hint assertion with /Click a shape below to add it, drag one onto the canvas, or start from a template\./. No button-count assertion required a change; all other lines unchanged.
+
+Template data verified value-by-value against spec tables: Microservices (7 nodes, 6 edges), CI/CD Pipeline (7 nodes, 6 edges, 2 diamonds with explicit 176×112), Event-Driven (7 nodes, 7 edges). All keys, labels, shapes, colors, coordinates, sizes, edges and handles match exactly.
+
+Static markup does not execute the dialog-opening click, insert handler or fitBounds. Builder tests cover logic; interactive behavior remains on the manual checklist below.
+
+Manual checklist:
+- **not run** - Holder on empty canvas: each template centered and fitted.
+- **not run** - With content: insertion below existing diagram, no moves/removals, view moves to insertion.
+- **not run** - One Undo removes all, Redo restores all, watcher matches.
+- **not run** - Labels fit all shapes, including CI/CD diamonds.
+- **not run** - Add same template twice in browser.
+- **not run** - Watcher and viewer see no Templates button.
+- **not run** - Dialog pointer movement does not publish cursors; typing does not trigger canvas shortcuts.
+- **not run** - 320px panel fit/scroll and dialog scrolling.
+
+No live projects created; no browser, two-account, server boot, blog/chat runtime or launch QA performed. No commit, push, branch or deploy.
+
+Review findings: context/specs/31-starter-templates-review.md
+
+
+
+### S30 — Launch implementation
+
+**Implementer:** Codex (2026-11-14, current user assignment) · **Reviewer:** Nemotron · **Spec:** Claude Fable 5.2 · **Baseline:** HEAD `efb06d9` (commit 70), with Approved uncommitted S29a/S29b and existing planning documents preserved.
+
+**Changed:** `src/components/Navbar.jsx` adds Collaborate immediately before Blog in both menus, moves the two 810px classes to 900px, and updates the existing comment. Blog and Chat links stay unchanged. Root `readme.md` documents the implemented workspace, routes, React Flow, real folder structure, and test commands. `server/readme.md` fills the missing tree entries, removes slice labels, and adds the single-instance subsection. Context edits reconcile checkpoint/status lines only, alongside this slice note and the user QA record.
+
+**Verified (2026-11-14):**
+
+| Command | Result |
+| --- | ---: |
+| `npm run build` | Passed: Vite 7.3.5, 4283 modules, 27.87s; existing chunk-size warning only |
+| `cd server && npm test` | 328 passed, 0 failed; duration_ms 2303.6843; exited on its own |
+| `node --test test/canvasHistory.test.mjs` | 31 passed |
+| `node --test test/canvasPreview.test.mjs` | 39 passed |
+| `node --test test/canvasShortcuts.test.mjs` | 44 passed |
+| `node --test test/cursorPresence.test.mjs` | 69 passed |
+| `node --test test/membershipUi.test.mjs` | 21 passed |
+| `node --test test/mobileA11y.test.mjs` | 13 passed |
+| `node --test test/participants.test.mjs` | 6 passed |
+| `node --test test/projectChat.test.mjs` | 14 passed |
+| `node --test test/projectChatUi.test.mjs` | 5 passed |
+| `node --test test/turnRobustness.test.mjs` | 28 passed |
+| `node --test test/turnState.test.mjs` | 10 passed |
+| `node --test test/workspaceSync.test.mjs` | 13 passed |
+| Client total (each suite in its own sequential command) | 293 passed, unchanged |
+| `git diff --check` | Passed; LF-to-CRLF notices only |
+
+Build comparison (kB, gzip in parentheses):
+
+| Chunk | S29b | S30 |
+| --- | --- | --- |
+| Entry | `index-Bs5CsaEW.js` 577.78 (181.03) | `index-B2tX_vCH.js` 578.23 (181.06) |
+| Collaborate | `Collaborate-DYHP4h8e.js` 24.06 (6.99) | `Collaborate-D4HqdPwU.js` 24.06 (7.00) |
+| WorkspacePage | `WorkspacePage-BGW9e-R9.js` 316.76 (99.54) | `WorkspacePage-CLkKaz8O.js` 316.76 (99.55) |
+
+Entry is 578,226 bytes, about 450 bytes above the S29b reported size, consistent with the two link elements. The script referenced by `dist/index.html` contains neither `@xyflow` nor `react-flow`. Collaborate/WorkspacePage sizes remain unchanged at reported precision; hash/preload references account for gzip variation.
+
+**Static checks:** parsed both readme trees against disk: all 156 root paths and 73 server paths exist, and every file under `server/src/` and `server/test/` appears in the server tree. No `S[0-9]{2}` label remains in `server/readme.md`. The navbar comparison confirms exactly two new Links immediately before Blog, two breakpoint class changes and one comment update; removing those changes recovers the original file, and the existing Blog/Chat Link blocks match exactly after newline normalization. There is no collaborate import. Checked feature claims against the overview and the shape/palette constants, turn state machine, workspace/session/share/chat stores, presence components and auth gate. All sixteen launch QA lines below are explicitly not run.
+
+**Scope:** `git diff --stat` includes the pre-existing S29a/S29b work. SHA-256 comparison of all tracked and untracked non-ignored files against the session-start snapshot confirms S30 changed only its twelve allowed files: Navbar, both readmes, AGENTS, the six context documents, HANDOFF, and the build plan. No application file under `src/collaborate/` or `server/src/`, no test, and no S29a/S29b spec/review file changed in S30. No files were added or removed.
+
+**Not run:** local navbar browser checks at 899px, 900px and 1080px. A temporary in-memory Vite navbar fixture and installed headless Chromium were attempted; Chromium timed out after 45 seconds without producing DOM or layout results. The temporary Vite server closed; no fixture or test file was added to the repo. Deployed launch QA, browser/touch/keyboard/two-account checks, `/blog` and `/chat` runtime checks, API boot/health, live MongoDB and media checks remain not run. No live data was written. The user runs the launch checklist after review and deployment.
+
+**Status:** Ready for review, uncommitted. Nothing committed, pushed, branched or deployed. Implementation review is next; launch QA is pending.
+
+**Deviation:** the root readme tree listed `.env`, which does not exist. Removed that tree entry to follow the user's explicit requirement that every tree path exist. `.env.example`, the environment-variable list, and setup instructions remain intact. Actual S30 implementer is Codex under this session's user assignment; earlier Grok assignments remain history.
+
+**Contradictions for the spec author (left unresolved as required):** `server/readme.md:292` calls room removal and Clerk-message deletion later work; `server/readme.md:324` documents immediate room revocation on project deletion, and `server/readme.md:353` documents Clerk-user project-message deletion. No behavior, payload, status, limit or example was changed to resolve these.
+
+### S30 — Launch QA
+
+Use two accounts, A (owner) and B, in separate browsers, on the deployed site. The user runs this checklist after deploying.
+
+1. **not run** — A creates a project, opens it, requests the turn, and adds 4 shapes, 3 edges, labels, and colors.
+2. **not run** — A invites B as viewer. B accepts from the dashboard and opens the project. B sees the canvas, A's cursor, and A's live drags, and can chat but can't request the turn.
+3. **not run** — A promotes B to editor. B's UI switches live, and B requests the turn and is queued.
+4. **not run** — A releases. B gets the turn with a toast and edits. A sees the edits live.
+5. **not run** — B goes idle for 2 minutes while A is queued. The turn passes to A.
+6. **not run** — A takes control while B holds the turn. B lands at the front of the queue.
+7. **not run** — B toggles offline for 10s while holding the turn and keeps it. B closes the tab, and after 20s the turn passes on.
+8. **not run** — Undo and redo a sequence, and both browsers match.
+9. **not run** — Reload both browsers. Canvas and chat history are intact.
+10. **not run** — A removes B, and B is kicked to the dashboard with a toast. A deletes the project, and the project disappears from both.
+11. **not run** — `/blog` and `/chat` still work.
+12. **not run** — Phone or 320px window: the workspace navbar shows back, name, people count, Share and Chat with nothing clipped.
+13. **not run** — Touch device: tapping a shape adds it; a node drags; a selected node shows its handles; tap-to-connect works; Delete selected removes the selection.
+14. **not run** — Keyboard: Tab reaches each shape in the panel, and Enter and Space add it.
+15. **not run** — Portfolio navbar: at 900px and 1080px wide the pill fits on one line with Collaborate in it; at 899px and below the hamburger menu shows Collaborate, Blog and Chat.
+16. **not run** — Clicking Collaborate from the portfolio opens the sign-in gate when signed out and the dashboard when signed in.
+
+Reminder: **after QA passes, update the portfolio's About text and project snippet in the admin panel** (the earlier suggestion was "Full-stack portfolio featuring a blog and real-time collaborative system design workspace").
+
+### S29b — Mobile, accessibility and UI states
+
+**Implementer:** Grok (2026-11-14) · **Reviewer:** Nemotron · **Spec:** Claude Fable 5.2 · **Baseline:** HEAD `efb06d9` (commit 70), with Approved uncommitted S29a left untouched. Nothing committed, pushed, branched, or deployed. S30 was not started.
+
+**Changed:**
+- `shapeDrag.js`: `activationOffset`, `shapeAtCenter`, `isActivationKey`.
+- `ShapePanel.jsx`: click, tap, Enter and Space add a shape at the canvas center; items are focusable buttons that stay `div draggable`; the row can scroll; a drop on the panel stops at the panel.
+- `EmptyCanvasHint.jsx` and one element in `WorkspaceCanvas.jsx`.
+- `CanvasControls.jsx`: Delete selected, only while `selectCanEdit` is true.
+- `WorkspaceNavbar.jsx` and `ParticipantStack.jsx`: below `sm`, hide the Projects word, the role, the Chat word, and avatars after the second, and show a count pill.
+- `dialogFocus.js` and `Dialog.jsx`: when a locked dialog unlocks, focus returns to the last control, then autofocus, then the first tabbable control.
+- `collaborate.css`: touch handle rules only, inside the two media queries.
+- `test/mobileA11y.test.mjs` (new, port 24929).
+
+No existing assertion was changed. No server file, rate-limit test, or S29a spec was edited.
+
+**Verified:**
+
+| Command | Result |
+| --- | ---: |
+| `node --test test/mobileA11y.test.mjs` | 13 passed |
+| `node --test test/canvasHistory.test.mjs` | 31 |
+| `node --test test/canvasPreview.test.mjs` | 39 |
+| `node --test test/canvasShortcuts.test.mjs` | 44 |
+| `node --test test/cursorPresence.test.mjs` | 69 |
+| `node --test test/membershipUi.test.mjs` | 21 |
+| `node --test test/participants.test.mjs` | 6 |
+| `node --test test/projectChat.test.mjs` | 14 |
+| `node --test test/projectChatUi.test.mjs` | 5 |
+| `node --test test/turnRobustness.test.mjs` | 28 |
+| `node --test test/turnState.test.mjs` | 10 |
+| `node --test test/workspaceSync.test.mjs` | 13 |
+| Client total | 280 passed, unchanged, plus the new suite |
+| `cd server && npm test` | 328 passed, 0 failed. duration_ms 2419.9697 |
+| `npm run build` | Passed in 8.80s, 4283 modules, Vite 7.3.5. Existing chunk-size warning only |
+| `git diff --check` | Exit 0. LF-to-CRLF notices only |
+
+Build chunks: entry `index-Bs5CsaEW.js` 577.78 kB (gzip 181.03 kB), same size as the S29a entry `index-B-dpQHOJ.js` 577.78 kB. `Collaborate-DYHP4h8e.js` 24.06 kB (gzip 6.99 kB). `WorkspacePage-BGW9e-R9.js` 316.76 kB (gzip 99.54 kB). The entry chunk did not grow.
+
+Click, key and focus behavior are not executed by `renderToStaticMarkup`. The pure helpers cover offset, center placement, activation keys and focus restore. The manual checks below were **not run**.
+
+**Label sweep** (icon-only or color-only controls opened for this slice). Each has an `aria-label` or an `sr-only` label. No missing label was found in a file outside the allowed list.
+
+- `ShapePanel.jsx:73` Add shape
+- `CanvasControls.jsx:25` Undo, `:28` Redo, `:34` Delete selected, `:50` Zoom in, `:53` Zoom out, `:56` Fit to screen
+- `ColorToolbar.jsx:37` node color
+- `WorkspaceNavbar.jsx:39` Back to projects, `:50` Share project, `:57` Chat
+- `ParticipantStack.jsx:44` person, `:84` wide overflow names, `:95` narrow count
+- `ProjectCard.jsx:18` Edit project, `:21` Delete project
+- `ProjectChatPanel.jsx:52` mute, `:60` Close chat
+- `ProjectComposer.jsx:78` Attach image or video (`sr-only` on the label)
+
+Text controls opened and left unchanged: `TurnBar.jsx:148` Request turn, `:154` Cancel request, `:160` Release, `:165` Take control; `ShareDialog.jsx:93` Confirm, `:101` Cancel, `:181` Invite, `:206` Revoke, `:232` Leave, `:240` Cancel, `:250` Leave project, `:263` Close; `ProjectDialogs.jsx:43` Cancel, `:44` Create/Save, `:71` Cancel, `:72` Delete project; `InvitationsList.jsx:39` Accept, `:50` Decline; `ProjectsPage.jsx:105` New project, `:118` Back to portfolio, `:131` Try again; `WorkspacePage.jsx:31` Back to projects, `:46` Try again; `CollaborateAuthGate.jsx:24` Continue; `ProjectComposer.jsx:66` Remove attachment, `:103` Send; `ProjectMessageList.jsx:54` Retry, `:67` Retry, `:72` Load earlier.
+
+**Not run:** every line of the manual checklist. That is the 320px navbar, mouse activation and drag, keyboard Tab/Enter/Space, touch drag/handles/connect/resize/delete, the three hint texts in a browser, focus after a failed create, and `/blog` and `/chat`. No live project was created.
+
+### S29a — Socket rate limits and the invariant audit
+
+**Implementer:** Grok (2026-11-14) · **Reviewer:** Nemotron · **Spec:** Claude Fable 5.2 · **Baseline:** HEAD `efb06d9` (commit 70). Planning documents were already dirty. Nothing committed, pushed, branched, or deployed. S29b was not started.
+
+**Changed:**
+- `server/src/lib/rateLimit.js` (new): pure `RATE_LIMITS`, `createBucket`, and `takeToken`. No imports and no `Date.now` call (the name appears only in a comment).
+- `server/src/sockets/workspace.socket.js`: default deps carry the limits and a clock; each socket lifecycle holds seven buckets; eleven registrations check `allowEvent` before the handler; refused acked events answer `Too many requests` through `replyTo` and are not logged; `disconnecting` deletes the socket index in a `finally`; the typing comment now says `onMemberChanged` updates the cached role.
+- `server/test/rateLimit.test.js` and `server/test/rateLimit.socket.test.js` (new). No existing test file was edited.
+- `server/readme.md` and `context/2-architecture.md`: the seven buckets, the failure sentence, and the implemented boundary.
+
+**Verified:**
+
+| Command | Result |
+| --- | ---: |
+| `cd server && npm test` | 328 passed, 0 failed (baseline 304 plus 24 new). duration_ms 2232.3684. Exited on its own |
+| `node --test test/canvasHistory.test.mjs` | 31 |
+| `node --test test/canvasPreview.test.mjs` | 39 |
+| `node --test test/canvasShortcuts.test.mjs` | 44 |
+| `node --test test/cursorPresence.test.mjs` | 69 |
+| `node --test test/membershipUi.test.mjs` | 21 |
+| `node --test test/participants.test.mjs` | 6 |
+| `node --test test/projectChat.test.mjs` | 14 |
+| `node --test test/projectChatUi.test.mjs` | 5 |
+| `node --test test/turnRobustness.test.mjs` | 28 |
+| `node --test test/turnState.test.mjs` | 10 |
+| `node --test test/workspaceSync.test.mjs` | 13 |
+| Client total | 280 passed, 0 failed, unchanged |
+| `npm run build` | Passed in 10.10s, 4281 modules, Vite 7.3.5. Existing chunk-size warning only |
+| `git diff --check` | Exit 0. LF-to-CRLF notices on `AGENTS.md`, `context/5-ai-workflow-rules.md`, `context/HANDOFF.md`, and `context/specs/00-build-plan.md` |
+| `node src/index.js` via `npm run dev` | `Server is up and running on PORT: 3000`. MongoDB connected to `3dfolio`. `GET /health` returned 200 `{"ok":true}`. The process was killed. Port 3000 was free afterward. No database write |
+
+Build chunks: entry `index-B-dpQHOJ.js` 577.78 kB (gzip 181.04 kB); `Collaborate-D3lM2CLX.js` 23.44 kB (gzip 6.80 kB); `WorkspacePage-DO_jLZM3.js` 313.85 kB (gzip 98.78 kB). A search of `dist/assets/*.js` for `xyflow` matched only the workspace chunk.
+
+**Deviations:**
+- `git diff --stat` also lists planning files that were already dirty and that this slice did not edit: `AGENTS.md`, `context/5-ai-workflow-rules.md`, `context/specs/00-build-plan.md`, and untracked `context/specs/29a-rate-limits-invariant-audit.md`. The files this slice added or edited are `server/src/lib/rateLimit.js`, `server/test/rateLimit.test.js`, `server/test/rateLimit.socket.test.js`, `server/src/sockets/workspace.socket.js`, `server/readme.md`, `context/2-architecture.md`, this tracker, and `context/HANDOFF.md`.
+- The in-flight join test spends the two remaining join tokens on calls with no acknowledgement function. Those calls enter `onJoin` and return before it bumps `generation`. A second valid join would supersede the stalled one under the existing join rules. The fourth call is refused, does not call `findProjectForMember`, and the stalled join still acknowledges `ok: true`.
+- Index cleanup was observed without a new production hook. `removeConnection` throws once, `disconnecting` logs that error through `safeHandler` and does not escape, and later `onMemberChanged` / `onProjectDeleted` do not call `socket.leave` or `socket.emit`. `onMemberChanged` still calls `io.to(socketId).emit` before the index lookup, and `onProjectDeleted` still emits `workspace:removed` to the project room. Those broadcasts do not consult the index.
+- The audit found no gap beyond the three items already in Q7. They are copied below and were not changed.
+
+**Not run:** browser checks of `/blog`, `/chat`, and `/collaborate`; two-account walkthrough; 320px check; live MongoDB races; live webhook. No live data was written.
+
+### S29a — Invariant audit
+
+Read after the code above was in the tree. Line numbers are from the files opened for this audit.
+
+| # | Result | Evidence |
+| --- | --- | --- |
+| 1 | Holds | Workspace handlers take the user from `readUserId` (`server/src/sockets/workspace.socket.js:110`, and the call sites at 936, 966, 1042, 1095, 1126, 1147, 1169) or from `socket.data.userId` at 634. Chat uses `socket.data.userId` (`server/src/sockets/chat.socket.js:15`). The handshake writes that field once (`server/src/lib/socket.js:44`). Project controllers use `req.user` (`server/src/controllers/project.controller.js:47`, `projectMember.controller.js:47`, `projectMessage.controller.js:76`, `server/src/middleware/projectMessage.middleware.js:10`). A search of `server/src` for `payload.userId`, `body.userId`, and `req.body.user` returned no matches. |
+| 2 | Holds | All 14 routes are in `server/src/routes/project.route.js:31-44`, behind `protectRoute` at line 27. Scoping queries and the write filters that repeat them: `listMyInvites` reads `invites.email` for `req.user.email` (`projectMember.controller.js:159`) and does not write. `acceptInvite` and `declineInvite` read through `inviteScope` (`:56` and `:188`) and write that same `$elemMatch` plus `snapshotGuard` (`:215` and `:243`). `listProjects` reads `{ owner: me }` and `{ "members.user": me }` (`project.controller.js:48` and `:53`) and does not write. `createProject` counts and creates with `owner: me` (`:75` and `:82`). `getProject` reads `findProjectForMember` (`:93`) and does not write. `updateProject` reads `findProjectForMember` (`:137`) and writes `{ _id, owner: me }` (`:148`). `deleteProject` reads `findProjectForMember` (`:162`) and deletes `{ _id, owner: me }` (`:166`). `createInvite` and `revokeInvite` read through `readProject` (`:47`) and write `{ _id, owner, snapshotGuard }` (`:112` and `:140`). `updateMemberRole` uses that read and writes `{ _id, owner, "members.user", snapshotGuard }` (`:269`). `removeMember` uses that read and writes either the owner filter or the self filter, plus `snapshotGuard` (`:310`). `listProjectMessages` and `sendProjectMessage` are preceded by `findProjectForMember` in `authorizeProjectChat` (`projectMessage.middleware.js:11`); history then filters `{ project }` (`projectMessages.js:95`), and send repeats `findProjectForMember` (`projectMessage.controller.js:78`) before `ProjectMessage.create`. `findProjectForMember` itself is the `$or` owner/member query (`projectAccess.js:60`). |
+| 3 | Holds | `canWrite` is defined at `workspace.socket.js:176`. Commit reaches it at 759. Preview reaches it at 1047. `Canvas.updateOne` has one caller, at 810. |
+| 4 | Holds | `runCommit` saves `applied.canvas.nodes` and `applied.canvas.edges` from `applyOps` (`workspace.socket.js:786` and `:814`). Under `src/collaborate/components`, `rfNodes` and `rfEdges` are read from the store (`WorkspaceCanvas.jsx:20`). The same file calls `dispatch` for a new node (`:73`). The search found no assignment to `rfNodes`, `rfEdges`, or `canvas`. |
+| 5 | Holds | The saved fields are the applied canvas (`workspace.socket.js:814`). Loads pass through `normalizeCanvas` at 221 and 263. `canvasSnapshot` copies only the stored node and edge fields (`:137`). |
+| 6 | Holds | Buckets live on the socket lifecycle (`workspace.socket.js:278`). Previews, cursors, typing, and turns are emitted and are not passed to a model (1049, 1102, 1132, 1177). Join reads the project (`:499`), the user (`:513`), and the canvas (`:252`) before it replies. Message history is a `ProjectMessage.find` after the membership check (`projectMessage.controller.js:45`). |
+| 7 | Holds | Every `socket.on` in `workspace.socket.js` (1218, 1226, 1230, 1238, 1246, 1251, 1256, 1261, 1266, 1271, 1276, 1281, 1290) and both in `chat.socket.js` (27 and 53) is wrapped in `safeHandler`. `io.on` is wrapped at `socket.js:56`. Acked handlers check `typeof ack === "function"` at `workspace.socket.js:615`, 920, and 954, and again on the refusal path at 1220, 1232, and 1240. Leave, preview, cursor, typing, turn, disconnecting, and the chat events have no acknowledgement. |
+| 8 | Holds | Outside `src/collaborate/`, the only imports from `collaborate/` are `src/pages/Collaborate.jsx:9`, `:11`, `:12`, `:13`, and `:17`. `@xyflow/react` is imported only under `src/collaborate/` (`useWorkspaceStore.js:1`, `WorkspaceCanvas.jsx:2`, `ShapePanel.jsx:2`, `ShapeNode.jsx:2`, `PresenceCursors.jsx:2`, `LinkEdge.jsx:2`, `ColorToolbar.jsx:1`, `CanvasControls.jsx:1`). Production build: entry `index-B-dpQHOJ.js` 577.78 kB (gzip 181.04 kB), `Collaborate-D3lM2CLX.js` 23.44 kB (gzip 6.80 kB), `WorkspacePage-DO_jLZM3.js` 313.85 kB (gzip 98.78 kB). A search of `dist/assets/*.js` for `xyflow` matched only `WorkspacePage-DO_jLZM3.js`. |
+| 9 | Holds | A search of `src/collaborate/` and `src/pages/Collaborate.jsx` for imports from `src/chat/` or `src/blog/` found none. `WorkspacePage.jsx:5` imports `../components/chat/ProjectChatPanel.jsx`, which is collaborate's own folder. |
+| 10 | not run | `/blog`, `/chat`, and `/collaborate` were not opened in a browser. |
+
+### S29a — Handler sweep
+
+| Event | safeHandler | Payload | Joined | Permission | Ack | Rate bucket |
+| --- | --- | --- | --- | --- | --- | --- |
+| `workspace:join` | `workspace.socket.js:1218` | `:618`, `:623`, `:627` | n/a, this is the join | `findProjectForMember` at `:499`, role at `:504` | `:615` and `:1220` | `join` at `:1219` |
+| `workspace:leave` | `:1226` | `:655` | `:667` (`activeProjectId`) | n/a, the socket can leave only its own project | n/a, no ack | n/a, never limited |
+| `canvas:commit` | `:1230` | `:922` | `acceptCanvasRequest` at `:937` | `canWrite` at `:759` | `:920` and `:1232` | `commit` at `:1231` |
+| `canvas:sync` | `:1238` | `:956` | `:967` | `can(role, "view")` at `:890` | `:954` and `:1240` | `sync` at `:1239` |
+| `canvas:preview` | `:1246` | `:1039` | `:1045` | `canWrite` at `:1047` | n/a, no ack (`:1038`) | `preview` at `:1247` |
+| `cursor:move` | `:1251` | `:1092` | `:1098` | `can(role, "chat")` at `:1087` | n/a, no ack | `cursor` at `:1252` |
+| `cursor:leave` | `:1256` | `:1144` | `:1150` | `:1087` | n/a, no ack | `cursor` at `:1257` |
+| `project:typing` | `:1261` | `:1123` | `:1129` | `:1087` | n/a, no ack | `typing` at `:1262` |
+| `turn:request` | `:1266` | `:1166` | `:1171` | member at `:1173`; `can(role, "edit")` at `:1268` | n/a, no ack (`:1163`) | `turn` at `:1267` |
+| `turn:release` | `:1271` | `:1166` | `:1171` | member at `:1173` | n/a, no ack | `turn` at `:1272` |
+| `turn:cancel` | `:1276` | `:1166` | `:1171` | member at `:1173` | n/a, no ack | `turn` at `:1277` |
+| `turn:reclaim` | `:1281` | `:1166` | `:1171` | member at `:1173`; `can(role, "reclaim")` at `:1283` | n/a, no ack | `turn` at `:1282` |
+| `disconnecting` | `:1290` | n/a, no payload | `:983` | n/a | n/a, no ack | n/a, never limited. Index delete is in `finally` at `:1293` |
+
+**Known, accepted, not changed (Q7):**
+- `server/src/index.js:52` returns `err.message` on a 500. The handler is shared with `/blog` and `/chat`, and `index.js` is protected.
+- REST has no rate limit. A member can post project messages and uploads as fast as the server answers.
+- `server/src/lib/socket.js:23` constructs Socket.io with CORS only, so the default 1 MB message size still applies to `canvas:commit`. The 50-op cap bounds what is stored, not what is parsed. Changing the size would edit `lib/socket.js`, which also serves `/chat`.
 
 ### S28 review corrections - 2026-11-13
 
@@ -1703,22 +1962,24 @@ A connection id keeps the account that authenticated it. `retryWorkspace` and a 
 
 **Final code review (Codex): Approved after second correction.** Connection ownership remains pinned across workspace retry/rebind; a fresh connection id can establish new ownership. Reader scrolling releases the stale earlier-page hold; live appends and content resizing preserve the current visible anchor. Account and mounted-hook regressions pass with existing assertions intact. Independently reran all 405 tests (221 server, 184 client), build (8.77s, 4275 modules, existing chunk warning), and diff check; all passed. Workspace: `WorkspacePage-CNgz3832.js`, 292.98 kB, gzip 92.84 kB. See `specs/24-project-chat-panel-review.md`. Browser/two-account/live-media and `/blog`/`/chat` remain unverified; API health is reported implementer evidence. The user stopped after S23/S24; both are approved/uncommitted on `43eb732`. No S25 spec or implementation was created.
 
-### S29 — Mobile and accessibility
+### S29b — Mobile, accessibility and UI states
 
-**Carry-forward from S08:** the shape panel is HTML5 drag-only. Add touch and keyboard/click alternatives in S29; no such handlers were added in S08.
+**Carry-forward from S08:** shapes were added only by mouse drag and drop. The S29b implementation note at the top of Slice Notes is the current state: click, tap, Enter and Space add a shape at the center of the visible canvas.
 
-### S29 — Hardening pass
+### S29a — Socket rate limits and the invariant audit
 
-**Carry-forward from S08:** shapes are added only by mouse drag and drop (HTML5 drag events). Touch drop and a keyboard way to add a shape are not built. S29's mobile and accessibility items should decide both.
+**Planning (Claude Fable 5.2, 2026-11-14).** S29 was split into S29a (server) and S29b (client). The spec is `specs/29a-rate-limits-invariant-audit.md`. Planning read the server handlers, controllers and routes, and reran the server suite (304 passing). The root client suites and the build were not rerun. No application or test code changed. The implementation note and the invariant audit are at the top of Slice Notes. S29a is Approved by Nemotron, uncommitted.
 
 ## Open Questions
 
+- **Q7. Three hardening items found while planning S29a and left alone.** (1) The central error handler in `server/src/index.js` returns `err.message` on a 500, which can expose a database error's text. It is shared with `/blog` and `/chat`, and `index.js` is a protected file. (2) REST has no rate limit, so a member can post project messages and uploads as fast as the server answers. (3) Socket.io's default 1 MB message size applies to `canvas:commit`; lowering it means editing `lib/socket.js`, which also serves `/chat`. *Default: accept all three for launch, since every caller is a signed-in, invited member. The user decides whether any becomes a slice.*
+
 - **Q6. Multi-select key in the S09 checklist.** S09 asks for Shift-click, but installed React Flow uses Ctrl-click on Windows / Meta-click on macOS by default; Shift is box selection. S09 also says every other canvas prop stays unchanged. Rendering and Ctrl-click multi-selection pass. Claude should correct the checklist or explicitly spec a different multiSelectionKeyCode in a later slice; S09 did not change keyboard behavior. *Resolved 2026-11-04 (Claude): keep React Flow's defaults.* The checklist was wrong. Multi-select is Ctrl-click on Windows and Cmd-click on macOS, and Shift-drag is box select. The S09 spec is corrected, and S10's multi-select drag check uses the same keys.
-- **Q1. What happens to `/chat`?** *Resolved 2026-11-02, refined 2026-11-03: scheduled for deletion.* `/chat` is generic (a thousand apps have DMs) and doesn't set this app apart. Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), then post-launch slices remove it. **One exception the user named:** if `/chat` code proves useful for the collaborate route, keep that part (S23–S24 copy and adapt its patterns per invariant 9, so this is about server pieces like presence and the media upload path). Decide what survives when the removal slices are planned. S30 adds no navbar link for it.
+- **Q1. What happens to `/chat`?** *Resolved 2026-11-02, refined 2026-11-03: scheduled for deletion.* `/chat` is generic (a thousand apps have DMs) and doesn't set this app apart. Project chat (S23–S24) becomes the only chat. `/chat` stays untouched and working through S30 (goal 6, invariant 10), then post-launch slices remove it. **One exception the user named:** if `/chat` code proves useful for the collaborate route, keep that part (S23–S24 copy and adapt its patterns per invariant 9, so this is about server pieces like presence and the media upload path). Decide what survives when the removal slices are planned. S30 adds no navbar link for it. **Reversed 2026-11-14: `/chat` stays.** The user decided removal has no benefit: it is built, and the Render backend is deployed either way. No removal slices will be written; invariant 10 stays.
 - **Q2. Which database do local test runs write to?** *Resolved 2026-11-01: the live database.* The user chose it, and `server/.env` holds the values Render uses. Slice verification must clean up its test data (projects, canvases, and later project messages) and never write `users` documents.
 - **Q3. Lane assignment.** Which agent takes server-lane vs client-lane slices, and whether slices run in parallel (separate git worktrees) or strictly in sequence. *Default: sequential, S01 → S30.*
 - **Q4. Should a `/collaborate` socket count as online in `/chat`?** *Resolved 2026-11-02: accept it.* Every authenticated socket registers chat presence, so a user with only `/collaborate` open shows online in `/chat` until `/chat` is retired (Q1). No server change. The presence note in S04's `useSessionStore.js` stays.
-- **Q5. Retire `/blog` too?** *Resolved 2026-11-03: yes, scheduled for deletion.* Same reason as `/chat`: a blog doesn't set this app apart. `/blog` keeps working, unchanged, through S30 (goal 6, invariant 10). Post-launch slices then remove the blog client (`src/blog/`, `src/pages/Blog.jsx`, its route and navbar link) and the server's post and comment routes, controllers, and models, plus their Clerk webhook cascades. The shared pieces stay because `/collaborate` uses them: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer. Invariant 9 (collaborate never imports from `src/blog/`) already keeps that removal clean. Whether to keep blog posts in the database (export first) is decided when the removal slices are planned.
+- **Q5. Retire `/blog` too?** *Resolved 2026-11-03: yes, scheduled for deletion.* Same reason as `/chat`: a blog doesn't set this app apart. `/blog` keeps working, unchanged, through S30 (goal 6, invariant 10). Post-launch slices then remove the blog client (`src/blog/`, `src/pages/Blog.jsx`, its route and navbar link) and the server's post and comment routes, controllers, and models, plus their Clerk webhook cascades. The shared pieces stay because `/collaborate` uses them: Clerk auth, `protectRoute`, `/auth/check`, the `User` model and webhook, ImageKit, and multer. Invariant 9 (collaborate never imports from `src/blog/`) already keeps that removal clean. Whether to keep blog posts in the database (export first) is decided when the removal slices are planned. **Reversed 2026-11-14: `/blog` stays**, for the same reason as Q1's reversal.
 
 ## Architecture Decisions
 
@@ -1729,9 +1990,12 @@ A connection id keeps the account that authenticated it. `retryWorkspace` and a 
 - 2026-10-31: Turns belong to a tab (`userId` + `tabId`), not a user, so a second tab is read-only and a reconnecting tab keeps its turn through the grace period.
 - 2026-10-31: Project chat uses a new `projectmessages` collection rather than extending `messages`, so 1:1 DMs are untouched whatever Q1 decides.
 - 2026-10-31: Spec files are written just in time, one per slice, from `specs/00-build-plan.md`, so each spec reflects the code as it actually is. Originally assigned to Claude; Grok later implemented several slices. For S25/S26 on 2026-11-12, the user assigned Codex to specify/review and Claude Sonnet to implement. Future assignments remain user-directed; no S27 work is started today.
+- 2026-11-14: `/blog` and `/chat` stay. The 2026-11-02 and 2026-11-03 decisions to delete them after launch are reversed: both are built and working, the Render backend is deployed regardless, and `/collaborate` shares only generic upload plumbing with `/chat`, so removal would cost work and gain nothing.
+- 2026-11-14: S29 was split into S29a (server) and S29b (client), because one slice mixing two lanes could not be verified in one session.
 
 ## Session Notes
 
+- **Latest handoff, 2026-11-14 (end of day, Claude Fable 5.2):** Today's work: the build plan's S29 was split into S29a (socket rate limits and the invariant audit; Grok) and S29b (mobile, accessibility and UI states; Grok), then S30 (launch: navbar link, readmes, QA record; Codex). Nemotron reviewed and Approved all three; Claude Fable 5.2 wrote the three specs. All three are uncommitted on `efb06d9` (commit 70). Final reviewed counts: 328 server tests, 293 client tests across twelve suites, production build passing. All 30 slices are implemented. Not run: the sixteen-item launch QA, and every browser, two-account, touch and live-database check. The user decided to keep `/blog` and `/chat` (Phase K cancelled; Q1 and Q5 reversed). One readme contradiction Codex recorded (project deletion and Clerk message cleanup described as later work) was corrected in `server/readme.md`. Next: the user commits and deploys, runs the launch QA, and the next agent starts drawDB D1 from `../3dfolio_drawdb_plan.md`. Earlier notes below are historical.
 - **Latest handoff, 2026-11-12 (final S26 review/context reconciliation):** S25/S26 are Approved by Codex and uncommitted on HEAD `9b47c77`; user handles commits. Independently verified 542 tests (283 server,259 client), build and diff check. Manual/live QA remains open, including API boot/health, real MongoDB concurrency, browser/two-account/media and /blog,/chat runtime checks. User requested stopping here and no S27 planning today. No S27 spec exists; preserve the tree and read HANDOFF.md on a user-directed resume. Final reconciliation changes documentation only. Earlier notes below are historical and superseded.
 - **Earlier implementer handoff, 2026-11-12 (S26):** S26 invitations/members API was Ready for review (Claude Sonnet), uncommitted on HEAD `9b47c77`, alongside Approved/uncommitted S25. Implementer reported 542 tests/build/diff check; final independent review above supersedes its pending-review status.
 - **Earlier handoff, 2026-11-12 (after the second correction): S25 is Ready for review again with the capture-phase cancellation fix; 492 tests, the build and the diff check passed (see the S25 second correction note); browser, two-account and API-boot checks still not run.**
@@ -1760,3 +2024,65 @@ A connection id keeps the account that authenticated it. `retryWorkspace` and a 
 - Render's free tier is kept awake by an external cron hitting `/health` every 10 minutes (see `server/readme.md`). Sockets still drop on deploys and restarts, which is what the S13 rejoin and S22 grace handling exist for.
 - `/collaborate` stays dark-launched (URL only, no navbar link) until S30.
 - Outside `/collaborate`, not fixed: `src/main.jsx` renders in `React.StrictMode`, and chat's `connectSocket` guards on `socket?.connected`. A socket that's still connecting isn't connected yet, so StrictMode's double-run effects can make two overlapping `checkAuth` calls open two sockets in dev. Production doesn't double-run effects. The S04 spec has collaborate guard on the socket's existence instead.
+
+
+### S32 ? More starter templates (Codex, 2026-11-14)
+
+**Status: Ready for review.** Reviewer unassigned; uncommitted.
+
+**Changed:** Eleven templates in two frozen groups; eight new system design diagrams with optional ordinary edge labels. Group headings use h3/Eyebrow and card names h4. Corrected the grouped map closure and spacing. Extended the existing test harness without changing its lifecycle, port or portal rewrite. Added spec fingerprints/counts, group/freeze checks, all-template structure/spacing checks, builder labels and atomic rejection checks, and grouped markup/preview checks. Updated the specified product, architecture, UI, build-plan, readme and handoff documentation. The template data module was left untouched during continuation as instructed; all eleven fingerprints pass unchanged.
+
+**Verification:** Every root suite ran via its own node --test command, sequentially: canvasTemplates 12; workspaceSync 13; turnState 10; turnRobustness 28; projectChatUi 5; projectChat 14; participants 6; mobileA11y 13; membershipUi 21; cursorPresence 69; canvasShortcuts 44; canvasPreview 39; canvasHistory 31. Other root suites total 293. Server npm test passed 328, exited on its own. Total 633 tests, zero failures. npm run build passed (4285 modules, 18.98s), with only the existing >500 kB chunk warning: entry 578.23 kB / gzip 181.05 kB, Collaborate 24.06 / 7.00 kB, WorkspacePage 340.39 / 105.17 kB (baseline 326.06 kB). Entry and Collaborate unchanged; WorkspacePage growth is the template data and specified grouping/label support.
+
+**Static checks:** git diff --check passed (existing LF-to-CRLF notices only). Reviewed git diff --stat against the initial working tree: changes for S32 are confined to its allowed files; earlier slice modifications/untracked files remain. git diff --stat omits untracked files, including the S31 template files and test. canvasTemplates.js has exactly one import, from @shared/canvasOps.js. No raw hex in TemplatesDialog.jsx. Searches of src/ and readme.md found none of the four prohibited strings. No server, dependency, store, ShapePanel, Dialog or other protected-file changes by this slice. Existing dispatch, insertion, placement and preview behavior retained.
+
+**Manual checklist (browser checks not run; no live projects created):**
+- **Not run:** The dialog shows two headings and eleven cards, and scrolls with the mouse, touch and the Tab key.
+- **Not run:** Each of the eight new templates, added to an empty canvas: lands centered, the view fits it, every node label fits inside its shape, no edge label covers a node, and the arrows read in the intended direction.
+- **Not run:** In Scaling to Millions of Users, Rate Limiter, News Feed System and Notification System, the edges that fan out from one handle are readable.
+- **Not run:** One Undo removes a whole new template, edge labels included; Redo brings it back; a watcher's canvas matches after each step.
+- **Not run:** An inserted edge label can be edited and cleared like any other.
+- **Not run:** A new template added to a canvas with content lands below it and nothing is moved.
+- **Not run:** The three S31 templates still insert as before.
+- **Not run:** At 320px wide the dialog still scrolls and the cards are readable.
+
+**Limitations/deviations:** No implementation scope deviations. Static markup does not run click, insert or fitBounds handlers. Browser, real font/layout, mouse/touch/keyboard scrolling, two-account sync and all manual items above remain unverified. Workflow server boot/health and /blog load /chat DM/typing/presence runtime checks were not run; automated suites do not establish those results. No live database writes, commit, push, branch or deployment. Stop at Ready for review; no further slice work.
+
+**Historical S33 implementation checkpoint:** Copied the sixteen-template block and seven groups from the spec; existing functions/insertion path retained. Added the stateful group filter and updated data, spacing and per-group markup tests. Verification pending.
+
+### S33 verification stopped: prohibited-string search
+
+**Resolved: spec error, corrected by the spec author on 2026-11-14.** The retired group-id search now covers only src/ and test/. The two pre-existing readme.md prose lines stay unchanged. Verification resumed; the earlier stop and output below are historical.
+
+Exact search output:
+
+```text
+readme.md:72:Personal website of Alejandro J. Foucault (ajfm88) — a 3D React portfolio front end, alongside four extra tools that share the same domain: a **GitHub Follower Tracker** (`/gft`), a **blog** (`/blog`), a **real-time chat** (`/chat`), and a **collaborative system-design workspace** (`/collaborate`). In the workspace, signed-in users create projects, invite collaborators, and design diagrams together on a shared canvas where one person edits at a time.
+readme.md:280:│   ├── collaborate/                        # Turn-based system-design workspace
+```
+
+Template suite: 14 passed, all 27 spec fingerprints unchanged. Baseline snapshot checks confirm builders/helpers/import unchanged and the first eleven templates unchanged except the eight permitted group assignments. Diff check passes with existing line-ending notices. No raw hex in TemplatesDialog. Remaining verification, final handoff and Ready for review status are incomplete. Manual checks not run; no live data created. No commit, push, branch or deployment.
+
+
+### S33 - Template library implementation (Codex, 2026-11-14)
+
+**Status: Approved** (reviewer Claude Sonnet 5.5, 2026-11-14; see `specs/33-template-library-review.md`). Implementer Codex; uncommitted. S32 dependency is Approved by Nemotron. The status below was Ready for review when the note was written.
+
+**Changed:** Copied the sixteen-template data block from the spec, bringing the library to twenty-seven templates in seven frozen groups. Reassigned only the eight specified existing group values; the first eleven retain their array order and other content. The dialog uses the specified wrapping pill buttons with aria-pressed and renders one group at a time. Its keyed scroll container starts at the top on a switch, and component state remembers the group while the workspace remains mounted. Unknown initialGroup falls back to Architecture patterns. Card markup, TemplatePreview and insertion path remain unchanged. Updated the existing test harness with the spec's full fingerprint/count/group table, all-template structural and spacing checks, and default/per-group/fallback/closed markup coverage. Fingerprint function unchanged; no expected value was adjusted. Updated all section 6 documentation, including the feature bullet, architecture checkpoint, S33 UI section, Phase L, tracker and HANDOFF.
+
+**Verification:** The prior S33 run passed canvasTemplates 14, including all 27 spec fingerprints, frozen groups/data, production applyOps/invertOps, placement, labels, atomic rejection, and all seven static group renders. Each other root suite ran unchanged in its own command, sequentially: workspaceSync 13; turnState 10; turnRobustness 28; projectChatUi 5; projectChat 14; participants 6; mobileA11y 13; membershipUi 21; cursorPresence 69; canvasShortcuts 44; canvasPreview 39; canvasHistory 31 (293 total). These passing root suites were not unnecessarily repeated during continuation; no application/test changes followed. Continuation: server npm test passed 328, zero failures/skips/cancellations, exited cleanly (11450.421 ms). Total: 635 tests passed. npm run build passed (4285 modules, 13.90s), only the existing >500 kB chunk warning. JS chunks: entry 578.23 kB / gzip 181.05 kB; Collaborate 24.06 / 7.00 kB; WorkspacePage 367.66 / 110.77 kB. Entry and Collaborate remain unchanged from S32; WorkspacePage increased from 340.39 kB by the template data and group-filter code.
+
+**Static verification:** Both corrected searches pass: no prohibited book/author/product names in src/ or readme.md; no retired system-design group id in src/ or test/. The two pre-existing readme prose lines remain unchanged. The earlier string-search conflict was a spec error, corrected by the spec author on 2026-11-14. git diff --check passes with existing LF-to-CRLF notices only. git diff --stat reviewed alongside the initial working-tree hash snapshot, including untracked files: S33 changes stay in allowed files; earlier uncommitted work preserved. The spec author's spec correction is separate. canvasTemplates.js retains its one @shared/canvasOps.js import; freezeDeep, TEMPLATE_GAP, sizeOf, boxOf, templateBounds and buildTemplateOps are unchanged from the S33 starting snapshot. No raw hex in TemplatesDialog. No server/dependency/store/ShapePanel/Dialog/EmptyCanvasHint/WorkspaceCanvas/mobileA11y change by S33. No new socket event, payload or limit.
+
+**Manual checklist:**
+
+- **Not run:** The dialog opens on Architecture patterns with seven group buttons; each button shows its group and is marked as pressed; the list starts at the top after each switch.
+- **Not run:** The group buttons work with the keyboard (Tab, Enter, Space), and focus stays inside the dialog.
+- **Not run:** Closing and reopening the dialog shows the group last chosen.
+- **Not run:** Each of the sixteen new templates, added to an empty canvas: lands centered, the view fits it, every node label fits inside its shape, no edge label covers a node, and the arrows read in the intended direction.
+- **Not run:** In Web Crawler, the edge from URL Filter back to URL Frontier runs below DNS Resolver and Content Store without touching them.
+- **Not run:** One Undo removes a whole new template; Redo brings it back; a watcher's canvas matches after each step.
+- **Not run:** The eleven earlier templates still insert as before.
+- **Not run:** At 320px wide the group buttons wrap, the dialog still scrolls and the cards are readable.
+
+**Limitations/deviations:** No implementation scope deviations. Static markup does not run group-button clicks, the insert handler or fitBounds. Browser layout, real-font label fit, touch/keyboard interaction, focus trapping, reopening state, scroll reset and two-account synchronization remain unverified. Workflow server boot/health and /blog and /chat runtime checks were not run. No live projects or other live data were created. No commit, push, branch or deployment. Stop at Ready for review.

@@ -15,7 +15,7 @@ Context: `1-project-overview.md` (what), `2-architecture.md` (how it fits, and t
 
 ## Slices
 
-**Checkpoint (2026-11-14, end of day):** S01–S28 are committed through HEAD `efb06d9` (commit 70). S29a, S29b and S30 are implemented and Approved by Nemotron, uncommitted; the user commits them. All 30 slices of the build plan are implemented. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The next work is the separate drawDB track, starting at D1 in `3dfolio_drawdb_plan.md` (beside the repo). See HANDOFF.md for evidence and limitations.
+**Checkpoint (2026-11-15):** S01–S33 are committed through HEAD `69bc3e7` (commit 71, 2026-11-15). All 30 slices of the build plan and the three template slices S31 to S33 are implemented, Approved and committed. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The current work is the separate drawDB track in `3dfolio_drawdb_plan.md` (beside the repo): D1 (app shell) is Approved by Grok on 2026-11-15, and D2 (build and deploy wiring) is next. Slice specs are in `3dfolio_drawdb_specs/` beside the repo. See HANDOFF.md for evidence and limitations.
 
 Each slice has a **lane** (`server`, `client`, `both`) and dependencies. Slices in different lanes with no dependency between them can run in parallel, one agent per lane, in separate git worktrees. Suggested parallel pairs: S04∥S02, S06∥S05, S19∥S17–S18, S23∥S21–S22, S26∥S24–S25.
 

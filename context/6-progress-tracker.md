@@ -4,19 +4,13 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
-- Phase J is implemented: S01–S28 are **Committed** through HEAD `efb06d9` (commit 70, 2026-11-14). S29a, S29b and S30 are **Approved** by Nemotron and uncommitted. All 30 slices are implemented. Launch QA (section `S30 — Launch QA`) is **not run**; the product is not recorded as launched.
-- Git reconciliation (Claude Fable 5.2, 2026-11-14): HEAD `efb06d9` (commit 70) commits Approved S27 and S28 with their planning/review documents. The working tree was clean before today's S29a planning. Notes below that call S27/S28 uncommitted are history from before that commit.
+- All `/collaborate` work is **Committed** through HEAD `69bc3e7` (commit 71, 2026-11-15): S01 to S30 and the template slices S31 to S33. Launch QA (section `S30 — Launch QA`) is **not run**; the product is not recorded as launched.
+- Git reconciliation (Claude Fable 5.2, 2026-11-15): commit 71 (`69bc3e7`) commits Approved S29a, S29b, S30, S31, S32 and S33 with the readme rewrites and the context files; the working tree was clean afterwards. Slice notes below that call these slices uncommitted are history from before that commit.
 
 ## Current Goal
 
-- State on 2026-11-14 after the S33 review (this line supersedes the older ones below): Phase L added three template slices after the 30-slice plan. S31, S32 and S33 are all **Approved** and uncommitted, with every manual browser check not run. No `/collaborate` slice is open. The user commits; the next implementation work is drawDB D1.
-
-- No `/collaborate` slice remains. The next work is the separate drawDB track, D1, from `../3dfolio_drawdb_plan.md`.
-- Added after that line was written (2026-11-14): the user asked for starter templates. S31 is specified in `specs/31-starter-templates.md` and Ready for review; implemented by Codex, reviewer unassigned. It is independent of drawDB D1, so the user chooses the order.
-- S30 (launch) is Approved by Nemotron (2026-11-14) and uncommitted: `specs/30-launch.md`, written by Claude Fable 5.2, implemented by Codex. Review: `specs/30-launch-review.md`.
-- S29b (mobile, accessibility and UI states) is Approved by Nemotron and uncommitted. Spec `specs/29b-mobile-accessibility-ui-states.md`.
-- S29a (socket rate limits and the invariant audit) is Approved by Nemotron and uncommitted. Spec `specs/29a-rate-limits-invariant-audit.md`.
-- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27 and S28. S26's manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25–S28.
+- No `/collaborate` slice is open. The current work is the separate drawDB track from `../3dfolio_drawdb_plan.md`, with slice specs in `../3dfolio_drawdb_specs/`. D1 was implemented by Codex and Approved by Grok on 2026-11-15; D2 is next. drawDB status lives in the plan, not in this file.
+- Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27, S28, and the manual checklists of S29b to S33. S26 manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25 to S33.
 
 ## Completed
 
@@ -45,23 +39,20 @@ Update this file after every meaningful implementation change. It records the **
 - S23: Project messages API and typing relay (approved by Codex after the empty-cursor correction; committed as `9b47c77`).
 - S24: Project chat panel (approved by Codex after two correction rounds; committed as `9b47c77`). Browser and live-media checks remain open.
 - S25: Undo/redo for the turn holder (Approved by Codex after second correction, 2026-11-12; committed as `c14a185`, together with S26).
-- S26: Invitations and members REST API (Approved by Codex, 2026-11-12; committed as `c14a185`, together with S25). Live socket enforcement (S27) and UI (S28) remain.
+- S26: Invitations and members REST API (Approved by Codex, 2026-11-12; committed as `c14a185`, together with S25).
+- S27 and S28: Live membership enforcement and the share dialog (Approved; committed as `efb06d9`, commit 70).
+- S29a, S29b, S30, S31, S32, S33: rate limits and audit, mobile and accessibility, launch, and the starter templates (Approved; committed as `69bc3e7`, commit 71, 2026-11-15). The launch QA and the manual browser checklists are not run.
 
 ## In Progress
 
-- Nothing is in progress. S29a, S29b, S30, S31, S32 and S33 are Approved and uncommitted.
+- Nothing on `/collaborate`. On the drawDB track, D1 is Approved and D2 is next.
 
 ## Next Up
 
-- S29a: Approved by Nemotron. The user commits.
-- S29b: Approved by Nemotron. The user commits.
-- S30: Approved by Nemotron. The user commits, deploys, and runs the launch QA (sixteen items, all not run). After QA passes, update the portfolio's About text and project snippet in the admin panel.
-- drawDB D1 (app shell and tooling) is the next implementation work, on a committed tree.
-- S31 (starter templates): `specs/31-starter-templates.md`, Approved by opencode (2026-11-14), implemented by Codex, uncommitted. Client only, no server change.
-- S33 (template library): `specs/33-template-library.md`, **Approved** by Claude Sonnet 5.5 on 2026-11-14 (`specs/33-template-library-review.md`), implemented by Codex, uncommitted. Twenty-seven templates in seven groups with a group filter. Full verification and manual gaps are in the S33 slice note.
-- S32 (eight more starter templates): `specs/32-more-starter-templates.md`, **Approved** by Nemotron (`specs/32-more-starter-templates-review.md`), implemented by Codex, uncommitted. Eleven templates in two groups with optional edge labels. Independent of drawDB D1.
+- The user deploys commit 71 and runs the launch QA (sixteen items, all not run). After QA passes, update the portfolio About text and project snippet in the admin panel.
+- drawDB D2 (build and deploy wiring), then D3 to D9, one per session. D1 is Approved (Grok, 2026-11-15).
 - `/blog` and `/chat` stay. Phase K (their removal) was cancelled by the user on 2026-11-14.
-- The shared-project walkthrough through S25–S28 needs configured test accounts/data; it has not been performed. The 320px participant-stack check with six other accounts moves to S29b. drawDB remains unstarted.
+- The shared-project walkthrough through S25 to S33 needs configured test accounts/data; it has not been performed.
 
 ## Slice Status
 
@@ -97,12 +88,12 @@ Status values: `Todo` · `In progress` · `Ready for review` · `Changes request
 | S26 | Invites + members API | server | S03 | ✓ | Committed | Claude Sonnet | `c14a185` |
 | S27 | Live membership enforcement + cleanup | server | S20, S26 | ✓ | Committed | GPT 6.1 Terra | `efb06d9` |
 | S28 | Share dialog + invitations UI | client | S24, S27 | ✓ | Committed | GPT 6.1 Terra | `efb06d9` |
-| S29a | Socket rate limits + invariant audit | server | S28 | ✓ | Approved | Grok (reviewer: Nemotron) | |
-| S29b | Mobile, accessibility + UI states | client | S28 | ✓ | Approved | Grok (reviewer: Nemotron) | |
-| S30 | Launch | client + docs | S29a, S29b | ✓ | Approved | Codex (reviewer: Nemotron) | Launch QA not run |
-| S31 | Starter templates | client | S29b | ✓ | Approved | Codex (reviewer: opencode) | |
-| S32 | More starter templates | client | S31 | ✓ | Approved | Codex (reviewer: Nemotron) | |
-| S33 | Template library: sixteen more templates + group filter | client | S32 | ✓ | Approved | Codex (reviewer: Claude Sonnet 5.5) | |
+| S29a | Socket rate limits + invariant audit | server | S28 | ✓ | Committed | Grok (reviewer: Nemotron) | `69bc3e7` |
+| S29b | Mobile, accessibility + UI states | client | S28 | ✓ | Committed | Grok (reviewer: Nemotron) | `69bc3e7` |
+| S30 | Launch | client + docs | S29a, S29b | ✓ | Committed | Codex (reviewer: Nemotron) | `69bc3e7`; launch QA not run |
+| S31 | Starter templates | client | S29b | ✓ | Committed | Codex (reviewer: opencode) | `69bc3e7` |
+| S32 | More starter templates | client | S31 | ✓ | Committed | Codex (reviewer: Nemotron) | `69bc3e7` |
+| S33 | Template library: sixteen more templates + group filter | client | S32 | ✓ | Committed | Codex (reviewer: Claude Sonnet 5.5) | `69bc3e7` |
 
 ## Slice Notes
 

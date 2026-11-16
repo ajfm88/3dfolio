@@ -81,7 +81,7 @@ In the workspace, signed-in users create projects, invite other people, and draw
 ## 🚀 <a name="live-app">Live App</a>
 
 <a href="https://3dfolio-ajfm88.vercel.app"><img src="https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge&logo=vercel"/></a>
-<a href="https://3dfolio-ajfm88-server.onrender.com"><img src="https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render"/></a>
+<a href="https://ajfm88-3dfolio-api.onrender.com"><img src="https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render"/></a>
 
 ## 🏗️ <a name="architecture">Architecture</a>
 

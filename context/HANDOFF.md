@@ -1,60 +1,36 @@
-# Session handoff — 2026-11-14 (end of day)
+# Session handoff — 2026-11-15
 
-## Start here on 2026-11-15
+## Start here
 
-1. Run `git status` and `git log -3`. The user planned to commit everything from 2026-11-14 as one commit, number 71: S29a, S29b, S30, S31, S32, S33, the readme rewrites and the context files. If the tree is not clean, tell the user before starting anything.
-2. The next implementation work is **drawDB slice D1** (app shell and tooling) from [the drawDB plan](../../3dfolio_drawdb_plan.md), which sits beside the repo. Read that file first. It has its own rules, its own status table and the list of root files a D slice may edit. Do one D slice per session and stop.
-3. D1 touches only the new `drawdb/` folder and the root `.gitignore`. It does not touch `src/`, `server/`, `test/` or the readmes. Source files are copied from `../drawdb-main/`, which is read-only.
-4. No `/collaborate` slice is open. S31, S32 and S33 (starter templates, twenty-seven in seven groups) are Approved. Their manual browser checklists, the S30 launch QA and every two-account check are **not run**; these belong to the user and do not block D1.
-5. Both readmes were rewritten for plain wording on 2026-11-14 and contain no em dashes. Keep them that way: no em dashes in `readme.md` or `server/readme.md`.
+1. Run `git status` and `git log -3`. HEAD is `69bc3e7` (commit 71, 2026-11-15), which commits everything from 2026-11-14: S29a, S29b, S30, S31, S32, S33, the readme rewrites and the context files. The tree was clean after it.
+2. The current work is the **drawDB track**. Read [the drawDB plan](../../3dfolio_drawdb_plan.md) first; slice specs and reviews are in `3dfolio_drawdb_specs/`, beside the repo. The drawDB status table is in section 8 of the plan, not in the progress tracker.
+3. **D1 (app shell and tooling) is Approved** (Claude Fable 5.2 spec, Codex implementation, [Grok review](../../3dfolio_drawdb_specs/D1-app-shell-review.md), 2026-11-15). `drawdb/` is a placeholder Vite app that builds into `dist/drawdb/`; its local differences from upstream are listed in `drawdb/UPSTREAM.md`. Not yet checked in a browser. **D2 (build and deploy wiring) is next**: it chains the drawDB build into the root build and adds the Vercel rewrite, then must be checked on a Vercel preview. `../drawdb-main/` stays read-only.
+4. No `/collaborate` slice is open. The S30 launch QA, the manual checklists of S29b to S33 and every two-account check are **not run**; they belong to the user and do not block drawDB work.
+5. Keep both readmes free of em dashes.
 
 ## Current point
 
-**S33 - Template library: Approved, uncommitted.** Implemented by Codex; Approved by Claude Sonnet 5.5 on 2026-11-14 ([review](specs/33-template-library-review.md)). It is code approval only. Twenty-seven templates in seven groups with a group filter. All 635 automated tests pass, build and static checks pass; all eight manual checks are not run. The string-search spec error was corrected by the spec author on 2026-11-14. Full slice note below and in the tracker. S32 is Approved by Nemotron and uncommitted; its older paragraph below predates that approval.
+All `/collaborate` work is **committed** through HEAD `69bc3e7` (commit 71): the 30 slices of the build plan and the three template slices S31 to S33 (twenty-seven templates in seven groups). Every slice is code-approved; none of it has been checked in a real browser with two accounts. `/collaborate` is **not recorded as launched**: the sixteen-item launch QA in [the tracker](6-progress-tracker.md) under `S30 — Launch QA` is entirely **not run**.
 
-**S32 - More starter templates: Approved, uncommitted.** Implemented by Codex; Approved by Nemotron ([review](specs/32-more-starter-templates-review.md)). S31 remains Approved. See the full S32 slice note in the tracker and the verification below.
+Never commit, push, branch or deploy. The user does.
 
-S01–S28 are **committed** through HEAD `efb06d9` (commit 70).
+## Decision: `/blog` and `/chat` stay
 
-S29a, S29b and S30 are implemented, **Approved** by Nemotron, and **uncommitted**. With them, all 30 slices of the `/collaborate` build plan are implemented. The user commits and deploys. Never commit, push, branch or deploy.
-
-`/collaborate` is **not recorded as launched**. The sixteen-item launch QA in [the tracker](6-progress-tracker.md) under `S30 — Launch QA` is entirely **not run**.
-
-**Next implementation work: drawDB slice D1**, from [the drawDB plan](../../3dfolio_drawdb_plan.md). Read that file first; it is a separate track with its own rules and status table. Start it on a committed tree (see the order below).
-
-**S31 - Starter templates is implemented and Ready for review**, uncommitted, by Codex under the user's assignment. Reviewer unassigned. Exact client template data, dialog previews and holder insertion via one additive dispatch are implemented; no server/store/Dialog/WorkspaceCanvas changes. See the S31 slice note in the tracker for per-suite counts, the single mobileA11y assertion change (line 238), chunk sizes and the full manual checklist. New suite 10, existing client suites 293, server 328 all passed; build and diff check passed. Browser/manual checklist entirely **not run**, including opening/insertion/fitBounds handlers, two-account undo/redo and 320px behavior. No live projects created. Stop here for review; user handles commits.
-
-## Decision made today: `/blog` and `/chat` stay
-
-The user cancelled Phase K (removing `/blog` and `/chat`). Both are built and working, and the Render backend is deployed either way, so removal has no benefit. Q1 and Q5 in the tracker are marked reversed, and the build plan's Phase K is marked cancelled. Invariants 9 and 10 stay in force. Do not write or start removal slices.
+The user cancelled Phase K (removing `/blog` and `/chat`) on 2026-11-14. Q1 and Q5 in the tracker are marked reversed, and the build plan's Phase K is marked cancelled. Invariants 9 and 10 stay in force. Do not write or start removal slices.
 
 `/collaborate` imports nothing from `src/chat/` or `src/blog/`. On the server it shares only generic upload plumbing with `/chat`: `uploadChatMedia` in `lib/imagekit.js` and `middleware/upload.middleware.js`.
 
-## What was done today
-
-| Slice | What | Spec | Implementer | Review |
-| --- | --- | --- | --- | --- |
-| S29a | Per-socket rate limits on eleven workspace events, two small socket fixes, the written invariant audit | [29a](specs/29a-rate-limits-invariant-audit.md) | Grok | [Approved](specs/29a-rate-limits-invariant-audit-review.md) |
-| S29b | Add a shape by click, tap or keyboard; empty canvas hint; Delete selected; touch-sized handles; 320px navbar; dialog focus restore | [29b](specs/29b-mobile-accessibility-ui-states.md) | Grok | [Approved](specs/29b-mobile-accessibility-ui-states-review.md) |
-| S30 | Collaborate link in the portfolio navbar (desktop pill breakpoint moved from 810px to 900px), root and server readmes, the launch QA record | [30](specs/30-launch.md) | Codex | [Approved](specs/30-launch-review.md) |
-
-Claude Fable 5.2 wrote the three specs. The build plan's S29 was split into S29a and S29b because it mixed a server lane with a client lane.
-
-After the S30 review, the spec author corrected one sentence in `server/readme.md` that Codex had flagged as a contradiction: it described live removal on project deletion and Clerk message cleanup as later work, and both exist since S27.
-
-## Last reviewed verification (Nemotron, S30 review)
+## Last reviewed verification (S33 review, before commit 71)
 
 - Server `npm test`: **328 passed**.
-- Twelve root client suites, one command each: canvasHistory 31, canvasPreview 39, canvasShortcuts 44, cursorPresence 69, membershipUi 21, mobileA11y 13, participants 6, projectChat 14, projectChatUi 5, turnRobustness 28, turnState 10, workspaceSync 13. **293 passed**.
-- `npm run build` passed with the existing chunk-size warning only. Entry chunk 578.23 kB (gzip 181.06 kB), about 450 bytes larger than before S30, with no React Flow text in it.
-- `git diff --check` passed.
-
-Nothing was rerun for today's end-of-day documentation update.
+- Thirteen root client suites, one command each: canvasTemplates 14, canvasHistory 31, canvasPreview 39, canvasShortcuts 44, cursorPresence 69, membershipUi 21, mobileA11y 13, participants 6, projectChat 14, projectChatUi 5, turnRobustness 28, turnState 10, workspaceSync 13. **307 passed**.
+- `npm run build` passed with the existing chunk-size warning only. Entry chunk 578.23 kB (gzip 181.05 kB).
+- Nothing was rerun for the 2026-11-15 documentation update.
 
 ## What has never been run
 
 - The launch QA: two accounts in two browsers on the deployed site, plus the phone, touch and keyboard lines.
-- Any real-browser or two-account check for S16 onward. Every approval rests on automated tests and code review.
+- Any real-browser or two-account check for S16 onward, including the S31 to S33 template checklists. Every approval rests on automated tests and code review.
 - The portfolio navbar at 899px, 900px and 1080px. The 900px breakpoint was chosen by estimate, not measured.
 - Live MongoDB concurrency, an isolated-account REST cycle, live media, the Clerk webhook, and `/blog` and `/chat` runtime checks.
 
@@ -62,11 +38,10 @@ Local configuration targets the live `3dfolio` database. Do not write live data 
 
 ## Suggested order for the user
 
-1. Commit everything from 2026-11-14 as commit 71 (the user chose one combined commit): S29a, S29b, S30, S31, S32, S33, the readmes and the context files. This makes the Collaborate navbar link public on the next deploy, before the launch QA has run.
-2. Deploy to Vercel and Render.
-3. Run the launch QA and fill in the tracker.
-4. After QA passes, update the portfolio's About text and project snippet in the admin panel.
-5. Start drawDB D1 once the tree is committed, so D1's diff contains only D1.
+1. Deploy commit 71 to Vercel and Render. Render was redeployed on 2026-11-15 as a new service, `ajfm88-3dfolio-api` (https://ajfm88-3dfolio-api.onrender.com, Oregon, root `server`, build `npm install` because lock files are gitignored, start `npm start`, health `/health`). Vercel `VITE_API_URL` and the Clerk webhook point at it. The old `3dfolio-ajfm88-server` and `threedfolio-ajfm88-api` services can be deleted. This deploy makes the Collaborate navbar link public before the launch QA has run.
+2. Run the launch QA and fill in the tracker. After it passes, update the portfolio About text and project snippet in the admin panel.
+3. Commit D1 as 72. Then drawDB at one slice per day (the user, 2026-11-15): D2 on 2026-11-16, which proves the Vercel routing before any real drawDB code lands.
+4. After the drawDB port (D9) is done: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
 
 ## Open items
 
@@ -76,10 +51,14 @@ Local configuration targets the live `3dfolio` database. Do not write live data 
 ## Notes for whoever works next
 
 - Run root suites one per command with `node --test test/<suite>.test.mjs`, because the Vite harnesses share port 24678. Server tests: `cd server && npm test`.
-- Preserve the approved behavior recorded in the final reviews of S23 to S30.
+- Preserve the approved behavior recorded in the final reviews of S23 to S33.
 - The drawDB plan lists the root files its slices may edit (`.gitignore`, `package.json`, `vercel.json`, `readme.md`). No `/collaborate` slice is in progress, so the protected-file rules in `5-ai-workflow-rules.md` do not block them.
 
-### S32 ? More starter templates (Codex, 2026-11-14)
+## History: implementer notes from 2026-11-14
+
+These notes were written before the reviews and before commit 71. Their statuses (Ready for review, uncommitted) are history: S32 and S33 are Approved and committed in `69bc3e7`.
+
+### S32 - More starter templates (Codex, 2026-11-14)
 
 **Status: Ready for review.** Reviewer unassigned; uncommitted.
 

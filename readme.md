@@ -445,6 +445,16 @@ This starts the frontend only. The 3D portfolio, `/gft` and the admin panel work
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
 
+**drawDB**
+
+`drawdb/` is a separate app with its own dependencies. It is served at `/drawdb/` and is currently a placeholder that reads `drawDB is being set up.` No navbar link is added in this step. Any future link from the portfolio must be a plain `<a href="/drawdb/">`, which loads that document with a full page navigation.
+
+`npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/drawdb/`.
+
+`npm run build` builds the portfolio, then installs the drawDB dependencies, including dev dependencies, and builds drawDB into `dist/drawdb/`. `npm run build:drawdb` builds only that app.
+
+Deploy this repository from its root. The Vercel build command stays `npm run build` (do not override it to `vite build`) and the output directory stays `dist`. Node must satisfy the engines of the installed Vite packages. Vite 7.3.5 and Vite 8.3.5 both require `^20.19.0 || >=22.12.0`. A version whose number is only higher than 20.19 is not automatically compatible. Root `npm run preview` does not apply `vercel.json`, so it does not prove that a `/drawdb/...` reload stays on the drawDB document.
+
 **Running the Tests**
 
 The server tests run with one command:

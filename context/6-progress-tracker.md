@@ -4,10 +4,14 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Phase
 
+- Small UI update (Codex, 2026-11-16): shortened the project chat placeholder from `Message the project` to `Message` to avoid wrapping in the narrow composer. Accessible label and input font size are unchanged. Diff checked; browser rendering not verified.
+
 - All `/collaborate` work is **Committed** through HEAD `69bc3e7` (commit 71, 2026-11-15): S01 to S30 and the template slices S31 to S33. Launch QA (section `S30 — Launch QA`) is **not run**; the product is not recorded as launched.
 - Git reconciliation (Claude Fable 5.2, 2026-11-15): commit 71 (`69bc3e7`) commits Approved S29a, S29b, S30, S31, S32 and S33 with the readme rewrites and the context files; the working tree was clean afterwards. Slice notes below that call these slices uncommitted are history from before that commit.
 
 ## Current Goal
+
+- Future naming direction (user, 2026-11-16): rename Collaborate to reflect system design, with `sysdesign` and `drawsysdes` as possible names. drawDB serves database design; this workspace serves system design. Final name and route remain undecided; no rename implemented.
 
 - No `/collaborate` slice is open. The current work is the separate drawDB track from `../3dfolio_drawdb_plan.md`, with slice specs in `../3dfolio_drawdb_specs/`. D1 was implemented by Codex and Approved by Grok on 2026-11-15; D2 is next. drawDB status lives in the plan, not in this file.
 - Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27, S28, and the manual checklists of S29b to S33. S26 manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25 to S33.

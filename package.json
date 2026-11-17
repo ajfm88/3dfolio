@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run build:drawdb",
+    "build:drawdb": "npm --prefix drawdb install --include=dev && npm --prefix drawdb run build",
+    "dev:drawdb": "npm --prefix drawdb run dev",
     "preview": "vite preview"
   },
   "dependencies": {

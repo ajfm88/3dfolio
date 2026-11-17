@@ -92,7 +92,7 @@ const ProjectComposer = () => {
             maxLength={PROJECT_CHAT_TEXT_MAX}
             value={text}
             disabled={isSending}
-            placeholder="Message the project"
+            placeholder="Message"
             aria-describedby={nearLimit ? "project-chat-length" : undefined}
             onChange={(event) => setComposerText(event.target.value)}
             onKeyDown={onKeyDown}

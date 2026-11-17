@@ -1,10 +1,36 @@
 # Session handoff — 2026-11-15
 
+## Current point (2026-11-16)
+
+Future naming direction (user, 2026-11-16): rename Collaborate to a name that communicates system design, such as `sysdesign` or `drawsysdes`. drawDB is for designing databases; the current Collaborate workspace is for designing systems. The final name and route are undecided. This is a planning note; no labels or routes have been renamed.
+
+User decision: do not create a separate upstream provenance document. Record local edits and omissions in the slice report.
+
+D2 local code changes are **Approved by Codex (2026-11-16); Vercel preview gate pending**. Independent build, lint, asset/upstream-copy comparisons and HTTP checks passed with no blocking findings. See [D2 review](../../3dfolio_drawdb_specs/D2-build-deploy-wiring-review.md). Browser and deployed routing remain unverified. HEAD is still `c30df64` (commit 72). D2 is uncommitted. D3 has not started. Never commit, push, branch or deploy.
+
+Changed: root `package.json` scripts (`build`, `build:drawdb`, `dev:drawdb`), `vercel.json` (`/drawdb/:path*` before the catch-all), a drawDB note in `readme.md`. Spec: [D2-build-deploy-wiring.md](../../3dfolio_drawdb_specs/D2-build-deploy-wiring.md).
+
+Local verification (Node v24.19.0, npm 11.17.0): `npm run build` exited 0. Portfolio Vite 7.3.5 transformed 4285 modules in 33.95s. Entry chunk `index-DEJvhQIh.js` is 578.23 kB, gzip 181.05 kB, the same as the D1 review. The only portfolio warning is the existing chunk-size warning. drawDB Vite 8.3.5 built 22 modules in 4.93s into `dist/drawdb/` (`index-qMCUsDJX.js` 177.83 kB, `index-Daar0k5v.css` 7.54 kB). Both `dist/index.html` and `dist/drawdb/index.html` exist. `npm --prefix drawdb run lint` exited 0. The drawDB lockfile hash is unchanged (removed 69, added 0, changed 0 versus upstream). `git diff --check` exited 0, with the existing LF-to-CRLF notice on `readme.md`.
+
+Dev server: the spec command `npm run dev:drawdb -- --port 5180 --strictPort` did not bind 5180. npm 11.17.0 swallowed `--port` and `--strictPort`, and Vite was started as `vite 5180` on port 5173. `/` and `/drawdb/` on that process returned empty 404s. A second start, `npm run dev:drawdb -- -- --port 5180 --strictPort`, reached Vite on `http://localhost:5180/drawdb/`. HTTP 200 for `/drawdb/` and `/drawdb/some/deep/path` (both 2491 bytes, same ETag, module `/drawdb/src/main.jsx`, config `/drawdb/config.js`). `/drawdb/config.js` returned `window.__DRAWDB_CONFIG__ = {};`. These are HTTP-only checks. The process was stopped. Nothing is listening on 5173 or 5180.
+
+Not run: a browser did not open the placeholder, so the centered text and the page console were not seen. Every Vercel preview item below is **Not run**. D2 is not end-to-end verified. D3 waits until that gate passes.
+
+Vercel preview gate (user runs this; do not treat local `vite preview` as proof):
+
+- Build from the `3dfolio` root with `npm run build`, output `dist`. Node must meet Vite 7.3.5 and Vite 8.3.5 engines: `^20.19.0 || >=22.12.0`.
+- Preview logs show the portfolio build, then the drawDB install and build, both succeeding, with the same portfolio entry chunk.
+- `/drawdb`, `/drawdb/`, and `/drawdb/anything/deep` each hard-reload to `drawDB is being set up.` with no application console errors.
+- `/drawdb/assets/` JavaScript and CSS load as those resources, `/drawdb/config.js` is the configuration script, and the favicon resolves. None of those return the portfolio document.
+- `/`, `/blog`, `/chat`, `/collaborate`, and `/gft` still open. Read-only. Do not create data.
+
+The older commit-71 stopping point below is historical.
+
 ## Start here
 
 1. Run `git status` and `git log -3`. HEAD is `69bc3e7` (commit 71, 2026-11-15), which commits everything from 2026-11-14: S29a, S29b, S30, S31, S32, S33, the readme rewrites and the context files. The tree was clean after it.
 2. The current work is the **drawDB track**. Read [the drawDB plan](../../3dfolio_drawdb_plan.md) first; slice specs and reviews are in `3dfolio_drawdb_specs/`, beside the repo. The drawDB status table is in section 8 of the plan, not in the progress tracker.
-3. **D1 (app shell and tooling) is Approved** (Claude Fable 5.2 spec, Codex implementation, [Grok review](../../3dfolio_drawdb_specs/D1-app-shell-review.md), 2026-11-15). `drawdb/` is a placeholder Vite app that builds into `dist/drawdb/`; its local differences from upstream are listed in `drawdb/UPSTREAM.md`. Not yet checked in a browser. **D2 (build and deploy wiring) is next**: it chains the drawDB build into the root build and adds the Vercel rewrite, then must be checked on a Vercel preview. `../drawdb-main/` stays read-only.
+3. **D1 (app shell and tooling) is Approved** (Claude Fable 5.2 spec, Codex implementation, [Grok review](../../3dfolio_drawdb_specs/D1-app-shell-review.md), 2026-11-15). `drawdb/` is a placeholder Vite app that builds into `dist/drawdb/`. Not yet checked in a browser. **D2 (build and deploy wiring) is next**: it chains the drawDB build into the root build and adds the Vercel rewrite, then must be checked on a Vercel preview. `../drawdb-main/` stays read-only.
 4. No `/collaborate` slice is open. The S30 launch QA, the manual checklists of S29b to S33 and every two-account check are **not run**; they belong to the user and do not block drawDB work.
 5. Keep both readmes free of em dashes.
 
@@ -40,7 +66,7 @@ Local configuration targets the live `3dfolio` database. Do not write live data 
 
 1. Deploy commit 71 to Vercel and Render. Render was redeployed on 2026-11-15 as a new service, `ajfm88-3dfolio-api` (https://ajfm88-3dfolio-api.onrender.com, Oregon, root `server`, build `npm install` because lock files are gitignored, start `npm start`, health `/health`). Vercel `VITE_API_URL` and the Clerk webhook point at it. The old `3dfolio-ajfm88-server` and `threedfolio-ajfm88-api` services can be deleted. This deploy makes the Collaborate navbar link public before the launch QA has run.
 2. Run the launch QA and fill in the tracker. After it passes, update the portfolio About text and project snippet in the admin panel.
-3. Commit D1 as 72. Then drawDB at one slice per day (the user, 2026-11-15): D2 on 2026-11-16, which proves the Vercel routing before any real drawDB code lands.
+3. D1 is committed as 72 (`c30df64`, 2026-11-16). Continue drawDB at one slice per day (the user, 2026-11-15): D2 on 2026-11-16, which proves the Vercel routing before any real drawDB code lands.
 4. After the drawDB port (D9) is done: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
 
 ## Open items

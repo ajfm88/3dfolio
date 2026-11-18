@@ -1,30 +1,20 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-16)
+## Current point (2026-11-17)
 
-Future naming direction (user, 2026-11-16): rename Collaborate to a name that communicates system design, such as `sysdesign` or `drawsysdes`. drawDB is for designing databases; the current Collaborate workspace is for designing systems. The final name and route are undecided. This is a planning note; no labels or routes have been renamed.
+HEAD is `c78e20f` (commit 73). D2 is committed and the user reported its Vercel preview check passed on 2026-11-17. **D3 (foundation) is Approved by Grok on 2026-11-17 and is uncommitted; it goes in commit 74.** Spec: [D3-foundation.md](../../3dfolio_drawdb_specs/D3-foundation.md) (Claude). Implementer: Codex. Review: [D3-foundation-review.md](../../3dfolio_drawdb_specs/D3-foundation-review.md) (Grok). D4 (domain logic) is next, after the user commits D3, at one slice per day.
 
-User decision: do not create a separate upstream provenance document. Record local edits and omissions in the slice report.
+Changed: 82 files copied byte for byte from upstream into `drawdb/src/config/` (1), `assets/` (20), `icons/` (8) and `i18n/` (53); `drawdb/src/main.jsx` is now upstream main.jsx without the Vercel Analytics import and element, with one `// 3dfolio:` line. `App.jsx`, dependencies and lockfiles are unchanged. `/drawdb` still shows the placeholder, now inside Semi UI LocaleProvider with i18next initialised.
 
-D2 local code changes are **Approved by Codex (2026-11-16); Vercel preview gate pending**. Independent build, lint, asset/upstream-copy comparisons and HTTP checks passed with no blocking findings. See [D2 review](../../3dfolio_drawdb_specs/D2-build-deploy-wiring-review.md). Browser and deployed routing remain unverified. HEAD is still `c30df64` (commit 72). D2 is uncommitted. D3 has not started. Never commit, push, branch or deploy.
+Verification (Codex and Grok, Node 24.19.0, npm 11.17.0): 82 of 82 copies identical; root build exit 0; drawDB 2740 modules, JS 1,283.14 kB (gzip 327.98 kB), CSS 31.07 kB, matching the planning pre-test; drawDB now prints the expected chunk-size warning; lint exit 0; no package or lockfile drift; Grok HTTP checks of `/drawdb/` and a deep path returned 200.
 
-Changed: root `package.json` scripts (`build`, `build:drawdb`, `dev:drawdb`), `vercel.json` (`/drawdb/:path*` before the catch-all), a drawDB note in `readme.md`. Spec: [D2-build-deploy-wiring.md](../../3dfolio_drawdb_specs/D2-build-deploy-wiring.md).
+Codex stopped at the spec stop condition because the portfolio entry filename changed from `index-DEJvhQIh.js` to `index-B08M9daK.js`. The size (578.23 kB, gzip 181.05 kB) did not change. Grok rebuilt commit 73 with the D3 files set aside and got the same new filename, so the change comes from the local install state, not from D3. Spec author ruling (Claude, 2026-11-17): not a D3 defect. Later specs compare the portfolio entry by size and gzip, not by filename.
 
-Local verification (Node v24.19.0, npm 11.17.0): `npm run build` exited 0. Portfolio Vite 7.3.5 transformed 4285 modules in 33.95s. Entry chunk `index-DEJvhQIh.js` is 578.23 kB, gzip 181.05 kB, the same as the D1 review. The only portfolio warning is the existing chunk-size warning. drawDB Vite 8.3.5 built 22 modules in 4.93s into `dist/drawdb/` (`index-qMCUsDJX.js` 177.83 kB, `index-Daar0k5v.css` 7.54 kB). Both `dist/index.html` and `dist/drawdb/index.html` exist. `npm --prefix drawdb run lint` exited 0. The drawDB lockfile hash is unchanged (removed 69, added 0, changed 0 versus upstream). `git diff --check` exited 0, with the existing LF-to-CRLF notice on `readme.md`.
+Not run: a browser view of the placeholder, its console and the `i18nextLng` localStorage key; the optional deployed check of `/drawdb/` and the portfolio routes. Collaborate and server suites were not run, as the spec directs. The drawDB install reports 6 npm audit findings (1 moderate, 5 high) from upstream dependencies; no audit fix was applied.
 
-Dev server: the spec command `npm run dev:drawdb -- --port 5180 --strictPort` did not bind 5180. npm 11.17.0 swallowed `--port` and `--strictPort`, and Vite was started as `vite 5180` on port 5173. `/` and `/drawdb/` on that process returned empty 404s. A second start, `npm run dev:drawdb -- -- --port 5180 --strictPort`, reached Vite on `http://localhost:5180/drawdb/`. HTTP 200 for `/drawdb/` and `/drawdb/some/deep/path` (both 2491 bytes, same ETag, module `/drawdb/src/main.jsx`, config `/drawdb/config.js`). `/drawdb/config.js` returned `window.__DRAWDB_CONFIG__ = {};`. These are HTTP-only checks. The process was stopped. Nothing is listening on 5173 or 5180.
+Future naming direction remains undecided: the user wants a system-design name for Collaborate, such as sysdesign or drawsysdes. No rename is included. Local upstream edits and omissions are recorded in slice reports; there is no separate provenance document.
 
-Not run: a browser did not open the placeholder, so the centered text and the page console were not seen. Every Vercel preview item below is **Not run**. D2 is not end-to-end verified. D3 waits until that gate passes.
-
-Vercel preview gate (user runs this; do not treat local `vite preview` as proof):
-
-- Build from the `3dfolio` root with `npm run build`, output `dist`. Node must meet Vite 7.3.5 and Vite 8.3.5 engines: `^20.19.0 || >=22.12.0`.
-- Preview logs show the portfolio build, then the drawDB install and build, both succeeding, with the same portfolio entry chunk.
-- `/drawdb`, `/drawdb/`, and `/drawdb/anything/deep` each hard-reload to `drawDB is being set up.` with no application console errors.
-- `/drawdb/assets/` JavaScript and CSS load as those resources, `/drawdb/config.js` is the configuration script, and the favicon resolves. None of those return the portfolio document.
-- `/`, `/blog`, `/chat`, `/collaborate`, and `/gft` still open. Read-only. Do not create data.
-
-The older commit-71 stopping point below is historical.
+The older stopping points below are historical.
 
 ## Start here
 

@@ -13,7 +13,7 @@ Update this file after every meaningful implementation change. It records the **
 
 - Future naming direction (user, 2026-11-16): rename Collaborate to reflect system design, with `sysdesign` and `drawsysdes` as possible names. drawDB serves database design; this workspace serves system design. Final name and route remain undecided; no rename implemented.
 
-- No `/collaborate` slice is open. The current work is the separate drawDB track from `../3dfolio_drawdb_plan.md`, with slice specs in `../3dfolio_drawdb_specs/`. D1 was implemented by Codex and Approved by Grok on 2026-11-15; D2 is next. drawDB status lives in the plan, not in this file.
+- No `/collaborate` slice is open. The current work is the separate drawDB track from `../3dfolio_drawdb_plan.md`, with slice specs in `../3dfolio_drawdb_specs/`. D1 and D2 are committed (72 and 73, D2 Vercel preview check passed per the user on 2026-11-17); D3 is Approved by Grok on 2026-11-17 and goes in commit 74; D4 is next. drawDB status lives in the plan, not in this file.
 - Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27, S28, and the manual checklists of S29b to S33. S26 manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25 to S33.
 
 ## Completed
@@ -49,12 +49,12 @@ Update this file after every meaningful implementation change. It records the **
 
 ## In Progress
 
-- Nothing on `/collaborate`. On the drawDB track, D1 is Approved and D2 is next.
+- Nothing on `/collaborate`. On the drawDB track, D3 is Approved (commit 74) and D4 is next.
 
 ## Next Up
 
 - The user deploys commit 71 and runs the launch QA (sixteen items, all not run). After QA passes, update the portfolio About text and project snippet in the admin panel.
-- drawDB D2 (build and deploy wiring), then D3 to D9, one per session. D1 is Approved (Grok, 2026-11-15).
+- drawDB D4 (domain logic), then D5 to D9, one per session. D1 to D3 are done (commits 72 to 74).
 - `/blog` and `/chat` stay. Phase K (their removal) was cancelled by the user on 2026-11-14.
 - The shared-project walkthrough through S25 to S33 needs configured test accounts/data; it has not been performed.
 

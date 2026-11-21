@@ -1,22 +1,24 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-18)
+## Current point (2026-11-19)
 
-HEAD is `c825533` (commit 74). D3 is committed. **D4 (domain logic: data, templates, utilities) is Approved by Grok on 2026-11-18 and uncommitted; the user commits it as 75.** Spec: [D4-domain-logic.md](../../3dfolio_drawdb_specs/D4-domain-logic.md) (Claude). Implementer: Codex. Review: [D4-domain-logic-review.md](../../3dfolio_drawdb_specs/D4-domain-logic-review.md) (Grok). D5 waits for the D4 commit, at one slice per day.
+HEAD is `a2ab54c` (commit 75); D4 is committed. D5 (contexts and hooks) is Approved by Grok on 2026-11-19 and uncommitted; the user commits it as 76. D6 waits for the D5 commit.
 
-Changed: 67 files copied byte for byte from upstream into `drawdb/src/data/` (7), `templates/` (6), `utils/` (53) and `api/` (1, gists.js). No existing application file was edited. The three excluded data files and api/email.js are absent. Nothing imports the new files yet; `/drawdb` still serves the placeholder. Only this section, the drawDB status sentences in AGENTS.md and the plan status/report were edited. No local edits to upstream code or separate provenance document.
+Copied 34 files byte for byte from upstream into `drawdb/src/context/` (15) and `drawdb/src/hooks/` (19). No existing source files were edited. Documentation status lines were refreshed.
 
-Verification (Codex, Node v24.19.0, npm 11.17.0): 67 of 67 SHA256-identical copies, exact folder counts, no extra or missing file; D3 folders and main.jsx, App.jsx and index.css unchanged against HEAD. Root `npm run build` exit 0: portfolio 4285 modules, 42.45s, entry 578.23 kB (gzip 181.05 kB), unchanged by size and gzip. drawDB 2740 modules, 537ms, JS 1283.14 kB (gzip 327.98 kB), unchanged from D3; CSS 32.19 kB (gzip 7.40 kB), expected growth from Tailwind scanning the newly copied source. Existing chunk-size warnings, five upstream MODULE_LEVEL_DIRECTIVE warnings and the lottie-web EVAL warning remain. No package or lockfile drift. The build install reported one moderate audit finding and two pending allow-scripts notices; no audit fix or script approval.
+Verification: all 34 SHA256 hashes match, with no missing or extra files; D3 and D4 files and entry files are unchanged. Root build and drawDB lint passed on Node v24.19.0 and npm 11.17.0. Portfolio entry 578.23 kB, gzip 181.05 kB; drawDB 2740 modules, JS 1283.14 kB, gzip 327.98 kB, CSS 32.19 kB, gzip 7.40 kB. Lockfiles and packages unchanged. Built HTML and local assets verified; HTTP-only dev checks passed and server stopped. Scope and diff checks passed. See the D5 plan note for commands and details.
 
-Generated HTML documents and local drawDB asset URLs checked, exit 0. `npm --prefix 'drawdb' run lint` exit 0. Dev HTTP-only checks returned 200 for `/drawdb/`, `/drawdb/some/deep/path` and `/drawdb/src/App.jsx`, with the placeholder text in the served module. Server stopped with Ctrl+C (process exit 1); no listener remains on 5180. Scope checks confirm only AGENTS.md and this handoff modified plus 67 new source files in four folders; node_modules and dist remain ignored. `git diff --check` exit 0, existing LF-to-CRLF notices only. Detailed commands and results are in the plan D4 implementation note.
+Not run: browser, browser console, localStorage runtime, deployed or Vercel checks, existing-route runtime checks, Collaborate and server suites. No live data writes, commit, push, branch or deployment. D6 not started. No spec deviations.
 
-Not run: browser rendering, browser console, i18nextLng localStorage, deployed/Vercel and existing-route runtime checks. Collaborate and server suites deliberately not run as specified; no live data writes. D4 has no browser or Vercel gate and requires no user check after commit. No commit, push, branch or deployment. D5 not started. No spec deviations.
+### Next session (2026-11-20 or later)
 
-Future naming direction remains undecided: the user wants a system-design name for Collaborate, such as sysdesign or drawsysdes. No rename is included.
+1. Run `git status` and `git log -3`. If HEAD is still `a2ab54c` and the D5 files are uncommitted, the user has not committed 76 yet: stop and tell them. The approved message is at the end of `../3dfolio_drawdb_specs/D5-contexts-hooks-review.md`. After the commit, update the D5 row in plan section 8 and the drawDB status sentences here, in `AGENTS.md` and in the checkpoint paragraphs of `context/1`, `2` and `5` to Committed.
+2. D6 (templates gallery) is next and has no spec yet. Claude writes it in `../3dfolio_drawdb_specs/D6-templates-gallery.md`, Codex implements, Grok reviews. Read the D6 planning notes at the end of plan section 8 first.
+3. D6 is the first slice with a visible screen, so its spec needs a browser check at `/drawdb/templates` (local, and on a Vercel preview after the commit), not only HTTP checks.
 
-The older stopping points below are historical.
+The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 
-## Start here
+## Start here (historical, 2026-11-15)
 
 1. Run `git status` and `git log -3`. HEAD is `69bc3e7` (commit 71, 2026-11-15), which commits everything from 2026-11-14: S29a, S29b, S30, S31, S32, S33, the readme rewrites and the context files. The tree was clean after it.
 2. The current work is the **drawDB track**. Read [the drawDB plan](../../3dfolio_drawdb_plan.md) first; slice specs and reviews are in `3dfolio_drawdb_specs/`, beside the repo. The drawDB status table is in section 8 of the plan, not in the progress tracker.

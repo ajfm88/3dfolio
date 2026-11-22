@@ -1,20 +1,18 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-19)
+## Current point (2026-11-20)
 
-HEAD is `a2ab54c` (commit 75); D4 is committed. D5 (contexts and hooks) is Approved by Grok on 2026-11-19 and uncommitted; the user commits it as 76. D6 waits for the D5 commit.
+HEAD is `978b101` (commit 76). D1 to D5 are committed. D6 (templates gallery) is Approved by Grok on 2026-11-20 and uncommitted for commit 77.
 
-Copied 34 files byte for byte from upstream into `drawdb/src/context/` (15) and `drawdb/src/hooks/` (19). No existing source files were edited. Documentation status lines were refreshed.
+D6 copies `Thumbnail.jsx`, `Templates.jsx` and `NotFound.jsx`. The one local edit in `Templates.jsx` adds the `/drawdb` prefix to the fork URL. The temporary `App.jsx` now routes `/templates` to the gallery and unknown paths to NotFound, with the placeholder at the root.
 
-Verification: all 34 SHA256 hashes match, with no missing or extra files; D3 and D4 files and entry files are unchanged. Root build and drawDB lint passed on Node v24.19.0 and npm 11.17.0. Portfolio entry 578.23 kB, gzip 181.05 kB; drawDB 2740 modules, JS 1283.14 kB, gzip 327.98 kB, CSS 32.19 kB, gzip 7.40 kB. Lockfiles and packages unchanged. Built HTML and local assets verified; HTTP-only dev checks passed and server stopped. Scope and diff checks passed. See the D5 plan note for commands and details.
+The root build and drawDB lint passed. The portfolio entry remains 578.23 kB (gzip 181.05 kB). drawDB builds 2781 modules, with JS 1,602.87 kB (gzip 412.26 kB) and CSS 174.69 kB (gzip 23.77 kB). The dependency files have their baseline hashes.
 
-Not run: browser, browser console, localStorage runtime, deployed or Vercel checks, existing-route runtime checks, Collaborate and server suites. No live data writes, commit, push, branch or deployment. D6 not started. No spec deviations.
+Local Chrome verified the gallery and six SVG thumbnails, the empty Your templates tab, the new fork tab at drawDB NotFound, the logo and root placeholder, deep-path NotFound, and the six IndexedDB template rows and light settings. The logo lands at `/drawdb` without a trailing slash. Direct navigation to `/drawdb/` also renders the placeholder. The console showed the two expected Semi UI `defaultProps` warnings and no drawDB errors.
 
-### Next session (2026-11-20 or later)
+### Next session
 
-1. Run `git status` and `git log -3`. If HEAD is still `a2ab54c` and the D5 files are uncommitted, the user has not committed 76 yet: stop and tell them. The approved message is at the end of `../3dfolio_drawdb_specs/D5-contexts-hooks-review.md`. After the commit, update the D5 row in plan section 8 and the drawDB status sentences here, in `AGENTS.md` and in the checkpoint paragraphs of `context/1`, `2` and `5` to Committed.
-2. D6 (templates gallery) is next and has no spec yet. Claude writes it in `../3dfolio_drawdb_specs/D6-templates-gallery.md`, Codex implements, Grok reviews. Read the D6 planning notes at the end of plan section 8 first.
-3. D6 is the first slice with a visible screen, so its spec needs a browser check at `/drawdb/templates` (local, and on a Vercel preview after the commit), not only HTTP checks.
+After the commit, the user checks the gallery and deep reload, fork, root and NotFound routes, `/`, `/blog` and `/collaborate`, and the gallery console on a Vercel preview. These deployed checks are pending. D7 waits for the commit and the preview check.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 

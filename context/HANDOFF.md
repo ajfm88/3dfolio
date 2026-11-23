@@ -1,18 +1,21 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-20)
+## Current point (2026-11-21)
 
-HEAD is `978b101` (commit 76). D1 to D5 are committed. D6 (templates gallery) is Approved by Grok on 2026-11-20 and uncommitted for commit 77.
+HEAD is `36c1319` (commit 77). D1 to D6 are committed. The D6 Vercel preview check passed (user, 2026-11-21). D7 (editor building blocks and side panel) is **Approved** by Grok on 2026-11-21 and uncommitted for commit 78.
 
-D6 copies `Thumbnail.jsx`, `Templates.jsx` and `NotFound.jsx`. The one local edit in `Templates.jsx` adds the `/drawdb` prefix to the fork URL. The temporary `App.jsx` now routes `/templates` to the gallery and unknown paths to NotFound, with the placeholder at the root.
+D7 copies 41 upstream files byte for byte into `drawdb/src/components/`. The copies cover `SortableList/`, `CodeEditor/`, `FloatingControls.jsx` and `EditorSidePanel/`. There are no local edits or new routes.
 
-The root build and drawDB lint passed. The portfolio entry remains 578.23 kB (gzip 181.05 kB). drawDB builds 2781 modules, with JS 1,602.87 kB (gzip 412.26 kB) and CSS 174.69 kB (gzip 23.77 kB). The dependency files have their baseline hashes.
+The root build and drawDB lint passed. The portfolio entry stays at 578.23 kB (gzip 181.05 kB). drawDB stays at 2781 modules and 1,602.87 kB of JS (gzip 412.26 kB). CSS grew from 174.69 kB (gzip 23.77 kB) to 181.83 kB (gzip 25.10 kB) because Tailwind scans the class names in the copied files. The package manifests and drawDB lockfile match their pre-build hashes.
 
-Local Chrome verified the gallery and six SVG thumbnails, the empty Your templates tab, the new fork tab at drawDB NotFound, the logo and root placeholder, deep-path NotFound, and the six IndexedDB template rows and light settings. The logo lands at `/drawdb` without a trailing slash. Direct navigation to `/drawdb/` also renders the placeholder. The console showed the two expected Semi UI `defaultProps` warnings and no drawDB errors.
+Local HTTP checks returned 200 for `/drawdb/`, `/drawdb/templates` and `/drawdb/nope/deep`. Port 5180 is clear. Browser: not run (not required for D7).
 
 ### Next session
 
-After the commit, the user checks the gallery and deep reload, fork, root and NotFound routes, `/`, `/blog` and `/collaborate`, and the gallery console on a Vercel preview. These deployed checks are pending. D7 waits for the commit and the preview check.
+1. The user commits D7 as 78 with the draft in `../3dfolio_drawdb_plan.md` (end of section 8, the D7 implementation note). Grok Approved D7 on 2026-11-21 (`../3dfolio_drawdb_specs/D7-editor-side-panel-review.md`).
+2. Next slice: **D8 (editor canvas)**, earliest 2026-11-22 (one D slice per day). No spec yet. The planning agent reads the D8 planning notes at the end of the plan, runs the scratch pre-test they describe, and writes `../3dfolio_drawdb_specs/D8-editor-canvas.md` plus a Codex implementer prompt, using `D7-editor-side-panel.md` as the template.
+3. D8 copies the seven files of `components/EditorCanvas/` with no local edits. They stay unrouted until D9, so drawDB modules (2781) and JS (1,602.87 kB) should not change. D8 has no browser or Vercel gate. Its commit is 79.
+4. After D8, D9 routes the editor and needs the full browser and Vercel checklist in plan section 7.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 

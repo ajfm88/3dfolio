@@ -1,0 +1,213 @@
+import { memo, useMemo, useState } from "react";
+import { Tabs, TabPane } from "@douyinfe/semi-ui";
+import { IconCode, IconList } from "@douyinfe/semi-icons";
+import { IconTable, IconRelationship } from "../../icons";
+import { DB, Tab } from "../../data/constants";
+import {
+  useLayout,
+  useSelect,
+  useDiagram,
+  useAreas,
+  useNotes,
+  useEnums,
+  useTypes,
+  useSettings,
+  useViews,
+} from "../../hooks";
+import { useTranslation } from "react-i18next";
+import RelationshipsTab from "./RelationshipsTab/RelationshipsTab";
+import TypesTab from "./TypesTab/TypesTab";
+import Issues from "./Issues";
+import AreasTab from "./AreasTab/AreasTab";
+import NotesTab from "./NotesTab/NotesTab";
+import TablesTab from "./TablesTab/TablesTab";
+import ViewsTab from "./ViewsTab/ViewsTab";
+import { databases } from "../../data/databases";
+import EnumsTab from "./EnumsTab/EnumsTab";
+import { isRtl } from "../../i18n/utils/rtl";
+import i18n from "../../i18n/i18n";
+import DBMLEditor from "./DBMLEditor";
+import SqlHeaderTab from "./SqlHeaderTab";
+
+export default memo(function SidePanel({ width, resize, setResize }) {
+  const { layout, setLayout } = useLayout();
+  const { settings } = useSettings();
+  const { selectedElement, setSelectedElement } = useSelect();
+  const { database, tablesCount, relationshipsCount } = useDiagram();
+  const { areasCount } = useAreas();
+  const { notesCount } = useNotes();
+  const { typesCount } = useTypes();
+  const { enumsCount } = useEnums();
+  const { viewsCount } = useViews();
+  const { t } = useTranslation();
+  const [dbmlProblems, setDbmlProblems] = useState([]);
+
+  const tabList = useMemo(() => {
+    const tabs = [
+      {
+        tab: `${t("tables")} (${tablesCount})`,
+        itemKey: Tab.TABLES,
+        component: <TablesTab />,
+      },
+      {
+        tab: `${t("views")} (${viewsCount})`,
+        itemKey: Tab.VIEWS,
+        component: <ViewsTab />,
+      },
+      {
+        tab: `${t("relationships")} (${relationshipsCount})`,
+        itemKey: Tab.RELATIONSHIPS,
+        component: <RelationshipsTab />,
+      },
+      {
+        tab: `${t("subject_areas")} (${areasCount})`,
+        itemKey: Tab.AREAS,
+        component: <AreasTab />,
+      },
+      {
+        tab: `${t("notes")} (${notesCount})`,
+        itemKey: Tab.NOTES,
+        component: <NotesTab />,
+      },
+    ];
+
+    if (databases[database].hasTypes) {
+      tabs.push({
+        tab: `${t("types")} (${typesCount})`,
+        itemKey: Tab.TYPES,
+        component: <TypesTab />,
+      });
+    }
+
+    if (databases[database].hasEnums) {
+      tabs.push({
+        tab: `${t("enums")} (${enumsCount})`,
+        itemKey: Tab.ENUMS,
+        component: <EnumsTab />,
+      });
+    }
+
+    if (database !== DB.GENERIC) {
+      tabs.push({
+        tab: t("sql_header"),
+        itemKey: Tab.SQL_HEADER,
+        component: <SqlHeaderTab />,
+      });
+    }
+
+    return isRtl(i18n.language) ? tabs.reverse() : tabs;
+  }, [
+    t,
+    database,
+    tablesCount,
+    viewsCount,
+    relationshipsCount,
+    areasCount,
+    typesCount,
+    enumsCount,
+    notesCount,
+  ]);
+
+  const fillHeight = selectedElement.currentTab === Tab.SQL_HEADER;
+
+  const setDbmlEditor = (value) => {
+    setLayout((prev) => ({ ...prev, dbmlEditor: value }));
+  };
+
+  return (
+    <div className="flex h-full">
+      <div
+        className={`flex flex-col h-full relative ${layout.dbmlEditor ? "" : "pt-2"}`}
+        style={{ width: `${width}px` }}
+      >
+        <div className="h-full flex-1 overflow-y-auto">
+          {layout.dbmlEditor ? (
+            <DBMLEditor onProblemsChange={setDbmlProblems} />
+          ) : (
+            <Tabs
+              type="card"
+              activeKey={selectedElement.currentTab}
+              lazyRender
+              keepDOM={false}
+              onChange={(key) =>
+                setSelectedElement((prev) => ({ ...prev, currentTab: key }))
+              }
+              collapsible
+              tabBarStyle={{ direction: "ltr" }}
+              className={fillHeight ? "h-full flex flex-col" : ""}
+              contentStyle={fillHeight ? { flex: 1, minHeight: 0 } : undefined}
+            >
+              {tabList.length &&
+                tabList.map((tab) => (
+                  <TabPane
+                    tab={tab.tab}
+                    itemKey={tab.itemKey}
+                    key={tab.itemKey}
+                    className={fillHeight ? "h-full *:h-full" : ""}
+                  >
+                    <div className={fillHeight ? "p-2 h-full" : "p-2"}>
+                      {tab.component}
+                    </div>
+                  </TabPane>
+                ))}
+            </Tabs>
+          )}
+        </div>
+        <div className="flex items-center justify-between px-3 py-1 border-t border-color">
+          <div className="flex items-center gap-3 text-xs text-color ms-2 opacity-60">
+            <div className="flex items-center gap-1.5" title={t("tables")}>
+              <IconTable />
+              <span>{tablesCount}</span>
+            </div>
+            <div
+              className="flex items-center gap-1.5"
+              title={t("relationships")}
+            >
+              <IconRelationship />
+              <span>{relationshipsCount}</span>
+            </div>
+          </div>
+          <div className="segmented-bg inline-flex items-center p-0.5 rounded-sm text-xs">
+            <button
+              className={`segmented-item flex items-center gap-1.5 px-2 py-0.5 rounded-sm transition-all ${
+                !layout.dbmlEditor
+                  ? "segmented-item-active font-medium shadow-sm"
+                  : "opacity-60 hover:opacity-100"
+              }`}
+              onClick={() => setDbmlEditor(false)}
+            >
+              <IconList size="small" />
+              {t("structure")}
+            </button>
+            <button
+              className={`segmented-item flex items-center gap-1 px-2 py-0.5 rounded-sm transition-all ${
+                layout.dbmlEditor
+                  ? "segmented-item-active font-medium shadow-sm"
+                  : "opacity-60 hover:opacity-100"
+              }`}
+              onClick={() => setDbmlEditor(true)}
+            >
+              <IconCode size="small" />
+              {t("code")}
+            </button>
+          </div>
+        </div>
+        {layout.issues && (
+          <div className="mt-auto border-t-2 border-color shadow-inner">
+            <Issues dbmlProblems={layout.dbmlEditor ? dbmlProblems : []} />
+          </div>
+        )}
+      </div>
+      <div
+        className={`group relative h-full w-0.5 cursor-col-resize flex justify-center ${settings.mode === "dark" ? "bg-zinc-800" : "bg-zinc-100"}`}
+        onPointerDown={(e) => e.isPrimary && setResize(true)}
+      >
+        <div
+          className={`h-full transition-all w-full ${
+            resize ? "bg-blue-500" : "group-hover:bg-blue-500"
+          }`}
+        />
+      </div>
+    </div>
+  );
+});

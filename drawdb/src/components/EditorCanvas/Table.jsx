@@ -1,0 +1,679 @@
+import { memo, useContext, useMemo, useState } from "react";
+import {
+  Action,
+  Tab,
+  ObjectType,
+  tableHeaderHeight,
+  tableColorStripHeight,
+} from "../../data/constants";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconMore,
+  IconMinus,
+  IconDeleteStroked,
+  IconEditStroked,
+  IconCopyStroked,
+  IconKeyStroked,
+  IconLock,
+  IconUnlock,
+} from "@douyinfe/semi-icons";
+import { nanoid } from "nanoid";
+import {
+  Popover,
+  Tag,
+  Button,
+  ButtonGroup,
+  SideSheet,
+  Divider,
+} from "@douyinfe/semi-ui";
+import { useLayout, useSettings, useDiagram, useSelect } from "../../hooks";
+import { DiagramActionsContext } from "../../context/DiagramContext";
+import { UndoRedoActionsContext } from "../../context/UndoRedoContext";
+import { SelectActionsContext } from "../../context/SelectContext";
+import TableInfo from "../EditorSidePanel/TablesTab/TableInfo";
+import { useTranslation } from "react-i18next";
+import { resolveType } from "../../utils/customTypes";
+import { isRtl } from "../../i18n/utils/rtl";
+import i18n from "../../i18n/i18n";
+import {
+  getCommentHeight,
+  getFieldOffsetY,
+  getTableHeight,
+  getTableWidth,
+  getVisibleFieldEntries,
+  getRelationshipFields,
+} from "../../utils/utils";
+import ResizeHandles from "./ResizeHandles";
+
+const shadowInset = 12;
+
+export default memo(function Table({
+  tableData,
+  isSelected,
+  database,
+  relatedFieldKeys,
+  onPointerDown,
+  setHoveredTable,
+  handleGripField,
+  setLinkingLine,
+}) {
+  const [hoveredField, setHoveredField] = useState(null);
+  const [hovered, setHovered] = useState(false);
+  const [resizeEngaged, setResizeEngaged] = useState(false);
+  const { layout } = useLayout();
+  const { addTable, deleteTable, deleteField, updateTable } = useContext(
+    DiagramActionsContext,
+  );
+  const { setUndoStack, setRedoStack } = useContext(UndoRedoActionsContext);
+  const { settings } = useSettings();
+  const { t } = useTranslation();
+  const { setSelectedElement, setBulkSelectedElements } =
+    useContext(SelectActionsContext);
+
+  const borderColor = useMemo(
+    () => (settings.mode === "light" ? "border-zinc-300" : "border-zinc-600"),
+    [settings.mode],
+  );
+
+  const width = getTableWidth(tableData);
+
+  const height = useMemo(
+    () => getTableHeight(tableData, settings.showComments, relatedFieldKeys),
+    [tableData, settings.showComments, relatedFieldKeys],
+  );
+
+  const visibleFieldEntries = useMemo(
+    () => getVisibleFieldEntries(tableData, relatedFieldKeys),
+    [tableData, relatedFieldKeys],
+  );
+
+  const visibleFields = useMemo(
+    () => visibleFieldEntries.map(({ field }) => field),
+    [visibleFieldEntries],
+  );
+
+  const toggleTableCollapse = (e) => {
+    e.stopPropagation();
+    if (layout.readOnly) return;
+
+    const collapsed = !tableData.collapsed;
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.TABLE,
+        component: "self",
+        tid: tableData.id,
+        undo: { collapsed: tableData.collapsed },
+        redo: { collapsed },
+        message: t("edit_table", {
+          tableName: tableData.name,
+          extra: "[collapse fields]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+    updateTable(tableData.id, { collapsed });
+  };
+
+  const lockUnlockTable = (e) => {
+    const locking = !tableData.locked;
+    updateTable(tableData.id, { locked: locking });
+
+    const lockTable = () => {
+      setSelectedElement((prev) => ({
+        ...prev,
+        element: ObjectType.NONE,
+        id: -1,
+        open: false,
+      }));
+      setBulkSelectedElements((prev) =>
+        prev.filter(
+          (el) => el.id !== tableData.id || el.type !== ObjectType.TABLE,
+        ),
+      );
+    };
+
+    const unlockTable = () => {
+      const elementInBulk = {
+        id: tableData.id,
+        type: ObjectType.TABLE,
+        initialCoords: { x: tableData.x, y: tableData.y },
+        currentCoords: { x: tableData.x, y: tableData.y },
+      };
+      if (e.ctrlKey || e.metaKey) {
+        setBulkSelectedElements((prev) => [...prev, elementInBulk]);
+      } else {
+        setBulkSelectedElements([elementInBulk]);
+      }
+      setSelectedElement((prev) => ({
+        ...prev,
+        element: ObjectType.TABLE,
+        id: tableData.id,
+        open: false,
+      }));
+    };
+
+    if (locking) {
+      lockTable();
+    } else {
+      unlockTable();
+    }
+  };
+
+  const duplicateTable = () => {
+    if (layout.readOnly) return;
+    const duplicated = {
+      ...tableData,
+      id: nanoid(),
+      name: `${tableData.name}_copy`,
+      x: tableData.x + 24,
+      y: tableData.y + 24,
+      fields: tableData.fields.map((f) => ({ ...f, id: nanoid() })),
+      indices: tableData.indices.map((idx) => ({ ...idx, id: nanoid() })),
+    };
+    addTable({ table: duplicated });
+  };
+
+  const openEditor = () => {
+    setSelectedElement((prev) => ({
+      ...prev,
+      ...(layout.sidebar && { currentTab: Tab.TABLES }),
+      element: ObjectType.TABLE,
+      id: tableData.id,
+      open: true,
+    }));
+    if (layout.sidebar) {
+      document
+        .getElementById(`scroll_table_${tableData.id}`)
+        ?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const resizeTable = ({ width: nextWidth, x: nextX }) => {
+    updateTable(
+      tableData.id,
+      nextX === undefined
+        ? { width: nextWidth }
+        : { width: nextWidth, x: nextX },
+    );
+    if (nextX === undefined) return;
+    setBulkSelectedElements((prev) =>
+      prev.map((el) =>
+        el.type === ObjectType.TABLE && el.id === tableData.id
+          ? {
+              ...el,
+              initialCoords: { ...el.initialCoords, x: nextX },
+              currentCoords: { ...el.currentCoords, x: nextX },
+            }
+          : el,
+      ),
+    );
+  };
+
+  const commitResize = (initial, final) => {
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        action: Action.EDIT,
+        element: ObjectType.TABLE,
+        component: "self",
+        tid: tableData.id,
+        undo: initial,
+        redo: final,
+        message: t("edit_table", {
+          tableName: tableData.name,
+          extra: "[width]",
+        }),
+      },
+    ]);
+    setRedoStack([]);
+  };
+
+  if (tableData.hidden) return null;
+
+  return (
+    <>
+      <foreignObject
+        key={tableData.id}
+        x={tableData.x - shadowInset}
+        y={tableData.y - shadowInset}
+        width={width + shadowInset * 2}
+        height={height + shadowInset * 2}
+        className="group"
+        onPointerDown={() => onPointerDown(tableData, ObjectType.TABLE)}
+        onPointerEnter={(e) => e.isPrimary && setHovered(true)}
+        onPointerLeave={(e) => e.isPrimary && setHovered(false)}
+      >
+        <div className="pointer-events-none" style={{ padding: shadowInset }}>
+          <div
+            onDoubleClick={openEditor}
+            className={`pointer-events-auto cursor-move shadow-[0_4px_4px_rgb(0_0_0/0.15)] border-2 hover:border-dashed hover:border-blue-500
+               select-none rounded-lg w-full ${
+                 settings.mode === "light"
+                   ? "bg-zinc-100 text-zinc-800"
+                   : "bg-zinc-800 text-zinc-200"
+               } ${
+                 resizeEngaged
+                   ? "border-dashed border-blue-500"
+                   : isSelected
+                     ? "border-solid border-blue-500"
+                     : borderColor
+               }`}
+            style={{ direction: "ltr" }}
+          >
+            <div
+              className="h-[10px] w-full rounded-t-md"
+              style={{ backgroundColor: tableData.color }}
+            />
+            <div
+              className={`${
+                visibleFieldEntries.length === 0
+                  ? "rounded-b-md"
+                  : "border-b border-gray-400"
+              } ${
+                settings.mode === "light" ? "bg-zinc-100" : "bg-zinc-900"
+              } ${tableData.comment && settings.showComments ? "pb-3" : ""}`}
+            >
+              <div
+                className={`overflow-hidden font-bold h-[40px] flex justify-between items-center gap-2`}
+              >
+                <div className="px-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
+                  {tableData.name}
+                </div>
+                <div className="hidden group-hover:flex items-center shrink-0 pe-2">
+                  <ButtonGroup
+                    type="tertiary"
+                    size="small"
+                    aria-label={t("table_actions")}
+                  >
+                    <Button
+                      size="small"
+                      type="tertiary"
+                      title={
+                        tableData.locked ? t("unlock_table") : t("lock_table")
+                      }
+                      icon={
+                        tableData.locked ? (
+                          <IconLock size="small" />
+                        ) : (
+                          <IconUnlock size="small" />
+                        )
+                      }
+                      disabled={layout.readOnly}
+                      onClick={lockUnlockTable}
+                    />
+                    <Button
+                      size="small"
+                      type="tertiary"
+                      icon={
+                        tableData.collapsed ? (
+                          <IconChevronDown size="small" />
+                        ) : (
+                          <IconChevronUp size="small" />
+                        )
+                      }
+                      disabled={layout.readOnly}
+                      aria-label={
+                        tableData.collapsed
+                          ? t("expand_unlinked_columns")
+                          : t("collapse_unlinked_columns")
+                      }
+                      title={
+                        tableData.collapsed
+                          ? t("expand_unlinked_columns")
+                          : t("collapse_unlinked_columns")
+                      }
+                      onClick={toggleTableCollapse}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                    <Popover
+                      key={tableData.id}
+                      content={
+                        <div className="popover-theme flex flex-col py-1 min-w-[160px]">
+                          <Button
+                            icon={<IconEditStroked />}
+                            type="tertiary"
+                            theme="borderless"
+                            block
+                            style={{ justifyContent: "flex-start" }}
+                            onClick={openEditor}
+                          >
+                            {t("edit")}
+                          </Button>
+                          <Button
+                            icon={<IconCopyStroked />}
+                            type="tertiary"
+                            theme="borderless"
+                            block
+                            style={{ justifyContent: "flex-start" }}
+                            onClick={duplicateTable}
+                            disabled={layout.readOnly}
+                          >
+                            {t("duplicate")}
+                          </Button>
+                          <Divider className="!my-1" />
+                          <Button
+                            icon={<IconDeleteStroked />}
+                            type="danger"
+                            theme="borderless"
+                            block
+                            style={{ justifyContent: "flex-start" }}
+                            onClick={() => deleteTable(tableData.id)}
+                            disabled={layout.readOnly}
+                          >
+                            {t("delete")}
+                          </Button>
+                        </div>
+                      }
+                      position="rightTop"
+                      style={{ padding: 8 }}
+                      showArrow
+                      trigger="click"
+                    >
+                      <Button
+                        size="small"
+                        type="tertiary"
+                        icon={<IconMore size="small" />}
+                        title={t("see_more")}
+                      />
+                    </Popover>
+                  </ButtonGroup>
+                </div>
+              </div>
+              {tableData.comment && settings.showComments && (
+                <div className="text-xs px-3 line-clamp-5">
+                  {tableData.comment}
+                </div>
+              )}
+            </div>
+
+            {visibleFieldEntries.map(({ field: e }, i) => {
+              return settings.showFieldSummary ? (
+                <Popover
+                  key={e.id ?? i}
+                  content={
+                    <FieldSummary
+                      field={e}
+                      tableId={tableData.id}
+                      database={database}
+                    />
+                  }
+                  position="right"
+                  showArrow
+                  style={
+                    isRtl(i18n.language)
+                      ? { direction: "rtl" }
+                      : { direction: "ltr" }
+                  }
+                >
+                  {field(e, i)}
+                </Popover>
+              ) : (
+                field(e, i)
+              );
+            })}
+          </div>
+        </div>
+      </foreignObject>
+      {!layout.readOnly && !tableData.locked && (
+        <ResizeHandles
+          x={tableData.x}
+          y={tableData.y}
+          width={width}
+          height={height}
+          visible={hovered}
+          onResize={resizeTable}
+          onResizeEnd={commitResize}
+          onEngagedChange={setResizeEngaged}
+        />
+      )}
+    </>
+  );
+
+  function field(fieldData, index) {
+    const fieldResolved = resolveType(database, fieldData.type);
+    const showFieldComment = fieldData.comment && settings.showComments;
+    return (
+      <div
+        className={`${
+          index === visibleFields.length - 1 ? "" : "border-b border-gray-400"
+        } group w-full overflow-hidden`}
+        onPointerEnter={(e) => {
+          if (!e.isPrimary) return;
+
+          setHoveredField(index);
+          setHoveredTable({
+            tableId: tableData.id,
+            fieldId: fieldData.id,
+          });
+        }}
+        onPointerLeave={(e) => {
+          if (!e.isPrimary) return;
+
+          setHoveredField(null);
+          setHoveredTable({
+            tableId: null,
+            fieldId: null,
+          });
+        }}
+        onPointerDown={(e) => {
+          // Required for onPointerLeave to trigger when a touch pointer leaves
+          // https://stackoverflow.com/a/70976017/1137077
+          e.target.releasePointerCapture(e.pointerId);
+        }}
+      >
+        <div className="h-[36px] px-2 py-1 flex justify-between items-center gap-1">
+          <div
+            className={`${
+              hoveredField === index ? "text-zinc-400" : ""
+            } flex items-center gap-2 overflow-hidden`}
+          >
+            <button
+              className="shrink-0 w-[10px] h-[10px] bg-[#2f68adcc] rounded-full"
+              onPointerDown={(e) => {
+                if (!e.isPrimary) return;
+
+                handleGripField();
+                const fieldY =
+                  tableData.y +
+                  getFieldOffsetY(
+                    visibleFields,
+                    index,
+                    width,
+                    settings.showComments,
+                  ) +
+                  tableHeaderHeight +
+                  tableColorStripHeight +
+                  getCommentHeight(
+                    tableData.comment,
+                    width,
+                    settings.showComments,
+                  ) +
+                  14;
+                setLinkingLine((prev) => ({
+                  ...prev,
+                  startFieldId: fieldData.id,
+                  startTableId: tableData.id,
+                  startX: tableData.x + 15,
+                  startY: fieldY,
+                  endX: tableData.x + 15,
+                  endY: fieldY,
+                }));
+              }}
+            />
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+              {fieldData.name}
+            </span>
+          </div>
+          <div className="text-zinc-400">
+            {hoveredField === index ? (
+              <Button
+                theme="solid"
+                size="small"
+                style={{
+                  backgroundColor: "#d42020b3",
+                }}
+                icon={<IconMinus />}
+                disabled={layout.readOnly}
+                onClick={() => {
+                  if (layout.readOnly) return;
+                  deleteField(fieldData, tableData.id);
+                }}
+              />
+            ) : settings.showDataTypes ? (
+              <div className="flex gap-1 items-center">
+                {fieldData.primary && <IconKeyStroked />}
+                {!fieldData.notNull && <span className="font-mono">?</span>}
+                <span
+                  className={
+                    "font-mono " +
+                    (fieldResolved.isCustom ? "" : fieldResolved.color)
+                  }
+                  style={
+                    fieldResolved.isCustom ? { color: fieldResolved.color } : {}
+                  }
+                >
+                  {fieldData.type +
+                    ((fieldResolved.isSized || fieldResolved.hasPrecision) &&
+                    fieldData.size &&
+                    fieldData.size !== ""
+                      ? `(${fieldData.size})`
+                      : "")}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        {showFieldComment && (
+          <div className="ms-3 px-3 pb-3">
+            <div
+              className={`text-xs line-clamp-2 ${settings.mode === "light" ? "text-zinc-600" : "text-zinc-200"}`}
+            >
+              {fieldData.comment}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+});
+
+function FieldSummary({ field: e, tableId, database }) {
+  const { tables, relationships } = useDiagram();
+  const { t } = useTranslation();
+  const resolved = resolveType(database, e.type);
+
+  let matchedEndFieldId = null;
+  const rel = relationships.find((r) => {
+    if (r.startTableId !== tableId) return false;
+    const pair = getRelationshipFields(r).find((p) => p.startFieldId === e.id);
+    if (!pair) return false;
+    matchedEndFieldId = pair.endFieldId;
+    return true;
+  });
+  const refTable = rel && tables.find((tbl) => tbl.id === rel.endTableId);
+  const refField = refTable?.fields.find((f) => f.id === matchedEndFieldId);
+  const reference =
+    refTable && refField
+      ? { tableName: refTable.name, fieldName: refField.name }
+      : null;
+
+  return (
+    <div className="popover-theme">
+      <div
+        className="flex justify-between items-center pb-2"
+        style={{ direction: "ltr" }}
+      >
+        <p className="me-4 font-bold">{e.name}</p>
+        <p
+          className={
+            "ms-4 font-mono " + (resolved.isCustom ? "" : resolved.color)
+          }
+          style={resolved.isCustom ? { color: resolved.color } : {}}
+        >
+          {e.type +
+            ((resolved.isSized || resolved.hasPrecision) &&
+            e.size &&
+            e.size !== ""
+              ? "(" + e.size + ")"
+              : "")}
+        </p>
+      </div>
+      <hr />
+      {e.primary && (
+        <Tag color="blue" className="me-2 my-2">
+          {t("primary_key")}
+        </Tag>
+      )}
+      {e.unique && (
+        <Tag color="amber" className="me-2 my-2">
+          {t("unique")}
+        </Tag>
+      )}
+      {e.notNull && (
+        <Tag color="purple" className="me-2 my-2">
+          {t("not_null")}
+        </Tag>
+      )}
+      {e.increment && (
+        <Tag color="green" className="me-2 my-2">
+          {t("autoincrement")}
+        </Tag>
+      )}
+      {reference && (
+        <Tag color="light-blue" className="me-2 my-2">
+          {t("foreign_key")}
+        </Tag>
+      )}
+      {reference && (
+        <p>
+          <strong>{t("references")}: </strong>
+          {reference.tableName}({reference.fieldName})
+        </p>
+      )}
+      <p>
+        <strong>{t("default_value")}: </strong>
+        {e.default === "" ? t("not_set") : e.default}
+      </p>
+      <p className="max-w-80">
+        <strong>{t("comment")}: </strong>
+        {e.comment === "" ? t("not_set") : e.comment}
+      </p>
+    </div>
+  );
+}
+
+export function TableEditSheet() {
+  const { layout } = useLayout();
+  const { selectedElement, setSelectedElement } = useSelect();
+  const { tables } = useDiagram();
+  const { t } = useTranslation();
+
+  const tableData =
+    selectedElement.element === ObjectType.TABLE &&
+    selectedElement.open &&
+    !layout.sidebar
+      ? tables.find((table) => table.id === selectedElement.id)
+      : null;
+
+  return (
+    <SideSheet
+      title={t("edit")}
+      size="small"
+      visible={Boolean(tableData)}
+      onCancel={() =>
+        setSelectedElement((prev) => ({
+          ...prev,
+          open: !prev.open,
+        }))
+      }
+      style={{ paddingBottom: "16px" }}
+    >
+      <div className="sidesheet-theme">
+        {tableData && <TableInfo data={tableData} />}
+      </div>
+    </SideSheet>
+  );
+}

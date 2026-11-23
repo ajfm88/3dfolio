@@ -1,21 +1,19 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-21)
+## Current point (2026-11-22)
 
-HEAD is `36c1319` (commit 77). D1 to D6 are committed. The D6 Vercel preview check passed (user, 2026-11-21). D7 (editor building blocks and side panel) is **Approved** by Grok on 2026-11-21 and uncommitted for commit 78.
+HEAD is `f8e2f13` (commit 78). D1 to D7 are committed. The D6 Vercel preview check passed (user, 2026-11-21). D8 (editor canvas) is **Approved** by Grok on 2026-11-22 and uncommitted for commit 79.
 
-D7 copies 41 upstream files byte for byte into `drawdb/src/components/`. The copies cover `SortableList/`, `CodeEditor/`, `FloatingControls.jsx` and `EditorSidePanel/`. There are no local edits or new routes.
+D8 copies seven upstream files byte for byte into `drawdb/src/components/EditorCanvas/`. The copies have no local edits, and the canvas remains unrouted.
 
-The root build and drawDB lint passed. The portfolio entry stays at 578.23 kB (gzip 181.05 kB). drawDB stays at 2781 modules and 1,602.87 kB of JS (gzip 412.26 kB). CSS grew from 174.69 kB (gzip 23.77 kB) to 181.83 kB (gzip 25.10 kB) because Tailwind scans the class names in the copied files. The package manifests and drawDB lockfile match their pre-build hashes.
+The root build and drawDB lint passed. The portfolio entry matches the baseline at 578.23 kB (gzip 181.05 kB). drawDB remains at 2781 modules and 1,602.87 kB of JavaScript (gzip 412.26 kB). CSS grew from 181.83 kB (gzip 25.10 kB) to 187.14 kB (gzip 26.03 kB) because Tailwind scans class names in the canvas files. The package manifests and drawDB lockfile match their pre-build hashes.
 
-Local HTTP checks returned 200 for `/drawdb/`, `/drawdb/templates` and `/drawdb/nope/deep`. Port 5180 is clear. Browser: not run (not required for D7).
+Local HTTP checks returned 200 for `/drawdb/`, `/drawdb/templates` and `/drawdb/nope/deep`. Port 5180 is clear. **Browser: not run (not required for D8)**. D8 has no Vercel gate or post-commit user check.
 
 ### Next session
 
-1. The user commits D7 as 78 with the draft in `../3dfolio_drawdb_plan.md` (end of section 8, the D7 implementation note). Grok Approved D7 on 2026-11-21 (`../3dfolio_drawdb_specs/D7-editor-side-panel-review.md`).
-2. Next slice: **D8 (editor canvas)**, earliest 2026-11-22 (one D slice per day). No spec yet. The planning agent reads the D8 planning notes at the end of the plan, runs the scratch pre-test they describe, and writes `../3dfolio_drawdb_specs/D8-editor-canvas.md` plus a Codex implementer prompt, using `D7-editor-side-panel.md` as the template.
-3. D8 copies the seven files of `components/EditorCanvas/` with no local edits. They stay unrouted until D9, so drawDB modules (2781) and JS (1,602.87 kB) should not change. D8 has no browser or Vercel gate. Its commit is 79.
-4. After D8, D9 routes the editor and needs the full browser and Vercel checklist in plan section 7.
+1. The user commits D8 as 79 using the draft in the D8 implementation note at the end of `../3dfolio_drawdb_plan.md`. Grok Approved D8 on 2026-11-22 (`../3dfolio_drawdb_specs/D8-editor-canvas-review.md`).
+2. Start **D9 (editor goes live and cleanup)** the next day after the D8 commit. D9 is the last slice and needs a spec, the local edits in plan section 7 and the full browser and Vercel checklist.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 

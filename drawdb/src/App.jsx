@@ -1,17 +1,10 @@
-// 3dfolio: temporary App.jsx for D6 (templates gallery). D9 replaces it with upstream App.jsx.
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+// 3dfolio: upstream App.jsx served under /drawdb, without the landing page, bug report and migration banner.
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useLayoutEffect } from "react";
+import Editor from "./pages/Editor";
 import Templates from "./pages/Templates";
 import SettingsContextProvider from "./context/SettingsContext";
 import NotFound from "./pages/NotFound";
-
-function Placeholder() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <p className="text-lg text-zinc-600">drawDB is being set up.</p>
-    </div>
-  );
-}
 
 export default function App() {
   return (
@@ -19,7 +12,10 @@ export default function App() {
       <SettingsContextProvider>
         <RestoreScroll />
         <Routes>
-          <Route path="/" element={<Placeholder />} />
+          <Route path="/" element={<Navigate to="/editor" replace />} />
+          <Route path="/editor" element={<Editor />} />
+          <Route path="/editor/diagrams/:id" element={<Editor />} />
+          <Route path="/editor/templates/:id" element={<Editor />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

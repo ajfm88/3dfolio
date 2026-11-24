@@ -69,12 +69,13 @@
 
 ## 🤖 <a name="introduction">Introduction</a>
 
-This is the personal website of Alejandro J. Foucault (ajfm88). The home page is a 3D portfolio built with React, and four more tools live on the same domain:
+This is the personal website of Alejandro J. Foucault (ajfm88). The home page is a 3D portfolio built with React, and five more tools live on the same domain:
 
 - a **GitHub Follower Tracker** at `/gft`
 - a **blog** at `/blog`
 - a **real-time chat** at `/chat`
 - a **collaborative system-design workspace** at `/collaborate`
+- a **database diagram editor**, [drawDB](https://github.com/drawdb-io/drawdb), at `/drawdb`
 
 In the workspace, signed-in users create projects, invite other people, and draw system diagrams together on a shared canvas. One person edits at a time while everyone else watches the changes live, and each project has its own chat.
 
@@ -199,6 +200,7 @@ The backend has its own readme with the full API, the schema and the reasons beh
 
 ```
 3dfolio/
+├── drawdb/                                 # drawDB, a separate Vite app served at /drawdb
 ├── public/                                 # Served as-is, filenames stable across builds
 │   ├── models/                             # Draco-compressed .glb models for the rotating cube
 │   ├── planet/                             # glTF earth model used by the contact section
@@ -370,8 +372,12 @@ The backend has its own readme with the full API, the schema and the reasons beh
 | `/chat`                   | Real-time chat          | Lazy   | Signed in       |
 | `/collaborate`            | Projects dashboard      | Lazy   | Signed in       |
 | `/collaborate/:projectId` | Workspace               | Lazy   | Project members |
+| `/drawdb`                 | drawDB editor           | Own    | Public          |
+| `/drawdb/templates`       | drawDB template gallery | Own    | Public          |
 
 Only `/` ships in the main bundle. Every other route is code-split, so a visitor who never opens the blog, the chat or the workspace never downloads Clerk, Axios, Zustand, socket.io-client or React Flow.
+
+The two `/drawdb` routes belong to a separate app with its own build, described at the end of Quick Start.
 
 Who can see what:
 
@@ -447,7 +453,9 @@ Open [http://localhost:5173](http://localhost:5173) in your browser to view the 
 
 **drawDB**
 
-`drawdb/` is a separate app with its own dependencies. It is served at `/drawdb/` and is currently a placeholder that reads `drawDB is being set up.` No navbar link is added in this step. Any future link from the portfolio must be a plain `<a href="/drawdb/">`, which loads that document with a full page navigation.
+`drawdb/` holds [drawDB](https://github.com/drawdb-io/drawdb), an open source database diagram editor, as a separate app with its own dependencies. `/drawdb/` opens the editor and `/drawdb/templates` lists the starter templates. Diagrams are saved in the visitor's browser with IndexedDB, so drawDB needs no backend and no sign-in. The Share and Versions buttons are hidden and the bug report entry is removed, because those need drawDB's own server, which this site does not run. No navbar link points to drawDB yet. Any future link from the portfolio must be a plain `<a href="/drawdb/">`, which loads that document with a full page navigation.
+
+drawDB is licensed under the GNU Affero General Public License v3.0, included as [`drawdb/LICENSE`](drawdb/LICENSE). That licence covers the code in `drawdb/`. Local changes to upstream files are marked with comments that start with `3dfolio:`.
 
 `npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/drawdb/`.
 

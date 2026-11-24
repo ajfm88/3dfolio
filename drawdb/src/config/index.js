@@ -16,3 +16,6 @@ export const gistBackendUrl = trimSlash(
     import.meta.env.VITE_BACKEND_URL ||
     "http://localhost:5000",
 );
+
+// 3dfolio: Share and Versions need the drawDB server, which this site does not run.
+export const SHARING_ENABLED = false;

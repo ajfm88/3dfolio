@@ -1,19 +1,22 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-22)
+## Current point (2026-11-23)
 
-HEAD is `f8e2f13` (commit 78). D1 to D7 are committed. The D6 Vercel preview check passed (user, 2026-11-21). D8 (editor canvas) is **Approved** by Grok on 2026-11-22 and uncommitted for commit 79.
+HEAD is `ef206a5` (commit 79). D1 to D8 are committed. D9 (editor goes live and cleanup) is **Ready for review** and uncommitted. Grok review is pending.
 
-D8 copies seven upstream files byte for byte into `drawdb/src/components/EditorCanvas/`. The copies have no local edits, and the canvas remains unrouted.
+D9 copies 26 upstream files and makes the six specified edits in `ControlPanel.jsx`. It adds the `SHARING_ENABLED` switch, replaces `App.jsx` with the editor routes, updates the `index.html` preview metadata, removes 11 unused images, copies the AGPL v3 licence to `drawdb/LICENSE`, and updates the root readme.
 
-The root build and drawDB lint passed. The portfolio entry matches the baseline at 578.23 kB (gzip 181.05 kB). drawDB remains at 2781 modules and 1,602.87 kB of JavaScript (gzip 412.26 kB). CSS grew from 181.83 kB (gzip 25.10 kB) to 187.14 kB (gzip 26.03 kB) because Tailwind scans class names in the canvas files. The package manifests and drawDB lockfile match their pre-build hashes.
+The root build and drawDB lint passed. The portfolio entry is 578.23 kB (gzip 181.05 kB). drawDB built 3387 modules. The five JavaScript chunks are 16,726.94, 1,463.44, 199.39, 150.97 and 29.02 kB. The main chunk is 3,074.12 kB gzip. CSS is 388.97 kB (gzip 49.01 kB). Dependency hashes match before and after the build.
 
-Local HTTP checks returned 200 for `/drawdb/`, `/drawdb/templates` and `/drawdb/nope/deep`. Port 5180 is clear. **Browser: not run (not required for D8)**. D8 has no Vercel gate or post-commit user check.
+The production build passed the headless Chrome checklist on a fresh profile. This covered the start dialog, PostgreSQL import in Monaco, deep reload and persistence, SQL preview, the save-copy toast and its target, New and New window URL capture, the gallery fork, theme toggling, hidden Share and Versions controls, the Help menu, and NotFound. The only external hosts requested were `cdn.jsdelivr.net` and `cdnjs.cloudflare.com`. There was no request to `localhost:5000`. The final pass had zero console errors and warnings. Earlier rapid imports logged a Monaco cancellation on disposal.
+
+Opening `/drawdb/` with a saved diagram reproduced the upstream duplicate. IndexedDB went from three saved diagrams to four, with a new ID and the same five tables and five relationships as the latest diagram. A direct reload by diagram ID kept the count unchanged. The export download, Flush storage, and post-commit Vercel checklist were not run. The local dev and preview servers were stopped.
 
 ### Next session
 
-1. The user commits D8 as 79 using the draft in the D8 implementation note at the end of `../3dfolio_drawdb_plan.md`. Grok Approved D8 on 2026-11-22 (`../3dfolio_drawdb_specs/D8-editor-canvas-review.md`).
-2. Start **D9 (editor goes live and cleanup)** the next day after the D8 commit. D9 is the last slice and needs a spec, the local edits in plan section 7 and the full browser and Vercel checklist.
+1. After Grok approves D9, the user commits it as 80 using the draft in the D9 implementation note.
+2. The user runs the Vercel preview checklist in `../3dfolio_drawdb_specs/D9-editor-live.md`.
+3. Once the preview checklist passes, the drawDB port is done. The Clerk Production move in Suggested order item 4 is next.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 
@@ -58,7 +61,7 @@ Local configuration targets the live `3dfolio` database. Do not write live data 
 1. Deploy commit 71 to Vercel and Render. Render was redeployed on 2026-11-15 as a new service, `ajfm88-3dfolio-api` (https://ajfm88-3dfolio-api.onrender.com, Oregon, root `server`, build `npm install` because lock files are gitignored, start `npm start`, health `/health`). Vercel `VITE_API_URL` and the Clerk webhook point at it. The old `3dfolio-ajfm88-server` and `threedfolio-ajfm88-api` services can be deleted. This deploy makes the Collaborate navbar link public before the launch QA has run.
 2. Run the launch QA and fill in the tracker. After it passes, update the portfolio About text and project snippet in the admin panel.
 3. D1 is committed as 72 (`c30df64`, 2026-11-16). Continue drawDB at one slice per day (the user, 2026-11-15): D2 on 2026-11-16, which proves the Vercel routing before any real drawDB code lands.
-4. After the drawDB port (D9) is done: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
+4. After D9 is committed and its Vercel preview checklist passes: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
 
 ## Open items
 

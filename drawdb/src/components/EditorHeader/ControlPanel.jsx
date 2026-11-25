@@ -1257,8 +1257,8 @@ export default function ControlPanel({
           {t("saved_as_copy")}{" "}
           <Typography.Text
             link={{
-              // 3dfolio: prefix the /drawdb basename, which a raw href does not apply.
-              href: `/drawdb/editor/diagrams/${newId}${window.location.search}`,
+              // 3dfolio: prefix the /dbdesign basename, which a raw href does not apply.
+              href: `/dbdesign/editor/diagrams/${newId}${window.location.search}`,
               target: "_blank",
               rel: "noopener noreferrer",
             }}
@@ -1282,12 +1282,12 @@ export default function ControlPanel({
   const menu = {
     file: {
       new: {
-        // 3dfolio: prefix the /drawdb basename, which window.open does not apply.
-        function: () => window.open("/drawdb/editor/templates/blank", "_blank"),
+        // 3dfolio: prefix the /dbdesign basename, which window.open does not apply.
+        function: () => window.open("/dbdesign/editor/templates/blank", "_blank"),
       },
       new_window: {
-        // 3dfolio: prefix the /drawdb basename, which window.open does not apply.
-        function: () => window.open("/drawdb/editor", "_blank"),
+        // 3dfolio: prefix the /dbdesign basename, which window.open does not apply.
+        function: () => window.open("/dbdesign/editor", "_blank"),
       },
       open: {
         function: open,

@@ -67,7 +67,7 @@ const Navbar = () => {
             </a>
           ))}
           <Link
-            to="/collaborate"
+            to="/sysdesign"
             onClick={() => setActive("")}
             className="text-gray-300 hover:text-[rgb(112,66,248)] transition-colors duration-200 whitespace-nowrap text-[13px] min-[1080px]:text-[15px] font-medium cursor-pointer"
           >
@@ -116,7 +116,7 @@ const Navbar = () => {
                 </a>
               ))}
               <Link
-                to="/collaborate"
+                to="/sysdesign"
                 onClick={() => {
                   setToggle(false);
                   setActive("");

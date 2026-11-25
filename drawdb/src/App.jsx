@@ -1,4 +1,4 @@
-// 3dfolio: upstream App.jsx served under /drawdb, without the landing page, bug report and migration banner.
+// 3dfolio: upstream App.jsx served under /dbdesign, without the landing page, bug report and migration banner.
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useLayoutEffect } from "react";
 import Editor from "./pages/Editor";
@@ -8,7 +8,7 @@ import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
-    <BrowserRouter basename="/drawdb">
+    <BrowserRouter basename="/dbdesign">
       <SettingsContextProvider>
         <RestoreScroll />
         <Routes>

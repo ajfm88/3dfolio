@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { Cardinality, Constraint, DB } from "../../data/constants";
+import { databases } from "../../data/databases";
 import { dbToTypes } from "../../data/datatypes";
 import { buildSQLFromAST, findReferencedTable } from "./shared";
 
@@ -19,7 +20,7 @@ const affinity = {
   ),
 };
 
-export function fromPostgres(ast, diagramDb = DB.GENERIC) {
+export function fromPostgres(ast, diagramDb = DB.GENERIC, existingTables = []) {
   const tables = [];
   const relationships = [];
   const types = [];
@@ -42,22 +43,23 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
             field.id = nanoid();
             field.name = d.column.column.expr.value;
 
+            // integer[] comes as { dataType: "INTEGER", array }, text[] as "TEXT[]"
+            const dataType = d.definition.dataType.replace(/(\[\])+$/, "");
+            const isArray =
+              dataType !== d.definition.dataType || Boolean(d.definition.array);
+
             let type = types.find((t) =>
-              new RegExp(`^(${t.name}|"${t.name}")$`).test(
-                d.definition.dataType,
-              ),
+              new RegExp(`^(${t.name}|"${t.name}")$`).test(dataType),
             )?.name;
             type ??= enums.find((t) =>
-              new RegExp(`^(${t.name}|"${t.name}")$`).test(
-                d.definition.dataType,
-              ),
+              new RegExp(`^(${t.name}|"${t.name}")$`).test(dataType),
             )?.name;
 
-            type ??=
-              dbToTypes[diagramDb][d.definition.dataType.toUpperCase()].type;
-            type ??= affinity[diagramDb][d.definition.dataType.toUpperCase()];
+            type ??= dbToTypes[diagramDb][dataType.toUpperCase()].type;
+            type ??= affinity[diagramDb][dataType.toUpperCase()];
 
             field.type = type;
+            if (isArray && databases[diagramDb].hasArrays) field.isArray = true;
 
             if (d.definition.expr && d.definition.expr.type === "expr_list") {
               field.values = d.definition.expr.value.map((v) => v.value);
@@ -139,7 +141,12 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
               );
               const startFieldName = startFieldNames[0];
 
-              const endTable = findReferencedTable(tables, table, endTableName);
+              const endTable = findReferencedTable(
+                tables,
+                table,
+                endTableName,
+                existingTables,
+              );
               if (!endTable) return;
 
               const fieldPairs = [];
@@ -232,7 +239,12 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
               }
             });
 
-            const endTable = findReferencedTable(tables, table, endTableName);
+            const endTable = findReferencedTable(
+              tables,
+              table,
+              endTableName,
+              existingTables,
+            );
             if (!endTable) return;
 
             const endField = endTable.fields.find(
@@ -284,7 +296,7 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
           const newEnum = {
             name: e.name.name,
             values: e.create_definitions.value.map((x) => x.value),
-            id : nanoid()
+            id: nanoid(),
           };
           enums.push(newEnum);
         } else if (Array.isArray(e.create_definitions)) {
@@ -357,7 +369,12 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
             const startTable = tables.find((t) => t.name === startTableName);
             if (!startTable) return;
 
-            const endTable = tables.find((t) => t.name === endTableName);
+            const endTable = findReferencedTable(
+              tables,
+              null,
+              endTableName,
+              existingTables,
+            );
             if (!endTable) return;
 
             const fieldPairs = [];

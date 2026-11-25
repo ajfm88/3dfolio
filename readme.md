@@ -74,8 +74,8 @@ This is the personal website of Alejandro J. Foucault (ajfm88). The home page is
 - a **GitHub Follower Tracker** at `/gft`
 - a **blog** at `/blog`
 - a **real-time chat** at `/chat`
-- a **collaborative system-design workspace** at `/collaborate`
-- a **database diagram editor**, [drawDB](https://github.com/drawdb-io/drawdb), at `/drawdb`
+- a **collaborative system-design workspace** at `/sysdesign`
+- a **database diagram editor**, [drawDB](https://github.com/drawdb-io/drawdb), at `/dbdesign`
 
 In the workspace, signed-in users create projects, invite other people, and draw system diagrams together on a shared canvas. One person edits at a time while everyone else watches the changes live, and each project has its own chat.
 
@@ -91,7 +91,7 @@ The site runs on two backends. Each one serves the part of the app it suits best
 | Layer                         | Backend                                      | Powers                                        | Hosting |
 | ----------------------------- | -------------------------------------------- | --------------------------------------------- | ------- |
 | This root project             | Firebase (Firestore, Storage, Auth)          | The 3D portfolio, `/gft`, and the admin panel | Vercel  |
-| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog`, `/chat`, and `/collaborate`          | Render  |
+| [`server/`](server/readme.md) | Express, MongoDB, Clerk, Socket.io, ImageKit | `/blog`, `/chat`, and `/sysdesign`            | Render  |
 
 Firebase holds the content that only the site owner edits. It is read over plain REST calls, so there is no server to run or keep awake.
 
@@ -180,7 +180,7 @@ The backend has its own readme with the full API, the schema and the reasons beh
 
 🟢 **Chat Presence and Sounds:** The chat shows who is online, marks unread conversations with a badge, and plays a sound for new messages that can be switched off.
 
-📐 **Collaborative Workspace (`/collaborate`):** Signed-in users create projects and draw system diagrams together on a shared React Flow canvas, with six shapes, labelled connections and an eight-color palette.
+📐 **Collaborative Workspace (`/sysdesign`):** Signed-in users create projects and draw system diagrams together on a shared React Flow canvas, with six shapes, labelled connections and an eight-color palette.
 
 🔁 **Turn-Based Editing:** One browser tab edits at a time while everyone else watches live. The server enforces the turn: there is a queue, a 20-second grace period for reconnecting, and a hand-off after 2 minutes without activity when someone is waiting.
 
@@ -200,7 +200,7 @@ The backend has its own readme with the full API, the schema and the reasons beh
 
 ```
 3dfolio/
-├── drawdb/                                 # drawDB, a separate Vite app served at /drawdb
+├── drawdb/                                 # drawDB, a separate Vite app served at /dbdesign
 ├── public/                                 # Served as-is, filenames stable across builds
 │   ├── models/                             # Draco-compressed .glb models for the rotating cube
 │   ├── planet/                             # glTF earth model used by the contact section
@@ -370,20 +370,20 @@ The backend has its own readme with the full API, the schema and the reasons beh
 | `/blog/:slug`             | Single post             | Lazy   | Public          |
 | `/blog/write`             | Rich-text editor        | Lazy   | Owner           |
 | `/chat`                   | Real-time chat          | Lazy   | Signed in       |
-| `/collaborate`            | Projects dashboard      | Lazy   | Signed in       |
-| `/collaborate/:projectId` | Workspace               | Lazy   | Project members |
-| `/drawdb`                 | drawDB editor           | Own    | Public          |
-| `/drawdb/templates`       | drawDB template gallery | Own    | Public          |
+| `/sysdesign`              | Projects dashboard      | Lazy   | Signed in       |
+| `/sysdesign/:projectId`   | Workspace               | Lazy   | Project members |
+| `/dbdesign`               | drawDB editor           | Own    | Public          |
+| `/dbdesign/templates`     | drawDB template gallery | Own    | Public          |
 
 Only `/` ships in the main bundle. Every other route is code-split, so a visitor who never opens the blog, the chat or the workspace never downloads Clerk, Axios, Zustand, socket.io-client or React Flow.
 
-The two `/drawdb` routes belong to a separate app with its own build, described at the end of Quick Start.
+The two `/dbdesign` routes belong to a separate app with its own build, described at the end of Quick Start. The old paths `/collaborate` and `/drawdb`, with anything after them, redirect permanently to `/sysdesign` and `/dbdesign` through `vercel.json`.
 
 Who can see what:
 
 - `/blog` is open to everyone, and any signed-in reader can comment. Only the owner account can write posts, and the API enforces that; it is not just a hidden button.
 - `/chat` shows a sign-in screen to visitors who are signed out.
-- `/collaborate` also shows a sign-in screen to visitors who are signed out. A project is visible only to its owner and the people invited to it, and a viewer can watch and chat but cannot edit.
+- `/sysdesign` also shows a sign-in screen to visitors who are signed out. A project is visible only to its owner and the people invited to it, and a viewer can watch and chat but cannot edit.
 
 ## 🤸 <a name="quick-start">Quick Start</a>
 
@@ -436,7 +436,7 @@ VITE_APP_GETFORM_DOT_IO_ENDPOINT=
 Where each one comes from:
 
 - **`VITE_FIREBASE_*`**: Firebase console, under **Project settings → Your apps → Web app**. Backs the admin panel and the content it serves.
-- **`VITE_CLERK_PUBLISHABLE_KEY`**: Clerk dashboard, under **Developers → API keys**. Signs users in to `/blog`, `/chat` and `/collaborate`.
+- **`VITE_CLERK_PUBLISHABLE_KEY`**: Clerk dashboard, under **Developers → API keys**. Signs users in to `/blog`, `/chat` and `/sysdesign`.
 - **`VITE_API_URL`**: base URL of the [`server/`](server/readme.md) API, including its `/api` prefix. It can point at a local instance or a deployed one.
 - **`VITE_IK_*`**: ImageKit dashboard, under **Developers → API keys**, plus the URL endpoint. These let the browser upload blog cover images directly. They are the public half of the same account `server/` uses; the ImageKit **private** key stays on the backend and never appears here.
 - **`VITE_APP_GETFORM_DOT_IO_ENDPOINT`**: [Getform](https://getform.io) endpoint that receives the portfolio's contact form submissions.
@@ -447,21 +447,21 @@ Where each one comes from:
 npm run dev
 ```
 
-This starts the frontend only. The 3D portfolio, `/gft` and the admin panel work on their own. `/blog`, `/chat` and `/collaborate` also need the [`server/`](server/readme.md) API to be reachable at `VITE_API_URL`. Either run it locally (`cd server && npm install && npm run dev`; its readme covers the setup) or point at a deployed instance.
+This starts the frontend only. The 3D portfolio, `/gft` and the admin panel work on their own. `/blog`, `/chat` and `/sysdesign` also need the [`server/`](server/readme.md) API to be reachable at `VITE_API_URL`. Either run it locally (`cd server && npm install && npm run dev`; its readme covers the setup) or point at a deployed instance.
 
 Open [http://localhost:5173](http://localhost:5173) in your browser to view the project.
 
 **drawDB**
 
-`drawdb/` holds [drawDB](https://github.com/drawdb-io/drawdb), an open source database diagram editor, as a separate app with its own dependencies. `/drawdb/` opens the editor and `/drawdb/templates` lists the starter templates. Diagrams are saved in the visitor's browser with IndexedDB, so drawDB needs no backend and no sign-in. The Share and Versions buttons are hidden and the bug report entry is removed, because those need drawDB's own server, which this site does not run. No navbar link points to drawDB yet. Any future link from the portfolio must be a plain `<a href="/drawdb/">`, which loads that document with a full page navigation.
+`drawdb/` holds [drawDB](https://github.com/drawdb-io/drawdb), an open source database diagram editor, as a separate app with its own dependencies. `/dbdesign/` opens the editor and `/dbdesign/templates` lists the starter templates. Diagrams are saved in the visitor's browser with IndexedDB, so drawDB needs no backend and no sign-in. The Share and Versions buttons are hidden and the bug report entry is removed, because those need drawDB's own server, which this site does not run. No navbar link points to drawDB yet. Any future link from the portfolio must be a plain `<a href="/dbdesign/">`, which loads that document with a full page navigation. The copy was last synced with upstream drawDB on 2026-11-24, and one local fix stops the editor from saving a duplicate of the latest diagram on each visit.
 
 drawDB is licensed under the GNU Affero General Public License v3.0, included as [`drawdb/LICENSE`](drawdb/LICENSE). That licence covers the code in `drawdb/`. Local changes to upstream files are marked with comments that start with `3dfolio:`.
 
-`npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/drawdb/`.
+`npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/dbdesign/`.
 
-`npm run build` builds the portfolio, then installs the drawDB dependencies, including dev dependencies, and builds drawDB into `dist/drawdb/`. `npm run build:drawdb` builds only that app.
+`npm run build` builds the portfolio, then installs the drawDB dependencies, including dev dependencies, and builds drawDB into `dist/dbdesign/`. `npm run build:drawdb` builds only that app.
 
-Deploy this repository from its root. The Vercel build command stays `npm run build` (do not override it to `vite build`) and the output directory stays `dist`. Node must satisfy the engines of the installed Vite packages. Vite 7.3.5 and Vite 8.3.5 both require `^20.19.0 || >=22.12.0`. A version whose number is only higher than 20.19 is not automatically compatible. Root `npm run preview` does not apply `vercel.json`, so it does not prove that a `/drawdb/...` reload stays on the drawDB document.
+Deploy this repository from its root. The Vercel build command stays `npm run build` (do not override it to `vite build`) and the output directory stays `dist`. Node must satisfy the engines of the installed Vite packages. Vite 7.3.5 and Vite 8.3.5 both require `^20.19.0 || >=22.12.0`. A version whose number is only higher than 20.19 is not automatically compatible. Root `npm run preview` does not apply `vercel.json`, so it does not prove that a `/dbdesign/...` reload stays on the drawDB document.
 
 **Running the Tests**
 
@@ -471,7 +471,7 @@ The server tests run with one command:
 cd server && npm test
 ```
 
-The client tests for `/collaborate` live in `test/` at the root. Run one suite per command, because the suites share a port:
+The client tests for `/sysdesign` live in `test/` at the root. Run one suite per command, because the suites share a port:
 
 ```bash
 node --test test/canvasTemplates.test.mjs

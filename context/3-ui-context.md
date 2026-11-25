@@ -99,12 +99,12 @@ There's no component library: components are hand-built with Tailwind and the to
 ## Layout Patterns
 
 - **Auth gate:** a centered `rounded-3xl` glass card, max-w-md, with the logo tile, eyebrow, title, one-line description, and a single primary button. Same structure as `ChatAuthGate`.
-- **Dashboard (`/collaborate`):**
+- **Dashboard (`/sysdesign`):**
   - centered column, max-w-6xl, page padding `p-4 sm:p-6`
   - header row with title and a **New project** button
   - an **Invitations** list (only when non-empty), then **My projects** and **Shared with me** as responsive card grids (1 / 2 / 3 columns)
   - empty states with a lucide icon (`h-8 w-8`), one line of copy, and a call to action
-- **Workspace (`/collaborate/:projectId`):** a full viewport (`h-[100dvh]`, following the visual viewport on phones like chat does), split into:
+- **Workspace (`/sysdesign/:projectId`):** a full viewport (`h-[100dvh]`, following the visual viewport on phones like chat does), split into:
   - **Navbar:** height `h-14`, `overflow-hidden`, `bg-[var(--collab-panel)]`, bottom border. Left: a back link (`aria-label="Back to projects"`) and the project name (`min-w-0 truncate`). Below `sm` the word Projects is hidden, the role badge is hidden, the Chat label is hidden, and the participant stack shows two avatars plus a count. At `sm` and above the word Projects, the role, the Chat label, and up to five avatars return. Share stays icon-only below `sm`.
   - **Main row:** at `lg` and above, a relative `min-w-0 flex-1` canvas column plus, when chat is open, one complementary panel (`lg:w-80`, left border). Below `lg` that same panel is the bottom flex child, capped at `max-h-[70%]`, with no second copy, scrim, or focus trap. The canvas column holds the canvas and `TurnBar`.
   - **Floating over the canvas:**

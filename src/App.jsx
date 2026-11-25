@@ -109,7 +109,7 @@ const App = () => {
           }
         />
         <Route
-          path="/collaborate/*"
+          path="/sysdesign/*"
           element={
             <LazyRoute feature="Collaborate">
               <Collaborate />

@@ -11,9 +11,9 @@ Update this file after every meaningful implementation change. It records the **
 
 ## Current Goal
 
-- Future naming direction (user, 2026-11-16): rename Collaborate to reflect system design, with `sysdesign` and `drawsysdes` as possible names. drawDB serves database design; this workspace serves system design. Final name and route remain undecided; no rename implemented.
+- Route names (user decision 2026-11-23, implemented 2026-11-24): the workspace is served at `/sysdesign` (S34) and drawDB at `/dbdesign` (D12), with permanent `vercel.json` redirects from `/collaborate` and `/drawdb`. Folders, files and names in the code keep `collaborate` and `drawdb`, and visible labels such as the navbar's Collaborate are unchanged until the user decides otherwise.
 
-- No `/collaborate` slice is open. The current work is the separate drawDB track from `../3dfolio_drawdb_plan.md`, with slice specs in `../3dfolio_drawdb_specs/`. D1 to D5 are committed as 72 to 76 (D2 Vercel preview check passed per the user on 2026-11-17); D6 (templates gallery) is Approved by Grok on 2026-11-20 and uncommitted for commit 77 (updated 2026-11-20). drawDB status lives in the plan, not in this file.
+- No workspace slice is open after S34. The drawDB track is complete through D9 (commits 72 to 80; the user reported the D9 Vercel preview checklist passed on 2026-11-24). The 2026-11-24 batch (D10 upstream sync, D11 duplicate diagram fix, D12, S34 and D13 docs) is implemented and awaits the user's commits 81 to 84. drawDB status lives in `../3dfolio_drawdb_plan.md` (section 8 for D1 to D9, section 10 for the batch), not in this file.
 - Still unverified in a browser with two accounts: S16, S17, S18, S20, S21, S22, S23, S24, S25, S27, S28, and the manual checklists of S29b to S33. S26 manual isolated-account REST cycle and live MongoDB race/index behavior are also unverified. No new API boot/health, real media, /blog or /chat runtime check was performed for S25 to S33.
 
 ## Completed
@@ -46,15 +46,17 @@ Update this file after every meaningful implementation change. It records the **
 - S26: Invitations and members REST API (Approved by Codex, 2026-11-12; committed as `c14a185`, together with S25).
 - S27 and S28: Live membership enforcement and the share dialog (Approved; committed as `efb06d9`, commit 70).
 - S29a, S29b, S30, S31, S32, S33: rate limits and audit, mobile and accessibility, launch, and the starter templates (Approved; committed as `69bc3e7`, commit 71, 2026-11-15). The launch QA and the manual browser checklists are not run.
+- S34: workspace route moved from `/collaborate` to `/sysdesign`, with a permanent `vercel.json` redirect (implemented by Claude Sonnet and checked by Claude Haiku on 2026-11-24; uncommitted, for commit 83). Spec and report: `specs/34-sysdesign-route.md`.
 
 ## In Progress
 
-- Nothing on `/collaborate`. On the drawDB track, D3 is Approved (commit 74) and D4 is next.
+- Nothing. The 2026-11-24 batch awaits the user's commits 81 to 84.
 
 ## Next Up
 
 - The user deploys commit 71 and runs the launch QA (sixteen items, all not run). After QA passes, update the portfolio About text and project snippet in the admin panel.
-- drawDB D4 (domain logic), then D5 to D9, one per session. D1 to D3 are done (commits 72 to 74).
+- After commits 81 to 84: the user checks `/dbdesign`, `/sysdesign` and both redirects on a Vercel preview (list in `HANDOFF.md`), then the Clerk Production move (HANDOFF Suggested order item 4).
+- `test/projectChatUi.test.mjs` has one failing test that still expects the placeholder `Message the project`, which became `Message` on 2026-11-16. Updating that expectation is a one-line follow-up for the user to assign.
 - `/blog` and `/chat` stay. Phase K (their removal) was cancelled by the user on 2026-11-14.
 - The shared-project walkthrough through S25 to S33 needs configured test accounts/data; it has not been performed.
 

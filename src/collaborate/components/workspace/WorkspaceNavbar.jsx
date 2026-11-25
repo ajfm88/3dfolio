@@ -36,7 +36,7 @@ const WorkspaceNavbar = () => {
   return (
     <header className="flex h-14 shrink-0 items-center gap-1 overflow-hidden border-b border-[var(--collab-border)] bg-[var(--collab-panel)] px-2 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-3">
-        <Link to="/collaborate" aria-label="Back to projects" className="inline-flex shrink-0 items-center gap-2 text-sm text-[var(--collab-accent-2)]">
+        <Link to="/sysdesign" aria-label="Back to projects" className="inline-flex shrink-0 items-center gap-2 text-sm text-[var(--collab-accent-2)]">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           <span className="hidden sm:inline">Projects</span>
         </Link>

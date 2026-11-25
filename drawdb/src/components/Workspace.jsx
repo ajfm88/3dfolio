@@ -353,8 +353,7 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
         if (selectedDb === "") setShowSelectDbModal(true);
         return;
       }
-      setDiagramSource("local");
-      applyDiagramState(diagram);
+      // 3dfolio: only navigate; the diagrams route loads it, so autosave cannot save a copy.
       navigate(`/editor/diagrams/${diagram.diagramId}`, { replace: true });
     };
 

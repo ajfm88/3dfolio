@@ -22,8 +22,8 @@ export default function Templates() {
   };
 
   const forkTemplate = (id) => {
-    // 3dfolio: prefix the /drawdb basename, which window.open does not apply.
-    window.open("/drawdb/editor/templates/" + id, "_blank");
+    // 3dfolio: prefix the /dbdesign basename, which window.open does not apply.
+    window.open("/dbdesign/editor/templates/" + id, "_blank");
   };
 
   useEffect(() => {

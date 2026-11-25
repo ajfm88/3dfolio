@@ -83,7 +83,7 @@ const ProjectsPage = () => {
         const project = await createProject(input);
         if (project) {
           setDialog(null);
-          navigate(`/collaborate/${project._id}`);
+          navigate(`/sysdesign/${project._id}`);
         }
       } else {
         const ok = dialog.kind === "edit"

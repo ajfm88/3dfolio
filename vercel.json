@@ -1,6 +1,10 @@
 {
+  "redirects": [
+    { "source": "/drawdb/:path*", "destination": "/dbdesign/:path*", "permanent": true },
+    { "source": "/collaborate/:path*", "destination": "/sysdesign/:path*", "permanent": true }
+  ],
   "rewrites": [
-    { "source": "/drawdb/:path*", "destination": "/drawdb/index.html" },
+    { "source": "/dbdesign/:path*", "destination": "/dbdesign/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

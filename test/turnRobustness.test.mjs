@@ -487,9 +487,9 @@ describe("turn robustness", () => {
   function renderPage() {
     return renderToStaticMarkup(createElement(
       MemoryRouter,
-      { initialEntries: [`/collaborate/${PROJECT}`] },
+      { initialEntries: [`/sysdesign/${PROJECT}`] },
       createElement(Routes, null, createElement(Route, {
-        path: "/collaborate/:projectId",
+        path: "/sysdesign/:projectId",
         element: createElement(WorkspacePage),
       })),
     ));

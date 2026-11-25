@@ -28,7 +28,7 @@ const NotFoundCard = () => (
       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--collab-accent-2)]">Collaborate</p>
       <h1 className="mt-3 text-2xl font-bold">Project not found</h1>
       <p className="mt-3 text-sm text-[var(--collab-muted)]">It may have been deleted, or you don't have access.</p>
-      <Link to="/collaborate" className={actionClass}>
+      <Link to="/sysdesign" className={actionClass}>
         Back to projects
       </Link>
     </div>
@@ -72,7 +72,7 @@ const WorkspacePage = () => {
     };
   }, [socket, projectId, bindWorkspace]);
 
-  if (status === "removed") return <Navigate to="/collaborate" replace />;
+  if (status === "removed") return <Navigate to="/sysdesign" replace />;
   if (status === "notFound") return <NotFoundCard />;
   if (status === "error") return <ErrorCard />;
 

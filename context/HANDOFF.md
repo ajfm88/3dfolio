@@ -1,22 +1,25 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-23)
+## Current point (2026-11-24)
 
-HEAD is `ef206a5` (commit 79). D1 to D8 are committed. D9 (editor goes live and cleanup) is **Ready for review** and uncommitted. Grok review is pending.
+HEAD is `65a692b` (commit 80). D1 to D9 are committed, and the user reported on 2026-11-24 that the D9 Vercel preview checklist passed, so the drawDB port is done. On that check the user also saw the upstream duplicate: each visit to the editor root saved another copy of the latest diagram.
 
-D9 copies 26 upstream files and makes the six specified edits in `ControlPanel.jsx`. It adds the `SHARING_ENABLED` switch, replaces `App.jsx` with the editor routes, updates the `index.html` preview metadata, removes 11 unused images, copies the AGPL v3 licence to `drawdb/LICENSE`, and updates the root readme.
+The same day the user asked for a follow-up batch. Claude (Opus 5.5) planned it and wrote the specs, Claude Sonnet implemented each slice, and Claude Haiku checked each one against its spec. It is uncommitted and is meant for four commits:
 
-The root build and drawDB lint passed. The portfolio entry is 578.23 kB (gzip 181.05 kB). drawDB built 3387 modules. The five JavaScript chunks are 16,726.94, 1,463.44, 199.39, 150.97 and 29.02 kB. The main chunk is 3,074.12 kB gzip. CSS is 388.97 kB (gzip 49.01 kB). Dependency hashes match before and after the build.
+1. Commit 81, D10: syncs `drawdb/` with the newer upstream copy in `../drawdb-main/`. Twelve source files change: a Bosnian locale, SQL import that links foreign keys to tables already in the diagram and reads Postgres array columns, and DBML refs parsed for `@dbml/core` 12. As upstream did, `@dbml/core` goes from 3.13.9 to 12.0.0 and `i18next` from 23.16.8 to 27.2.7. The main drawDB chunk grows from about 16.7 MB to about 21.7 MB before compression.
+2. Commit 82, D11: fixes the duplicate. `Workspace.jsx` now only navigates to the latest diagram and lets the diagrams route load it, so autosave no longer runs while the URL still lacks the diagram ID.
+3. Commit 83, D12 and S34: drawDB moves from `/drawdb` to `/dbdesign`, and the workspace from `/collaborate` to `/sysdesign`. `vercel.json` redirects both old paths permanently. Folders, files and names in the code do not change, and the visible labels (the navbar's Collaborate, the drawDB titles) stay as they were. Diagrams saved in visitors' browsers stay, because the origin is the same.
+4. Commit 84, D13: these documentation updates.
 
-The production build passed the headless Chrome checklist on a fresh profile. This covered the start dialog, PostgreSQL import in Monaco, deep reload and persistence, SQL preview, the save-copy toast and its target, New and New window URL capture, the gallery fork, theme toggling, hidden Share and Versions controls, the Help menu, and NotFound. The only external hosts requested were `cdn.jsdelivr.net` and `cdnjs.cloudflare.com`. There was no request to `localhost:5000`. The final pass had zero console errors and warnings. Earlier rapid imports logged a Monaco cancellation on disposal.
+Specs, reports and reviews are in `../3dfolio_drawdb_specs/` (D10 to D13) and `context/specs/34-sysdesign-route.md`. The plan's section 10 lists the files for each commit.
 
-Opening `/drawdb/` with a saved diagram reproduced the upstream duplicate. IndexedDB went from three saved diagrams to four, with a new ID and the same five tables and five relationships as the latest diagram. A direct reload by diagram ID kept the count unchanged. The export download, Flush storage, and post-commit Vercel checklist were not run. The local dev and preview servers were stopped.
+Known and left alone: `test/projectChatUi.test.mjs` has one failing test that still expects the placeholder `Message the project`, which became `Message` on 2026-11-16. A local portfolio build has no root `.env`, so the workspace cannot render locally.
 
 ### Next session
 
-1. After Grok approves D9, the user commits it as 80 using the draft in the D9 implementation note.
-2. The user runs the Vercel preview checklist in `../3dfolio_drawdb_specs/D9-editor-live.md`.
-3. Once the preview checklist passes, the drawDB port is done. The Clerk Production move in Suggested order item 4 is next.
+1. The user commits 81 to 84 in order.
+2. On a Vercel preview, the user checks: `/dbdesign` opens the editor with the diagrams saved before; `/drawdb` and `/drawdb/editor/diagrams/<id>` redirect to the same paths under `/dbdesign`; visiting `/dbdesign/` several times adds no copies in File > Open; File > New, Save as and a template fork open `/dbdesign/...` tabs; the navbar's Collaborate link opens `/sysdesign`; `/collaborate` and `/collaborate/<id>` redirect to `/sysdesign`; `/`, `/blog` and `/chat` look as before.
+3. Then the Clerk Production move in Suggested order item 4. If the Clerk dashboard lists a `/collaborate` URL, change it to `/sysdesign`.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 

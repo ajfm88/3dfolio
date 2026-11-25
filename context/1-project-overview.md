@@ -2,11 +2,11 @@
 
 ## Overview
 
-`/collaborate` is a real-time collaborative system-design workspace inside the 3dfolio portfolio. Signed-in users create projects, invite collaborators by email, and design software architectures together on a shared diagram canvas: shapes, connections, labels, and colors. Editing is **turn-based**. One browser tab holds the turn and edits while everyone else watches the changes live, sees each other's cursors, chats in a project-scoped thread, and queues for their turn. It's a simplified take on Ghost AI, built on the stack 3dfolio already runs: React/Vite on Vercel, plus Express, Socket.io, MongoDB and Clerk on Render. There are no third-party realtime or background-job services.
+`/sysdesign` (built as `/collaborate`, and still named Collaborate in the code) is a real-time collaborative system-design workspace inside the 3dfolio portfolio. Signed-in users create projects, invite collaborators by email, and design software architectures together on a shared diagram canvas: shapes, connections, labels, and colors. Editing is **turn-based**. One browser tab holds the turn and edits while everyone else watches the changes live, sees each other's cursors, chats in a project-scoped thread, and queues for their turn. It's a simplified take on Ghost AI, built on the stack 3dfolio already runs: React/Vite on Vercel, plus Express, Socket.io, MongoDB and Clerk on Render. There are no third-party realtime or background-job services.
 
 ## Goals
 
-**Development checkpoint (2026-11-23):** S01–S33 are committed through HEAD `69bc3e7` (commit 71, 2026-11-15). All 30 slices of the build plan and the three template slices S31 to S33 are implemented, Approved and committed. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The current work is the separate drawDB track in `3dfolio_drawdb_plan.md` (beside the repo): D1 to D8 are committed as 72 to 79 (D8 is `ef206a5`). The D6 Vercel preview check passed (user, 2026-11-21). D9 (editor goes live and cleanup) is Ready for review, with a Vercel preview checklist after its commit. Slice specs are in `3dfolio_drawdb_specs/` beside the repo. The feature lists below describe what is built; launch readiness depends on the QA. [HANDOFF.md](HANDOFF.md) records the current stopping point and limitations.
+**Development checkpoint (2026-11-24):** S01–S33 are committed through HEAD `69bc3e7` (commit 71, 2026-11-15). All 30 slices of the build plan and the three template slices S31 to S33 are implemented, Approved and committed. Launch QA on the deployed site is the user's and is **not run**, so the workspace is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. On 2026-11-24 the workspace URL moved from `/collaborate` to `/sysdesign` (S34) and drawDB's from `/drawdb` to `/dbdesign` (D12); `vercel.json` redirects the old paths, and folders, files and names in the code still say `collaborate` and `drawdb`. The drawDB track in `3dfolio_drawdb_plan.md` (beside the repo) is complete: D1 to D9 are committed as 72 to 80 (D9 is `65a692b`), and the user reported the D9 Vercel preview checklist passed on 2026-11-24. The 2026-11-24 batch (D10 upstream sync, D11 duplicate diagram fix, D12, S34 and D13 docs) is implemented and awaits the user's commits 81 to 84. Slice specs are in `3dfolio_drawdb_specs/` beside the repo and in `context/specs/`. The feature lists below describe what is built; launch readiness depends on the QA. [HANDOFF.md](HANDOFF.md) records the current stopping point and limitations.
 
 1. A signed-in user can create, rename, and delete projects, and see the projects shared with them.
 2. Members of a project see the same canvas, and every committed edit appears for all of them within about one second.
@@ -17,9 +17,9 @@
 
 ## Core User Flow
 
-1. User opens `/collaborate` and signs in with Clerk (modal).
+1. User opens `/sysdesign` and signs in with Clerk (modal).
 2. User sees the dashboard: **My projects**, **Shared with me**, and **Invitations**.
-3. User creates a project and is taken to `/collaborate/:projectId`.
+3. User creates a project and is taken to `/sysdesign/:projectId`.
 4. User requests the turn. Nobody holds it, so it's granted immediately.
 5. User drags shapes onto the canvas, connects them, and labels and colors them. Each change is saved as it's made.
 6. User opens Share and invites a teammate by email as an editor.
@@ -76,7 +76,7 @@
 - New Socket.io workspace events on the existing server.
 - Cleanup when a Clerk user is deleted.
 - Documentation of every new endpoint, event, and collection in `server/readme.md`.
-- A navbar link to `/collaborate` at launch (S30).
+- A navbar link to `/collaborate` at launch (S30), now `/sysdesign` (S34).
 
 ### Out of Scope
 

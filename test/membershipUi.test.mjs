@@ -145,7 +145,7 @@ it("dashboard shows invitations only when present and removed workspace renders 
     invitations.setState({invites:[{_id:"i",project:{name:"Design"},role:"editor",invitedBy:null}],busy:null});
     let html=renderToStaticMarkup(createElement(MemoryRouter,null,createElement(ProjectsPage)));assert.ok(html.includes("Invitations"));assert.ok(html.includes("Invited by a former user"));
     invitations.setState({invites:[]});html=renderToStaticMarkup(createElement(MemoryRouter,null,createElement(ProjectsPage)));assert.ok(!html.includes("invitations-title"));
-    ws.useWorkspaceStore.setState({status:"removed"});html=renderToStaticMarkup(createElement(MemoryRouter,null,createElement(WorkspacePage)));assert.ok(html.includes('data-route="/collaborate"'));assert.ok(!html.includes("Share project"));
+    ws.useWorkspaceStore.setState({status:"removed"});html=renderToStaticMarkup(createElement(MemoryRouter,null,createElement(WorkspacePage)));assert.ok(html.includes('data-route="/sysdesign"'));assert.ok(!html.includes("Share project"));
   } finally {React.useSyncExternalStore=old;}
 });
 it("successful self-leave marks the event and sends one shared toast id",async()=>{

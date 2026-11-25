@@ -1,6 +1,6 @@
 # Architecture Context
 
-**Current checkpoint (2026-11-23):** S01–S33 are committed through HEAD `69bc3e7` (commit 71, 2026-11-15). All 30 slices of the build plan and the three template slices S31 to S33 are implemented, Approved and committed. Launch QA on the deployed site is the user's and is **not run**, so `/collaborate` is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. The current work is the separate drawDB track in `3dfolio_drawdb_plan.md` (beside the repo): D1 to D8 are committed as 72 to 79 (D8 is `ef206a5`). The D6 Vercel preview check passed (user, 2026-11-21). D9 (editor goes live and cleanup) is Ready for review, with a Vercel preview checklist after its commit. Slice specs are in `3dfolio_drawdb_specs/` beside the repo. Runtime and manual QA are not established; see HANDOFF.md.
+**Current checkpoint (2026-11-24):** S01–S33 are committed through HEAD `69bc3e7` (commit 71, 2026-11-15). All 30 slices of the build plan and the three template slices S31 to S33 are implemented, Approved and committed. Launch QA on the deployed site is the user's and is **not run**, so the workspace is not recorded as launched. `/blog` and `/chat` stay in the app: the user cancelled their removal on 2026-11-14. On 2026-11-24 the workspace URL moved from `/collaborate` to `/sysdesign` (S34) and drawDB's from `/drawdb` to `/dbdesign` (D12); `vercel.json` redirects the old paths, and folders, files and names in the code still say `collaborate` and `drawdb`. The drawDB track in `3dfolio_drawdb_plan.md` (beside the repo) is complete: D1 to D9 are committed as 72 to 80 (D9 is `65a692b`), and the user reported the D9 Vercel preview checklist passed on 2026-11-24. The 2026-11-24 batch (D10 upstream sync, D11 duplicate diagram fix, D12, S34 and D13 docs) is implemented and awaits the user's commits 81 to 84. Slice specs are in `3dfolio_drawdb_specs/` beside the repo and in `context/specs/`. Runtime and manual QA are not established; see HANDOFF.md.
 
 S31 checkpoint: implemented by Codex, verification recorded in the tracker. Templates are client data inserted as ordinary ops in a single dispatch.
 
@@ -8,8 +8,8 @@ S31 checkpoint: implemented by Codex, verification recorded in the tracker. Temp
 
 | Layer | Technology | Role |
 | --- | --- | --- |
-| Frontend | React 19 + Vite 7 | SPA on Vercel. `/collaborate/*` is a lazy route chunk. |
-| Routing | React Router 6 | `/collaborate` (dashboard) and `/collaborate/:projectId` (workspace) |
+| Frontend | React 19 + Vite 7 | SPA on Vercel. `/sysdesign/*` is a lazy route chunk; `vercel.json` redirects `/collaborate/*` there. |
+| Routing | React Router 6 | `/sysdesign` (dashboard) and `/sysdesign/:projectId` (workspace) |
 | State | zustand | Session/socket, projects, and workspace stores |
 | Canvas | `@xyflow/react` (React Flow v12) | Rendering and interaction only. Never the source of truth. |
 | Styling | Tailwind 3 + scoped CSS custom properties | `.collab-root` theme, see `3-ui-context.md` |

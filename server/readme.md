@@ -1,6 +1,6 @@
 # 3dfolio Backend (Server)
 
-This is the backend for three parts of the site: the blog (`/blog`), the direct-message chat (`/chat`) and the collaborative workspace (`/collaborate`). It is a REST API and a WebSocket server built with Express 5, MongoDB, Clerk and Socket.io.
+This is the backend for three parts of the site: the blog (`/blog`), the direct-message chat (`/chat`) and the collaborative workspace (`/sysdesign`). It is a REST API and a WebSocket server built with Express 5, MongoDB, Clerk and Socket.io.
 
 The server holds the business logic, talks to the database, uploads media to ImageKit and delivers real-time events. The three features share Clerk sign-in, one MongoDB database and one deployment. Project chat in the workspace is separate from direct messages, but it reuses the same Socket.io server and the same upload code.
 
@@ -188,7 +188,7 @@ The Clerk webhook is mounted first because its signature is verified against the
 
 ## The Collaborative Workspace at a Glance
 
-Most of this document is reference detail. This is the short version of how `/collaborate` works on the server:
+Most of this document is reference detail. This is the short version of how the workspace (`/sysdesign`) works on the server:
 
 - **Projects and access.** A project has one owner and up to ten seats shared between members and pending invitations. Members are editors or viewers. Every project read and write is scoped to the caller's membership in the database query itself, so an outsider gets `404` and never learns that a project exists.
 - **REST for durable things.** Projects, invitations, members and project chat messages go through `/api/projects`.
@@ -263,7 +263,7 @@ Conversations are derived, not stored. There is no `conversations` collection. T
 
 ### Project Routes (Protected)
 
-All requests to `/api/projects` require a valid Clerk session. These routes back the `/collaborate` dashboard, the Share dialog and the project chat panel.
+All requests to `/api/projects` require a valid Clerk session. These routes back the `/sysdesign` dashboard, the Share dialog and the project chat panel.
 
 | Method | Endpoint                                  | Who                                       | Description                                  |
 | ------ | ----------------------------------------- | ----------------------------------------- | -------------------------------------------- |
@@ -386,7 +386,7 @@ The server is created as an `http.Server`, not through `app.listen()`, so Expres
 
 Sockets authenticate exactly like REST requests: the client sends its Clerk session token in `handshake.auth.token`, the server verifies it and resolves it to the synced MongoDB user. Every socket joins a room named for its user id, so emits reach all of that user's open tabs.
 
-The chat uses the `typing`, `getOnlineUsers` and `newMessage` events. Every event with a `workspace:`, `canvas:`, `cursor:`, `turn:`, `presence:` or `project:` prefix belongs to `/collaborate`.
+The chat uses the `typing`, `getOnlineUsers` and `newMessage` events. Every event with a `workspace:`, `canvas:`, `cursor:`, `turn:`, `presence:` or `project:` prefix belongs to the workspace (`/sysdesign`).
 
 ### Client to Server
 

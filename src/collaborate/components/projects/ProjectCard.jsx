@@ -8,7 +8,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => (
   <article className="relative rounded-2xl border border-[var(--collab-border)] bg-[var(--collab-panel)] p-5 transition-colors hover:border-[var(--collab-border-strong)] hover:bg-[var(--collab-panel-2)]">
     <div className="flex items-start justify-between gap-2">
       <Link
-        to={`/collaborate/${project._id}`}
+        to={`/sysdesign/${project._id}`}
         className="min-w-0 truncate text-base font-semibold text-[var(--collab-text)] after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--collab-accent-2)]"
       >
         {project.name}

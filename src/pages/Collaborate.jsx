@@ -77,7 +77,7 @@ const CollaborateApp = () => {
           <Routes>
             <Route index element={<ProjectsPage />} />
             <Route path=":projectId" element={<WorkspacePage />} />
-            <Route path="*" element={<Navigate to="/collaborate" replace />} />
+            <Route path="*" element={<Navigate to="/sysdesign" replace />} />
           </Routes>
         </Suspense>
       )}

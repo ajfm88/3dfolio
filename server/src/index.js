@@ -13,6 +13,7 @@ import postRoutes from "./routes/post.route.js";
 import commentRoutes from "./routes/comment.route.js";
 import messageRoutes from "./routes/message.route.js";
 import projectRoutes from "./routes/project.route.js";
+import diagramRoutes from "./routes/diagram.route.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -25,8 +26,11 @@ const CLIENT_URLS = (process.env.CLIENT_URL || "http://localhost:5173")
 // express.raw) BEFORE express.json() parses everything else.
 app.use("/api/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhook);
 
-app.use(express.json());
 app.use(cors({ origin: CLIENT_URLS, credentials: true }));
+// Whole diagrams are bigger than the global 100 kB default. body-parser skips
+// a body that is already parsed, so the global parser below leaves these alone.
+app.use("/api/diagrams", express.json({ limit: "2mb" }));
+app.use(express.json());
 app.use(clerkMiddleware());
 
 // Landing line for anyone opening the service URL directly — the API itself
@@ -45,6 +49,7 @@ app.use("/api/comments", commentRoutes);
 
 app.use("/api/messages", messageRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/diagrams", diagramRoutes);
 
 // central error handler
 app.use((err, req, res, next) => {

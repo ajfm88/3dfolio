@@ -2094,9 +2094,7 @@ export default function ControlPanel({
       shortcuts: {
         function: () => window.open(`${socials.docs}/shortcuts`, "_blank"),
       },
-      ask_on_discord: {
-        function: () => window.open(socials.discord, "_blank"),
-      },
+      // 3dfolio: Ask us on Discord removed, because this site does not run the drawDB Discord.
       // 3dfolio: Report a bug removed, because this site has no bug report page.
     },
   };

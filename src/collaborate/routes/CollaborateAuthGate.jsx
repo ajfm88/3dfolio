@@ -16,7 +16,7 @@ const CollaborateAuthGate = () => (
       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--collab-accent-2)]">
         Secure entry
       </p>
-      <h1 className="mt-3 text-2xl font-bold text-[var(--collab-text)]">ajfm88 Collaborate</h1>
+      <h1 className="mt-3 text-2xl font-bold text-[var(--collab-text)]">System Design</h1>
       <p className="mt-3 text-sm leading-relaxed text-[var(--collab-muted)]">
         Design software architectures together on a shared canvas, one editor at a time. Sign in to see your projects.
       </p>

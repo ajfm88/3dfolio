@@ -1,5 +1,5 @@
 <div align="center">
-    <img width="64" alt="drawDB logo" src="./src/assets/icon-dark.png">
+    <img width="64" alt="drawDB logo" src="./src/assets/icon_dark_64.png">
     <h1>drawDB</h1>
 </div>
 
@@ -8,9 +8,6 @@
 <div align="center" style="margin-bottom:12px;">
     <a href="https://drawdb.app/" style="display: flex; align-items: center;">
         <img src="https://img.shields.io/badge/Start%20building-grey" alt="drawDB"/>
-    </a>
-    <a href="https://discord.gg/BrjZgNrmR6" style="display: flex; align-items: center;">
-        <img src="https://img.shields.io/discord/1196658537208758412.svg?label=Join%20the%20Discord&logo=discord" alt="Discord"/>
     </a>
     <a href="https://x.com/drawDB_" style="display: flex; align-items: center;">
         <img src="https://img.shields.io/badge/Follow%20us%20on%20X-blue?logo=X" alt="Follow us on X"/>
@@ -59,6 +56,3 @@ docker run -p 3000:80 -e VITE_BACKEND_URL=https://your-drawdb-server.example.com
 ## Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
-
-## Support
-- Join discussions: [Discord](https://discord.gg/BrjZgNrmR6)

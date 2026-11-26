@@ -10,15 +10,12 @@ export default function NotFound() {
         check out the{" "}
         <a className="text-blue-600" href={socials.docs}>
           docs
-        </a>
-        ,{" "}
-        <a className="text-blue-600" href="mailto:drawdb@outlook.com">
-          shoot us an email
         </a>{" "}
         or{" "}
-        <a className="text-blue-600" href={socials.discord}>
-          a message on discord
+        <a className="text-blue-600" href="mailto:drawdb@outlook.com">
+          shoot us an email
         </a>
+        {/* 3dfolio: the Discord link is removed. */}
       </p>
       <br />
       <p className="opacity-70">

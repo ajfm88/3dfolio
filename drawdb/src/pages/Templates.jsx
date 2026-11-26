@@ -27,7 +27,8 @@ export default function Templates() {
   };
 
   useEffect(() => {
-    document.title = "Templates | drawDB";
+    // 3dfolio: tab title names this site.
+    document.title = "Templates | ajfm88’s dbdesign";
   }, []);
 
   return (

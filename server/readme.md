@@ -106,6 +106,8 @@ server/
 │   │   ├── projectAccess.js          # Project roles, permission table, membership-scoped lookup, limits
 │   │   ├── projectMembership.js      # Invite/member validation, email normalization, response shapes, snapshot guard
 │   │   ├── projectMessages.js        # Project chat query, text, paging, and response whitelist
+│   │   ├── diagramAccess.js          # Diagram roles, save parsing, and size limits
+│   │   ├── diagramCleanup.js         # Owned diagram delete and Clerk user diagram cleanup
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
 │   │   ├── turns.js                  # Pure turn state: holder, queue, grace, and idle
@@ -123,6 +125,7 @@ server/
 │   │   ├── comment.controller.js     # Comment list, add, and delete handlers
 │   │   ├── message.controller.js     # Message history, conversations, and send + emit
 │   │   ├── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
+│   │   ├── diagram.controller.js     # Cloud diagram list, create, read, update, and delete
 │   │   ├── projectMember.controller.js # Invitations and members: create, revoke, list, accept, decline, role, remove
 │   │   └── projectMessage.controller.js # Project chat history and send, then room broadcast
 │   ├── models/
@@ -131,6 +134,7 @@ server/
 │   │   ├── comment.model.js          # Mongoose Comment model
 │   │   ├── message.model.js          # Mongoose Message model
 │   │   ├── project.model.js          # Project ownership, members, and pending invites
+│   │   ├── diagram.model.js          # Cloud diagram: content string, revision, and members
 │   │   ├── canvas.model.js           # One versioned canvas snapshot per project
 │   │   └── projectMessage.model.js   # One project chat message; collection projectmessages
 │   ├── routes/
@@ -138,7 +142,8 @@ server/
 │   │   ├── post.route.js             # /api/posts routes
 │   │   ├── comment.route.js          # /api/comments routes
 │   │   ├── message.route.js          # /api/messages routes
-│   │   └── project.route.js          # /api/projects routes
+│   │   ├── project.route.js          # /api/projects routes
+│   │   └── diagram.route.js          # /api/diagrams routes
 │   ├── sockets/
 │   │   ├── chat.socket.js            # Chat presence, typing, and disconnect handlers
 │   │   └── workspace.socket.js       # Workspace join, leave, canvas, turns, cursors, and project typing
@@ -147,6 +152,8 @@ server/
 │   └── index.js                      # Express app entry point
 ├── test/
 │   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
+│   ├── diagramAccess.test.js         # Diagram permission table, parsing, limits, and schema
+│   ├── diagram.api.test.js           # Diagram REST authority, revision check, and quotas
 │   ├── models.test.js                # Project and Canvas schema validation without a database
 │   ├── canvas.socket.test.js         # Canvas commit validation, persistence, and sync
 │   ├── cursor.socket.test.js         # Cursor authority and volatile relay
@@ -177,14 +184,17 @@ The order in `src/index.js` matters:
 
 | Order | Middleware            | Note                                                 |
 | ----- | --------------------- | ---------------------------------------------------- |
-| 1     | `/api/webhooks/clerk` | Mounted with `express.raw()`, before the JSON parser |
-| 2     | `express.json()`      | Parses every other request body                      |
-| 3     | `cors()`              | Explicit allowlist from `CLIENT_URL`, no wildcard    |
-| 4     | `clerkMiddleware()`   | Attaches Clerk session context to the request        |
-| 5     | Routes                | `/`, `/health`, `/api/*`                             |
-| 6     | Central error handler | Formats every failure into one JSON shape            |
+| 1     | `/api/webhooks/clerk` | Mounted with `express.raw()`, before any JSON parser |
+| 2     | `cors()`              | Explicit allowlist from `CLIENT_URL`, no wildcard. Runs before the JSON parsers so a 413 still carries CORS headers |
+| 3     | `/api/diagrams` JSON  | `express.json({ limit: "2mb" })` for diagram bodies only |
+| 4     | `express.json()`      | 100 kB default for every other request body          |
+| 5     | `clerkMiddleware()`   | Attaches Clerk session context to the request        |
+| 6     | Routes                | `/`, `/health`, `/api/*`                             |
+| 7     | Central error handler | Formats every failure into one JSON shape            |
 
 The Clerk webhook is mounted first because its signature is verified against the exact raw bytes of the request body. Parsing the body first re-serializes it, and the signature check then fails on a body that looks identical but is not byte-for-byte the same.
+
+`/api/diagrams` gets its own 2 MB JSON parser, mounted before the global 100 kB parser. body-parser skips a body that is already parsed, so the global parser leaves those requests alone. CORS runs before both parsers so a body that is too large still gets CORS headers.
 
 ## The Collaborative Workspace at a Glance
 
@@ -338,6 +348,56 @@ These seven routes sit on the same router, behind `protectRoute`. Identity is th
 
 **Live membership.** Removing a member or leaving revokes every attached tab immediately; demoting an editor revokes its turn and queue entries. Deleting a project revokes every attached tab and discards its room. These hooks act only within the current server process, so they require the existing single-instance deployment. The client listens for these changes and exposes sharing through the Share UI.
 
+### Diagram Routes (Protected)
+
+These five routes sit on `/api/diagrams`, behind `protectRoute`. They store drawDB diagrams for `/dbdesign`. Nothing adds members until a later slice, and the role table is already enforced. The owner is never stored in `members`. A caller with no role gets `404` with `{ "message": "Diagram not found" }`, the same body for a missing id, a malformed id, and a stranger. A role without the permission gets `403`. No route answers 402.
+
+| Route | Who | Success |
+| ----- | --- | ------- |
+| `GET /api/diagrams` | signed in | `200 { userId, diagrams }`. Owned and member diagrams, newest `updatedAt` first. Each item is `diagramId`, `name`, `database`, `lastModified`, `sizeBytes`, `role`, `owner`. The list query leaves `content` out. |
+| `POST /api/diagrams` | signed in | `201 { diagramId, revision, lastModified, sizeBytes }`. The caller becomes the owner, `revision` is 1, and `members` is empty. |
+| `GET /api/diagrams/:diagramId` | owner, editor, or viewer | `200` the diagram, including `revision`, `canWrite`, and the stored content fields. |
+| `PUT /api/diagrams/:diagramId` | owner or editor | `200 { diagramId, revision, lastModified, sizeBytes }`. The body includes `baseRevision`. The path id is the diagram that is saved. |
+| `DELETE /api/diagrams/:diagramId` | owner | `204` with no body. |
+
+`userId` and `owner.id` are hex strings. `owner` is `{ id, username, email }`, where `username` is the user's full name when they have one. `lastModified` is the diagram's `updatedAt` as an ISO timestamp. `canWrite` is true for an owner or an editor.
+
+Checks run in this order. Create: diagram id, body, owned count, storage, then insert. A duplicate id is `409` with `A diagram with this id already exists`. Read, update, and delete: parse the id, then one query that matches only when the caller is the owner or a member. Update then checks edit permission, `baseRevision`, the body, the owner's storage, and a compare-and-set on `revision`. A stale `baseRevision` is `409` with `{ "message": "This diagram was changed somewhere else", "revision": <current> }`. Delete checks the delete permission, then removes that diagram.
+
+| Status | When | Message |
+| ------ | ---- | ------- |
+| 400 | Bad or missing diagram id on create | `Invalid diagram id` |
+| 400 | Body is not an object | `Diagram data must be an object` |
+| 400 | Name is not text | `Name must be text` |
+| 400 | Name is longer than 200 characters | `Name must be 200 characters or fewer` |
+| 400 | Database type is not a known token | `Unknown database type` |
+| 400 | A content list is missing or not a list | `<field> must be a list` |
+| 400 | A content list contains a non-object | `<field> must contain objects` |
+| 400 | `sqlHeader` is not text | `sqlHeader must be text` |
+| 400 | `pan` is not a point | `pan must have numeric x and y` |
+| 400 | `zoom` is not a positive finite number | `zoom must be a positive number` |
+| 400 | The caller already owns 50 diagrams | `You can keep up to 50 cloud diagrams` |
+| 400 | Update `baseRevision` is not an integer of 1 or more | `baseRevision must be a positive whole number` |
+| 401 | Not signed in | `Unauthorized` |
+| 403 | Update by a viewer | `You can only view this diagram` |
+| 403 | Delete by an editor or a viewer | `Only the owner can delete this diagram` |
+| 404 | No role, missing diagram, or malformed id | `Diagram not found` |
+| 409 | Duplicate diagram id | `A diagram with this id already exists` |
+| 409 | Stale revision | `This diagram was changed somewhere else`, plus `revision` |
+| 413 | Content is over 1 MiB | `Diagram is too large` |
+| 413 | The owner's stored bytes would pass 25 MiB, or the JSON body is over 2 MB | `Storage limit reached`, or the parser's body-size error |
+
+A missing name becomes `Untitled diagram`. A missing database becomes `generic`. An editor's write counts against the diagram owner's storage, and the check replaces that diagram's current size with the new one. Two writes at the same time can both pass the count or storage read; that race is accepted.
+
+| Limit | Value | Answer when exceeded |
+| ----- | ----- | -------------------- |
+| Content per diagram | 1 MiB (1,048,576 bytes) | 413 `Diagram is too large` |
+| JSON body for `/api/diagrams` | 2 MB | 413 |
+| Cloud diagrams owned per user | 50 | 400 `You can keep up to 50 cloud diagrams` |
+| Storage per owner | 25 MiB (26,214,400 bytes) | 413 `Storage limit reached` |
+
+Exactly 1,048,576 content bytes is allowed. Storage is the sum of `sizeBytes` on the diagrams that user owns.
+
 ## Authorization
 
 All protected routes require a Clerk session token in the request header:
@@ -376,7 +436,7 @@ Clerk owns identity and MongoDB owns application data. Every Clerk user has a ma
 
 If a request arrives before the webhook has synced its user, the guard returns `404` and does not crash.
 
-Deleting a Clerk user cascades. The workspace cleanup runs first: it deletes the projects that user owns along with their canvases and chat, removes the user from other projects and from any live project room, removes invitations sent to their email, and deletes the project messages they wrote. Then the `User` document is deleted, followed by that user's posts, comments and direct messages. If the workspace cleanup fails, the `User` row is left in place so that Clerk's webhook retry can run it again.
+Deleting a Clerk user cascades. The workspace cleanup runs first: it deletes the projects that user owns along with their canvases and chat, removes the user from other projects and from any live project room, removes invitations sent to their email, and deletes the project messages they wrote. Deleting a user also deletes their cloud diagrams and removes their diagram memberships, after the workspace cleanup and before the User row is deleted. Then the `User` document is deleted, followed by that user's posts, comments and direct messages. If the workspace cleanup fails, the `User` row is left in place so that Clerk's webhook retry can run it again.
 
 ## Socket.io Events
 
@@ -857,6 +917,33 @@ Index: { project: 1, createdAt: -1, _id: -1 }
 ```
 
 A saved message needs nonblank text or exactly one of `image` and `video`. Numbers, arrays, and objects are not cast into those strings. Owner delete removes every row whose `project` is the deleted project. Direct messages are not part of that cascade.
+
+### Diagrams Collection
+
+Collection name: `diagrams`. `content` is the diagram as a JSON string. The server does not query inside it. The owner is never stored in `members`.
+
+```
+{
+  _id:        ObjectId,
+  diagramId:  String (required, unique, client UUID, stored lowercase),
+  owner:      ObjectId (ref: User, required, indexed),
+  name:       String (required, max 200 characters),
+  database:   String (required, max 32 characters),
+  content:    String (required, JSON text of the diagram),
+  sizeBytes:  Number (required, min 0, UTF-8 byte length of content),
+  revision:   Number (required, min 1, default 1),
+  members:    [{                      // default: []; no subdocument _id
+    user:     ObjectId (ref: User, required),
+    role:     String (required, enum: "editor" | "viewer"),
+    addedAt:  Date (default: Date.now)
+  }],
+  createdAt:  Date,
+  updatedAt:  Date
+}
+Indexes: { diagramId: 1 } unique, { owner: 1 }, { "members.user": 1 }
+```
+
+`content` holds `{ tables, references, notes, areas, views, enums, types, sqlHeader, pan, zoom }` in that key order. `sizeBytes` is the UTF-8 length of that string. `updatedAt` is the `lastModified` the client shows. An update is stored only when `revision` still equals the caller's `baseRevision`, and the stored revision then increases by 1.
 
 ## Validation Rules
 

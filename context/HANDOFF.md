@@ -1,25 +1,31 @@
 # Session handoff — 2026-11-15
 
-## Current point (2026-11-24)
+## Current point (2026-11-26)
 
-HEAD is `65a692b` (commit 80). D1 to D9 are committed, and the user reported on 2026-11-24 that the D9 Vercel preview checklist passed, so the drawDB port is done. On that check the user also saw the upstream duplicate: each visit to the editor root saved another copy of the latest diagram.
+HEAD is `952d335` (commit 81, 2026-11-25), and the batch below is committed. Commit 80 (`65a692b`) finished D1 to D9, and the user reported on 2026-11-24 that the D9 Vercel preview checklist passed, so the drawDB port is done. On that check the user also saw the upstream duplicate: each visit to the editor root saved another copy of the latest diagram.
 
-The same day the user asked for a follow-up batch. Claude (Opus 5.5) planned it and wrote the specs, Claude Sonnet implemented each slice, and Claude Haiku checked each one against its spec. It is uncommitted and is meant for four commits:
+The same day the user asked for a follow-up batch. Claude (Opus 5.5) planned it and wrote the specs, Claude Sonnet implemented each slice, and Claude Haiku checked each one against its spec. It was planned as four commits, 81 to 84, but the user committed all of it as one commit, 81 (`952d335`), on 2026-11-25. Its parts, in the planned order:
 
-1. Commit 81, D10: syncs `drawdb/` with the newer upstream copy in `../drawdb-main/`. Twelve source files change: a Bosnian locale, SQL import that links foreign keys to tables already in the diagram and reads Postgres array columns, and DBML refs parsed for `@dbml/core` 12. As upstream did, `@dbml/core` goes from 3.13.9 to 12.0.0 and `i18next` from 23.16.8 to 27.2.7. The main drawDB chunk grows from about 16.7 MB to about 21.7 MB before compression.
-2. Commit 82, D11: fixes the duplicate. `Workspace.jsx` now only navigates to the latest diagram and lets the diagrams route load it, so autosave no longer runs while the URL still lacks the diagram ID.
-3. Commit 83, D12 and S34: drawDB moves from `/drawdb` to `/dbdesign`, and the workspace from `/collaborate` to `/sysdesign`. `vercel.json` redirects both old paths permanently. Folders, files and names in the code do not change, and the visible labels (the navbar's Collaborate, the drawDB titles) stay as they were. Diagrams saved in visitors' browsers stay, because the origin is the same.
-4. Commit 84, D13: these documentation updates.
+1. D10: syncs `drawdb/` with the newer upstream copy in `../drawdb-main/`. Twelve source files change: a Bosnian locale, SQL import that links foreign keys to tables already in the diagram and reads Postgres array columns, and DBML refs parsed for `@dbml/core` 12. As upstream did, `@dbml/core` goes from 3.13.9 to 12.0.0 and `i18next` from 23.16.8 to 27.2.7. The main drawDB chunk grows from about 16.7 MB to about 21.7 MB before compression.
+2. D11: fixes the duplicate. `Workspace.jsx` now only navigates to the latest diagram and lets the diagrams route load it, so autosave no longer runs while the URL still lacks the diagram ID.
+3. D12 and S34: drawDB moves from `/drawdb` to `/dbdesign`, and the workspace from `/collaborate` to `/sysdesign`. `vercel.json` redirects both old paths permanently. Folders, files and names in the code do not change, and the visible labels (the navbar's Collaborate, the drawDB titles) stay as they were. Diagrams saved in visitors' browsers stay, because the origin is the same.
+4. D13: these documentation updates.
 
-Specs, reports and reviews are in `../3dfolio_drawdb_specs/` (D10 to D13) and `context/specs/34-sysdesign-route.md`. The plan's section 10 lists the files for each commit.
+Specs, reports and reviews are in `../3dfolio_drawdb_specs/` (D10 to D13) and `context/specs/34-sysdesign-route.md`. The plan's section 10 lists each slice and its status.
 
 Known and left alone: `test/projectChatUi.test.mjs` has one failing test that still expects the placeholder `Message the project`, which became `Message` on 2026-11-16. A local portfolio build has no root `.env`, so the workspace cannot render locally.
 
+The dbdesign cloud track (`../3dfolio_dbcloud_plan.md`) has two slices in commit 82, together with the 2026-11-25 fixes:
+
+- C1, the diagrams API (server only). Grok implemented it and Sonnet reviewed it on 2026-11-25; the server suite has 407 tests.
+- C2, drawDB sign-in and cloud storage (client, 2026-11-26). Claude Sonnet implemented it and Claude Haiku reviewed it, both as subagents of the planning session. The code is in `drawdb/src/cloud/`, and only `drawdb/src/main.jsx` changed among the existing files. Signed out, or built without `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL`, drawDB stays local only. `npm --prefix drawdb test` runs its unit tests.
+
+Signed-in behaviour has not been checked yet: Clerk cannot be automated here. The user's checklist is section 12 of `../3dfolio_dbcloud_specs/C2-drawdb-cloud-storage.md`. Next in the track: C3 server (commit 83).
+
 ### Next session
 
-1. The user commits 81 to 84 in order.
-2. On a Vercel preview, the user checks: `/dbdesign` opens the editor with the diagrams saved before; `/drawdb` and `/drawdb/editor/diagrams/<id>` redirect to the same paths under `/dbdesign`; visiting `/dbdesign/` several times adds no copies in File > Open; File > New, Save as and a template fork open `/dbdesign/...` tabs; the navbar's Collaborate link opens `/sysdesign`; `/collaborate` and `/collaborate/<id>` redirect to `/sysdesign`; `/`, `/blog` and `/chat` look as before.
-3. Then the Clerk Production move in Suggested order item 4. If the Clerk dashboard lists a `/collaborate` URL, change it to `/sysdesign`.
+1. On a Vercel preview, the user checks: `/dbdesign` opens the editor with the diagrams saved before; `/drawdb` and `/drawdb/editor/diagrams/<id>` redirect to the same paths under `/dbdesign`; visiting `/dbdesign/` several times adds no copies in File > Open; File > New, Save as and a template fork open `/dbdesign/...` tabs; the navbar's Collaborate link opens `/sysdesign`; `/collaborate` and `/collaborate/<id>` redirect to `/sysdesign`; `/`, `/blog` and `/chat` look as before.
+2. Then the Clerk Production move in Suggested order item 4. If the Clerk dashboard lists a `/collaborate` URL, change it to `/sysdesign`.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 
@@ -33,7 +39,7 @@ The older stopping points below are historical. The Start here list that follows
 
 ## Current point
 
-All `/collaborate` work is **committed** through HEAD `69bc3e7` (commit 71): the 30 slices of the build plan and the three template slices S31 to S33 (twenty-seven templates in seven groups). Every slice is code-approved; none of it has been checked in a real browser with two accounts. `/collaborate` is **not recorded as launched**: the sixteen-item launch QA in [the tracker](6-progress-tracker.md) under `S30 — Launch QA` is entirely **not run**.
+All `/collaborate` work is **committed** through `69bc3e7` (commit 71): the 30 slices of the build plan and the three template slices S31 to S33 (twenty-seven templates in seven groups). Every slice is code-approved; none of it has been checked in a real browser with two accounts. `/collaborate` is **not recorded as launched**: the sixteen-item launch QA in [the tracker](6-progress-tracker.md) under `S30 — Launch QA` is entirely **not run**.
 
 Never commit, push, branch or deploy. The user does.
 

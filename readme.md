@@ -75,7 +75,7 @@ This is the personal website of Alejandro J. Foucault (ajfm88). The home page is
 - a **blog** at `/blog`
 - a **real-time chat** at `/chat`
 - a **collaborative system-design workspace** at `/sysdesign`
-- a **database diagram editor**, [drawDB](https://github.com/drawdb-io/drawdb), at `/dbdesign`
+- a **database diagram editor** at `/dbdesign`
 
 In the workspace, signed-in users create projects, invite other people, and draw system diagrams together on a shared canvas. One person edits at a time while everyone else watches the changes live, and each project has its own chat.
 
@@ -361,19 +361,19 @@ The backend has its own readme with the full API, the schema and the reasons beh
 
 ## 🧭 <a name="pages-and-routes">Pages and Routes</a>
 
-| Route                     | Page                    | Bundle | Access          |
-| ------------------------- | ----------------------- | ------ | --------------- |
-| `/`                       | 3D portfolio            | Main   | Public          |
-| `/gft`                    | GitHub Follower Tracker | Lazy   | Public          |
-| `/blog`                   | Blog homepage           | Lazy   | Public          |
-| `/blog/posts`             | Full post list          | Lazy   | Public          |
-| `/blog/:slug`             | Single post             | Lazy   | Public          |
-| `/blog/write`             | Rich-text editor        | Lazy   | Owner           |
-| `/chat`                   | Real-time chat          | Lazy   | Signed in       |
-| `/sysdesign`              | Projects dashboard      | Lazy   | Signed in       |
-| `/sysdesign/:projectId`   | Workspace               | Lazy   | Project members |
-| `/dbdesign`               | drawDB editor           | Own    | Public          |
-| `/dbdesign/templates`     | drawDB template gallery | Own    | Public          |
+| Route                   | Page                    | Bundle | Access          |
+| ----------------------- | ----------------------- | ------ | --------------- |
+| `/`                     | 3D portfolio            | Main   | Public          |
+| `/gft`                  | GitHub Follower Tracker | Lazy   | Public          |
+| `/blog`                 | Blog homepage           | Lazy   | Public          |
+| `/blog/posts`           | Full post list          | Lazy   | Public          |
+| `/blog/:slug`           | Single post             | Lazy   | Public          |
+| `/blog/write`           | Rich-text editor        | Lazy   | Owner           |
+| `/chat`                 | Real-time chat          | Lazy   | Signed in       |
+| `/sysdesign`            | Projects dashboard      | Lazy   | Signed in       |
+| `/sysdesign/:projectId` | Workspace               | Lazy   | Project members |
+| `/dbdesign`             | drawDB editor           | Own    | Public          |
+| `/dbdesign/templates`   | drawDB template gallery | Own    | Public          |
 
 Only `/` ships in the main bundle. Every other route is code-split, so a visitor who never opens the blog, the chat or the workspace never downloads Clerk, Axios, Zustand, socket.io-client or React Flow.
 
@@ -453,11 +453,11 @@ Open [http://localhost:5173](http://localhost:5173) in your browser to view the 
 
 **drawDB**
 
-`drawdb/` holds [drawDB](https://github.com/drawdb-io/drawdb), an open source database diagram editor, as a separate app with its own dependencies. `/dbdesign/` opens the editor and `/dbdesign/templates` lists the starter templates. Diagrams are saved in the visitor's browser with IndexedDB, so drawDB needs no backend and no sign-in. The Share and Versions buttons are hidden and the bug report entry is removed, because those need drawDB's own server, which this site does not run. No navbar link points to drawDB yet. Any future link from the portfolio must be a plain `<a href="/dbdesign/">`, which loads that document with a full page navigation. The copy was last synced with upstream drawDB on 2026-11-24, and one local fix stops the editor from saving a duplicate of the latest diagram on each visit.
+`drawdb/` holds [drawDB](https://github.com/drawdb-io/drawdb), an open source database diagram editor, as a separate app with its own dependencies. `/dbdesign/` opens the editor and `/dbdesign/templates` lists the starter templates. Signed out, diagrams are saved in the visitor's browser with IndexedDB and drawDB sends nothing to the API. A Sign in button in the editor header uses the same Clerk account as the rest of the site. Signed in, new diagrams are saved to the cloud through `/api/diagrams` and follow the visitor to any device, and a diagram made before signing in can be moved to the cloud from a banner. If the same cloud diagram is edited in two places at once, the later save is refused with a message to reload, so nothing is silently overwritten. This code lives in `drawdb/src/cloud/` and is only switched on when `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL` are both set at build time; without them drawDB stays local only. The Share and Versions buttons are still hidden and the bug report entry is removed. No navbar link points to drawDB yet. Any future link from the portfolio must be a plain `<a href="/dbdesign/">`, which loads that document with a full page navigation. The copy was last synced with upstream drawDB on 2026-11-24, and one local fix stops the editor from saving a duplicate of the latest diagram on each visit.
 
 drawDB is licensed under the GNU Affero General Public License v3.0, included as [`drawdb/LICENSE`](drawdb/LICENSE). That licence covers the code in `drawdb/`. Local changes to upstream files are marked with comments that start with `3dfolio:`.
 
-`npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/dbdesign/`.
+`npm run dev:drawdb` starts the drawDB development server. It does not install packages. If `drawdb/node_modules` is missing, install them first with `npm --prefix drawdb install`. The development base is `/dbdesign/`. To try sign-in locally, put both variables in `drawdb/.env.local`, which git ignores. `npm --prefix drawdb test` runs the cloud storage unit tests.
 
 `npm run build` builds the portfolio, then installs the drawDB dependencies, including dev dependencies, and builds drawDB into `dist/dbdesign/`. `npm run build:drawdb` builds only that app.
 

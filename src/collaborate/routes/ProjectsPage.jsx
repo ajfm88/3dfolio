@@ -113,7 +113,7 @@ const ProjectsPage = () => {
         <div>
           <div className="flex items-center gap-3">
             <img src={LOGO_SRC} alt={LOGO_ALT} className="h-8 w-8 object-contain" />
-            <h1 className="text-2xl font-bold">ajfm88 Collaborate</h1>
+            <h1 className="text-2xl font-bold">System Design</h1>
           </div>
           <Link to="/" className="mt-2 inline-block text-xs text-[var(--collab-muted)] hover:text-[var(--collab-accent-2)]">← Back to portfolio</Link>
         </div>

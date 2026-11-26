@@ -536,7 +536,8 @@ export default function WorkSpace({ forcedDiagramId } = {}) {
   }, [saveState, layout, save]);
 
   useEffect(() => {
-    document.title = "Editor | drawDB";
+    // 3dfolio: tab title names this site.
+    document.title = "Editor | ajfm88’s dbdesign";
 
     load();
   }, [load]);

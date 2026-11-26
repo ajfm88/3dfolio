@@ -1,5 +1,6 @@
 import { io } from "../lib/socket.js";
 import { deleteUserCollaborateData } from "../lib/projectCleanup.js";
+import { deleteUserDiagramData } from "../lib/diagramCleanup.js";
 import express from "express";
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js";
@@ -65,6 +66,7 @@ router.post("/", async (req, res) => {
         // Keep the user row until collaborate cleanup succeeds, so a retry can finish it.
         const doomed = await User.findOne({ clerkId: evt.data.id }).select("_id email").lean();
         if (doomed) await deleteUserCollaborateData(io, doomed);
+        if (doomed) await deleteUserDiagramData(doomed);
         const deletedUser = await User.findOneAndDelete({ clerkId: evt.data.id });
         // A deleted Clerk account shouldn't leave orphaned content behind, so the
         // delete cascades into everything that references the user.

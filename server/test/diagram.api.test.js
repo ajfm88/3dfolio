@@ -5,9 +5,13 @@ import { after, afterEach, before, beforeEach, describe, it, mock } from "node:t
 import express from "express";
 import mongoose from "mongoose";
 import Diagram from "../src/models/diagram.model.js";
+import DiagramShare from "../src/models/diagramShare.model.js";
+import DiagramVersion from "../src/models/diagramVersion.model.js";
 import User from "../src/models/user.model.js";
 import diagramRouter from "../src/routes/diagram.route.js";
+import shareRouter from "../src/routes/share.route.js";
 import { deleteUserDiagramData } from "../src/lib/diagramCleanup.js";
+import { parseShareId, parseSnapshotContent } from "../src/lib/diagramSnapshots.js";
 import {
   MAX_DIAGRAM_BYTES,
   MAX_OWNED_DIAGRAMS,
@@ -112,6 +116,113 @@ function project(doc, fields) {
   return projected;
 }
 
+function assertVersionSort(sort) {
+  const keys = sort ? Object.keys(sort) : [];
+  if (
+    keys.length !== 2
+    || keys[0] !== "createdAt"
+    || keys[1] !== "_id"
+    || sort.createdAt !== -1
+    || sort._id !== -1
+  ) {
+    throw new Error(`unsupported sort ${JSON.stringify(sort)}`);
+  }
+}
+
+function filterKeys(filter) {
+  return Object.keys(filter ?? {}).sort();
+}
+
+function matchVersion(doc, filter) {
+  const keys = filterKeys(filter);
+  if (keys.length === 1 && keys[0] === "owner") {
+    if (isOperator(filter.owner)) throw new Error("unsupported owner operator");
+    return same(doc.owner, filter.owner);
+  }
+  if (keys.length === 1 && keys[0] === "diagram") {
+    if (isOperator(filter.diagram)) throw new Error("unsupported diagram operator");
+    return same(doc.diagram, filter.diagram);
+  }
+  if (keys.length === 2 && keys[0] === "diagram" && keys[1] === "versionId") {
+    if (typeof filter.versionId !== "string" || isOperator(filter.diagram)) {
+      throw new Error("unsupported version filter");
+    }
+    return same(doc.diagram, filter.diagram) && doc.versionId === filter.versionId;
+  }
+  throw new Error(`unsupported version filter ${keys.join(",")}`);
+}
+
+function versionDeleteShape(filter) {
+  const keys = filterKeys(filter);
+  if (keys.length === 1 && (keys[0] === "owner" || keys[0] === "diagram")) {
+    if (isOperator(filter[keys[0]])) throw new Error(`unsupported ${keys[0]} operator`);
+    return;
+  }
+  if (keys.length === 2 && keys[0] === "_id" && keys[1] === "diagram") {
+    if (isOperator(filter.diagram)) throw new Error("unsupported diagram operator");
+    const idList = filter._id && typeof filter._id === "object" ? Object.keys(filter._id) : [];
+    if (idList.length !== 1 || idList[0] !== "$in" || !Array.isArray(filter._id.$in)) {
+      throw new Error("unsupported _id operator");
+    }
+    return;
+  }
+  throw new Error(`unsupported version delete ${keys.join(",")}`);
+}
+
+function matchVersionDelete(doc, filter) {
+  versionDeleteShape(filter);
+  const keys = filterKeys(filter);
+  if (keys.length === 1 && keys[0] === "owner") return same(doc.owner, filter.owner);
+  if (keys.length === 1 && keys[0] === "diagram") return same(doc.diagram, filter.diagram);
+  return same(doc.diagram, filter.diagram) && filter._id.$in.some((id) => same(doc._id, id));
+}
+
+function matchShare(doc, filter) {
+  const keys = filterKeys(filter);
+  if (keys.length === 1 && keys[0] === "owner") {
+    if (isOperator(filter.owner)) throw new Error("unsupported owner operator");
+    return same(doc.owner, filter.owner);
+  }
+  if (keys.length === 1 && keys[0] === "diagram") {
+    if (isOperator(filter.diagram)) throw new Error("unsupported diagram operator");
+    return same(doc.diagram, filter.diagram);
+  }
+  if (keys.length === 1 && keys[0] === "shareId") {
+    if (typeof filter.shareId !== "string") throw new Error("unsupported shareId filter");
+    return doc.shareId === filter.shareId;
+  }
+  if (keys.length === 1 && keys[0] === "_id") {
+    if (isOperator(filter._id)) throw new Error("unsupported _id operator");
+    return same(doc._id, filter._id);
+  }
+  throw new Error(`unsupported share filter ${keys.join(",")}`);
+}
+
+function shareDeleteShape(filter) {
+  const keys = filterKeys(filter);
+  if (keys.length !== 1 || (keys[0] !== "owner" && keys[0] !== "diagram")) {
+    throw new Error(`unsupported share delete ${keys.join(",")}`);
+  }
+  if (isOperator(filter[keys[0]])) throw new Error(`unsupported ${keys[0]} operator`);
+}
+
+function assertShareSet(update) {
+  const operators = Object.keys(update ?? {});
+  if (operators.length !== 1 || operators[0] !== "$set") throw new Error("unsupported share update");
+  const fields = Object.keys(update.$set).sort();
+  if (fields.join(",") !== "content,sizeBytes,updatedBy") {
+    throw new Error(`unsupported $set ${fields.join(",")}`);
+  }
+}
+
+function newestFirst(rows) {
+  return [...rows].sort((a, b) => {
+    const byTime = time(b.createdAt) - time(a.createdAt);
+    if (byTime !== 0) return byTime;
+    return hex(b._id).localeCompare(hex(a._id));
+  });
+}
+
 function applyUpdate(doc, update) {
   for (const [operator, body] of Object.entries(update)) {
     if (operator === "$set") {
@@ -150,6 +261,7 @@ function createApp() {
     next();
   });
   app.use("/api/diagrams", diagramRouter);
+  app.use("/api/shares", shareRouter);
   app.use((error, _req, res, _next) => {
     res.status(error.status || error.statusCode || 500).json({ message: error.message || "Something went wrong!" });
   });
@@ -239,6 +351,55 @@ describe("diagram routes", { concurrency: false }, () => {
     return doc;
   }
 
+  function versionIdFor(n) {
+    return n.toString(16).padStart(40, "0");
+  }
+
+  function nextVersionDate() {
+    const createdAt = new Date(Date.UTC(2026, 0, 1, 0, 0, state.versionSeq));
+    state.versionSeq += 1;
+    return createdAt;
+  }
+
+  function addVersion(diagram, extra = {}) {
+    const content = extra.content ?? JSON.stringify({ tables: [], n: state.versions.size });
+    const parsed = parseSnapshotContent(content);
+    if (!parsed.ok) throw new Error(parsed.message);
+    const doc = {
+      _id: extra._id ?? newId(),
+      versionId: extra.versionId ?? versionIdFor(state.versions.size + 1),
+      diagram: extra.diagram ?? diagram._id,
+      owner: extra.owner ?? diagram.owner,
+      recordedBy: extra.recordedBy ?? diagram.owner,
+      content: extra.storedContent ?? parsed.value.content,
+      contentHash: extra.contentHash ?? parsed.value.contentHash,
+      sizeBytes: extra.sizeBytes ?? parsed.value.sizeBytes,
+      createdAt: extra.createdAt ?? nextVersionDate(),
+    };
+    state.versions.set(hex(doc._id), doc);
+    return doc;
+  }
+
+  function addShare(diagram, extra = {}) {
+    const content = extra.content ?? JSON.stringify({ tables: [] });
+    const parsed = parseSnapshotContent(content);
+    if (!parsed.ok) throw new Error(parsed.message);
+    const shareId = extra.shareId ?? `share${state.shares.size.toString(16).padStart(17, "0")}`;
+    const doc = {
+      _id: extra._id ?? newId(),
+      shareId,
+      diagram: extra.diagram ?? diagram._id,
+      owner: extra.owner ?? diagram.owner,
+      updatedBy: extra.updatedBy ?? diagram.owner,
+      content: extra.storedContent ?? parsed.value.content,
+      sizeBytes: extra.sizeBytes ?? parsed.value.sizeBytes,
+      createdAt: extra.createdAt ?? new Date("2026-11-26T00:00:00.000Z"),
+      updatedAt: extra.updatedAt ?? new Date("2026-11-26T00:00:00.000Z"),
+    };
+    state.shares.set(hex(doc._id), doc);
+    return doc;
+  }
+
   function rowsFor(filter, record) {
     let rows = [...state.diagrams.values()].filter((doc) => matchDoc(doc, filter));
     if (record.sort) {
@@ -264,6 +425,18 @@ describe("diagram routes", { concurrency: false }, () => {
       updateMany: [],
       userFinds: [],
       userFindOnes: [],
+      versions: new Map(),
+      shares: new Map(),
+      versionReads: [],
+      versionCreates: [],
+      versionDeletes: [],
+      shareReads: [],
+      shareCreates: [],
+      shareUpdates: [],
+      shareDeletes: [],
+      events: [],
+      versionSeq: 0,
+      shareCreateConflict: null,
       createError: null,
       disappearBeforeUpdate: false,
     };
@@ -400,6 +573,7 @@ describe("diagram routes", { concurrency: false }, () => {
     });
 
     install(Diagram, "deleteOne", async (filter) => {
+      state.events.push("diagram.deleteOne");
       state.deletes.push(filter);
       const entry = [...state.diagrams.entries()].find(([, doc]) => matchDoc(doc, filter));
       if (!entry) return { deletedCount: 0 };
@@ -417,6 +591,210 @@ describe("diagram routes", { concurrency: false }, () => {
       }
       return { matchedCount: matched, modifiedCount: matched };
     });
+
+    install(DiagramVersion, "find", (filter) => {
+      const record = { op: "find", filter, select: null, sort: null };
+      state.versionReads.push(record);
+      const api = {
+        select(value) {
+          if (value !== "-content" && value !== "sizeBytes") throw new Error(`unsupported select ${value}`);
+          record.select = value;
+          return api;
+        },
+        sort(value) {
+          assertVersionSort(value);
+          record.sort = value;
+          return api;
+        },
+        lean() {
+          if (record.select === "-content") {
+            if (!record.sort) throw new Error("version metadata read is missing its sort");
+          } else if (record.select === "sizeBytes") {
+            if (record.sort) throw new Error("unsupported sort on sizeBytes");
+          } else {
+            throw new Error(`unsupported select ${record.select}`);
+          }
+          const keys = filterKeys(filter);
+          if (keys.length !== 1 || (keys[0] !== "diagram" && keys[0] !== "owner")) {
+            throw new Error(`unsupported version find ${keys.join(",")}`);
+          }
+          let rows = [...state.versions.values()].filter((doc) => matchVersion(doc, filter));
+          if (record.sort) rows = newestFirst(rows);
+          return Promise.resolve(rows.map((doc) => project(doc, record.select)));
+        },
+      };
+      return api;
+    });
+
+    install(DiagramVersion, "findOne", (filter) => {
+      const record = { op: "findOne", filter, select: null };
+      state.versionReads.push(record);
+      const api = {
+        select(value) {
+          throw new Error(`unsupported select ${value}`);
+        },
+        lean() {
+          const keys = filterKeys(filter);
+          if (keys.join(",") !== "diagram,versionId") throw new Error(`unsupported version findOne ${keys.join(",")}`);
+          const row = [...state.versions.values()].find((doc) => matchVersion(doc, filter));
+          return Promise.resolve(row ? clone(row) : null);
+        },
+      };
+      return api;
+    });
+
+    install(DiagramVersion, "create", async (doc) => {
+      state.versionCreates.push(doc);
+      const stored = {
+        _id: newId(),
+        createdAt: nextVersionDate(),
+        ...clone(doc),
+      };
+      state.versions.set(hex(stored._id), stored);
+      return clone(stored);
+    });
+
+    install(DiagramVersion, "deleteMany", async (filter) => {
+      state.events.push("version.deleteMany");
+      state.versionDeletes.push(filter);
+      versionDeleteShape(filter);
+      let deleted = 0;
+      for (const [key, doc] of [...state.versions.entries()]) {
+        if (!matchVersionDelete(doc, filter)) continue;
+        state.versions.delete(key);
+        deleted += 1;
+      }
+      return { deletedCount: deleted };
+    });
+
+    install(DiagramShare, "find", (filter) => {
+      const record = { op: "find", filter, select: null };
+      state.shareReads.push(record);
+      const api = {
+        select(value) {
+          if (value !== "sizeBytes") throw new Error(`unsupported select ${value}`);
+          record.select = value;
+          return api;
+        },
+        sort(value) {
+          throw new Error(`unsupported sort ${JSON.stringify(value)}`);
+        },
+        lean() {
+          if (record.select !== "sizeBytes") throw new Error(`unsupported select ${record.select}`);
+          if (filterKeys(filter).join(",") !== "owner") throw new Error("unsupported share find");
+          const rows = [...state.shares.values()].filter((doc) => matchShare(doc, filter));
+          return Promise.resolve(rows.map((doc) => project(doc, record.select)));
+        },
+      };
+      return api;
+    });
+
+    install(DiagramShare, "findOne", (filter) => {
+      const record = { op: "findOne", filter };
+      state.shareReads.push(record);
+      const api = {
+        select() {
+          throw new Error("unsupported share select");
+        },
+        lean() {
+          const keys = filterKeys(filter).join(",");
+          if (keys !== "diagram" && keys !== "shareId") throw new Error(`unsupported share findOne ${keys}`);
+          const row = [...state.shares.values()].find((doc) => matchShare(doc, filter));
+          return Promise.resolve(row ? clone(row) : null);
+        },
+      };
+      return api;
+    });
+
+    install(DiagramShare, "create", async (doc) => {
+      state.shareCreates.push(doc);
+      if (state.shareCreateConflict) {
+        const planted = state.shareCreateConflict;
+        state.shareCreateConflict = null;
+        state.shares.set(hex(planted._id), planted);
+        const error = new Error("E11000 duplicate key");
+        error.code = 11000;
+        throw error;
+      }
+      if ([...state.shares.values()].some((row) => same(row.diagram, doc.diagram) || row.shareId === doc.shareId)) {
+        const error = new Error("E11000 duplicate key");
+        error.code = 11000;
+        throw error;
+      }
+      const stored = {
+        _id: newId(),
+        createdAt: new Date("2026-11-26T12:00:00.000Z"),
+        updatedAt: new Date("2026-11-26T12:00:00.000Z"),
+        ...clone(doc),
+      };
+      state.shares.set(hex(stored._id), stored);
+      return clone(stored);
+    });
+
+    install(DiagramShare, "updateOne", async (filter, update) => {
+      state.shareUpdates.push({ filter, update });
+      if (filterKeys(filter).join(",") !== "_id" || isOperator(filter._id)) {
+        throw new Error("unsupported share update filter");
+      }
+      assertShareSet(update);
+      const doc = [...state.shares.values()].find((candidate) => matchShare(candidate, filter));
+      if (!doc) return { matchedCount: 0, modifiedCount: 0 };
+      applyUpdate(doc, update);
+      return { matchedCount: 1, modifiedCount: 1 };
+    });
+
+    install(DiagramShare, "deleteOne", async (filter) => {
+      state.events.push("share.deleteOne");
+      state.shareDeletes.push(filter);
+      if (filterKeys(filter).join(",") !== "diagram" || isOperator(filter.diagram)) {
+        throw new Error("unsupported share deleteOne");
+      }
+      const entry = [...state.shares.entries()].find(([, doc]) => matchShare(doc, filter));
+      if (!entry) return { deletedCount: 0 };
+      state.shares.delete(entry[0]);
+      return { deletedCount: 1 };
+    });
+
+    install(DiagramShare, "deleteMany", async (filter) => {
+      state.events.push("share.deleteMany");
+      state.shareDeletes.push(filter);
+      shareDeleteShape(filter);
+      let deleted = 0;
+      for (const [key, doc] of [...state.shares.entries()]) {
+        if (!matchShare(doc, filter)) continue;
+        state.shares.delete(key);
+        deleted += 1;
+      }
+      return { deletedCount: deleted };
+    });
+
+    const unused = [
+      "updateMany",
+      "findOneAndUpdate",
+      "findOneAndDelete",
+      "findOneAndReplace",
+      "findById",
+      "findByIdAndUpdate",
+      "findByIdAndDelete",
+      "countDocuments",
+      "aggregate",
+      "insertMany",
+      "replaceOne",
+      "exists",
+      "distinct",
+      "bulkWrite",
+      "estimatedDocumentCount",
+    ];
+    for (const method of [...unused, "updateOne", "deleteOne"]) {
+      install(DiagramVersion, method, () => {
+        throw new Error(`DiagramVersion.${method} is not used`);
+      });
+    }
+    for (const method of unused) {
+      install(DiagramShare, method, () => {
+        throw new Error(`DiagramShare.${method} is not used`);
+      });
+    }
   });
 
   async function call(user, method, path, body) {
@@ -437,14 +815,34 @@ describe("diagram routes", { concurrency: false }, () => {
         parsed = { raw: text };
       }
     }
+    assert.notEqual(response.status, 402);
     return { status: response.status, body: parsed };
+  }
+
+  async function callShare(path) {
+    const response = await fetch(`${base}/api/shares${path}`);
+    const text = await response.text();
+    let parsed = null;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = { raw: text };
+      }
+    }
+    assert.notEqual(response.status, 402);
+    return {
+      status: response.status,
+      body: parsed,
+      cacheControl: response.headers.get("cache-control"),
+    };
   }
 
   function stored(doc) {
     return state.diagrams.get(hex(doc._id));
   }
 
-  it("registers the five routes behind protectRoute", () => {
+  it("registers the eleven routes behind protectRoute", () => {
     const paths = diagramRouter.stack
       .filter((layer) => layer.route)
       .map((layer) => `${Object.keys(layer.route.methods)[0]} ${layer.route.path}`);
@@ -455,6 +853,12 @@ describe("diagram routes", { concurrency: false }, () => {
       "get /:diagramId",
       "put /:diagramId",
       "delete /:diagramId",
+      "get /:diagramId/versions",
+      "post /:diagramId/versions",
+      "get /:diagramId/versions/:versionId",
+      "get /:diagramId/versions/:versionA/compare/:versionB",
+      "put /:diagramId/share",
+      "delete /:diagramId/share",
     ]);
   });
 
@@ -466,10 +870,17 @@ describe("diagram routes", { concurrency: false }, () => {
     const globalJson = source.indexOf("app.use(express.json());");
     const projects = source.indexOf('app.use("/api/projects", projectRoutes);');
     const diagrams = source.indexOf('app.use("/api/diagrams", diagramRoutes);');
+    const lines = source.split(/\r?\n/);
+    const diagramImport = lines.findIndex((line) => line === 'import diagramRoutes from "./routes/diagram.route.js";');
+    const shareImport = lines.findIndex((line) => line === 'import shareRoutes from "./routes/share.route.js";');
+    const diagramMount = lines.findIndex((line) => line === 'app.use("/api/diagrams", diagramRoutes);');
+    const shareMount = lines.findIndex((line) => line === 'app.use("/api/shares", shareRoutes);');
     assert.ok(webhook >= 0 && webhook < cors);
     assert.ok(cors < diagramJson && diagramJson < globalJson);
     assert.ok(projects >= 0 && projects < diagrams);
     assert.equal(source.includes('res.send("3dfolio API'), true);
+    assert.equal(shareImport, diagramImport + 1);
+    assert.equal(shareMount, diagramMount + 1);
   });
 
   it("calls diagram cleanup after collaborate cleanup and before the user row is deleted", () => {
@@ -492,14 +903,21 @@ describe("diagram routes", { concurrency: false }, () => {
     );
   });
 
-  it("answers 401 signed out on all five routes", async () => {
+  it("answers 401 signed out on all eleven routes", async () => {
     const diagram = addDiagram(users.owner);
+    const versionId = "a".repeat(40);
     const routes = [
       ["GET", "/"],
       ["POST", "/", saveBody(NEW_ID)],
       ["GET", `/${diagram.diagramId}`],
       ["PUT", `/${diagram.diagramId}`, saveBody(diagram.diagramId, { baseRevision: 1 })],
       ["DELETE", `/${diagram.diagramId}`],
+      ["GET", `/${diagram.diagramId}/versions`],
+      ["POST", `/${diagram.diagramId}/versions`, { content: "{\"tables\":[]}" }],
+      ["GET", `/${diagram.diagramId}/versions/${versionId}`],
+      ["GET", `/${diagram.diagramId}/versions/${versionId}/compare/null`],
+      ["PUT", `/${diagram.diagramId}/share`, { content: "{\"tables\":[]}" }],
+      ["DELETE", `/${diagram.diagramId}/share`],
     ];
     for (const [method, path, body] of routes) {
       const response = await call(null, method, path, body);
@@ -509,6 +927,8 @@ describe("diagram routes", { concurrency: false }, () => {
     assert.equal(state.creates.length, 0);
     assert.equal(state.updates.length, 0);
     assert.equal(state.deletes.length, 0);
+    assert.equal(state.versionCreates.length, 0);
+    assert.equal(state.shareCreates.length, 0);
   });
 
   it("answers 404 for a signed-in user who has not been synced", async () => {
@@ -972,6 +1392,530 @@ describe("diagram routes", { concurrency: false }, () => {
       assert.deepEqual(stored(shared).members.map((entry) => hex(entry.user)), [hex(users.viewer._id)]);
       assert.equal(stored(unrelated).members.length, 0);
       assert.equal(state.diagrams.has(hex(unrelated._id)), true);
+    });
+  });
+
+  it("exposes one public share route and no protectRoute", () => {
+    const paths = shareRouter.stack
+      .filter((layer) => layer.route)
+      .map((layer) => `${Object.keys(layer.route.methods)[0]} ${layer.route.path}`);
+    assert.deepEqual(paths, ["get /:shareId"]);
+    assert.equal(shareRouter.stack.some((layer) => layer.handle?.name === "protectRoute"), false);
+  });
+
+  describe("versions", () => {
+    function withMembers() {
+      return addDiagram(users.owner, {
+        members: [member(users.editor, "editor"), member(users.viewer, "viewer")],
+      });
+    }
+
+    it("records a version for the owner and an editor", async () => {
+      const diagram = withMembers();
+      const payloads = [
+        [users.owner, '{ "tables" : [ ] , "by" : "owner" }'],
+        [users.editor, '{ "tables" : [ { "name" : "users" } ] , "label" : "café" }'],
+      ];
+      for (const [user, raw] of payloads) {
+        const expected = parseSnapshotContent(raw);
+        const response = await call(user, "POST", `/${ID_A}/versions`, { content: raw, ignored: true });
+        assert.equal(response.status, 201, user.fullName);
+        assert.equal(response.body.recorded, true);
+        assert.match(response.body.version.version, /^[0-9a-f]{40}$/);
+        assert.equal(
+          response.body.version.committed_at,
+          new Date(response.body.version.committed_at).toISOString(),
+        );
+        const row = [...state.versions.values()].find((item) => item.versionId === response.body.version.version);
+        assert.equal(response.body.version.committed_at, row.createdAt.toISOString());
+        assert.equal(response.body.version.sizeBytes, expected.value.sizeBytes);
+        assert.equal(hex(row.diagram), hex(diagram._id));
+        assert.equal(hex(row.owner), hex(users.owner._id));
+        assert.equal(hex(row.recordedBy), hex(user._id));
+        assert.equal(row.content, expected.value.content);
+        assert.equal(row.contentHash, expected.value.contentHash);
+      }
+    });
+
+    it("skips an unchanged snapshot and does not read storage", async () => {
+      const diagram = withMembers();
+      addVersion(diagram, {
+        versionId: versionIdFor(1),
+        content: JSON.stringify({ tables: [], label: "old" }),
+      });
+      const newest = addVersion(diagram, {
+        versionId: versionIdFor(2),
+        content: JSON.stringify({ tables: [], label: "café" }),
+      });
+      const response = await call(users.owner, "POST", `/${ID_A}/versions`, {
+        content: '{ "tables" : [ ] , "label" : "café" }',
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.recorded, false);
+      assert.deepEqual(response.body.version, {
+        version: newest.versionId,
+        committed_at: newest.createdAt.toISOString(),
+        sizeBytes: newest.sizeBytes,
+      });
+      assert.equal(state.versionCreates.length, 0);
+      assert.equal(state.reads.some((read) => read.select === "sizeBytes"), false);
+      assert.equal(state.versionReads.some((read) => read.select === "sizeBytes"), false);
+      assert.equal(state.shareReads.length, 0);
+    });
+
+    it("rejects a viewer, a stranger, a bad diagram id, and bad snapshot content", async () => {
+      withMembers();
+      const viewer = await call(users.viewer, "POST", `/${ID_A}/versions`, { content: "{\"tables\":[]}" });
+      assert.equal(viewer.status, 403);
+      assert.deepEqual(viewer.body, { message: "You can only view this diagram" });
+      assert.equal(state.versionReads.length, 0);
+
+      const stranger = await call(users.outsider, "POST", `/${ID_A}/versions`, { content: "{\"tables\":[]}" });
+      const malformed = await call(users.owner, "POST", "/not-a-uuid/versions", { content: "{\"tables\":[]}" });
+      assert.equal(stranger.status, 404);
+      assert.equal(malformed.status, 404);
+      assert.deepEqual(stranger.body, { message: "Diagram not found" });
+      assert.deepEqual(malformed.body, stranger.body);
+      assert.equal(state.versionReads.length, 0);
+
+      const cases = [
+        [1, 400, "Snapshot content must be text"],
+        [null, 400, "Snapshot content must be text"],
+        ["[]", 400, "Snapshot content must be a JSON object"],
+        ["null", 400, "Snapshot content must be a JSON object"],
+        ['"text"', 400, "Snapshot content must be a JSON object"],
+        ["{bad", 400, "Snapshot content must be a JSON object"],
+        ["{}", 400, "Snapshot content must have a tables list"],
+        ['{"tables":{}}', 400, "Snapshot content must have a tables list"],
+      ];
+      for (const [content, status, message] of cases) {
+        const response = await call(users.owner, "POST", `/${ID_A}/versions`, { content });
+        assert.equal(response.status, status, message);
+        assert.deepEqual(response.body, { message });
+      }
+      assert.equal(state.versionReads.length, 0);
+      assert.equal(state.versionCreates.length, 0);
+
+      const overhead = Buffer.byteLength('{"tables":[],"pad":""}', "utf8");
+      const over = `{"tables":[],"pad":"${"x".repeat(MAX_DIAGRAM_BYTES - overhead + 1)}"}`;
+      assert.equal(Buffer.byteLength(over, "utf8"), MAX_DIAGRAM_BYTES + 1);
+      const tooBig = await call(users.owner, "POST", `/${ID_A}/versions`, { content: over });
+      assert.equal(tooBig.status, 413);
+      assert.deepEqual(tooBig.body, { message: "Diagram is too large" });
+      assert.equal(state.versionReads.length, 0);
+      assert.equal(state.versionCreates.length, 0);
+    });
+
+    it("drops the oldest version when a diagram already has 20", async () => {
+      const diagram = withMembers();
+      const seeded = [];
+      for (let n = 0; n < 20; n += 1) {
+        seeded.push(addVersion(diagram, {
+          versionId: versionIdFor(n),
+          content: JSON.stringify({ tables: [], n }),
+        }));
+      }
+      const oldest = seeded[0];
+      const response = await call(users.owner, "POST", `/${ID_A}/versions`, {
+        content: JSON.stringify({ tables: [], fresh: true }),
+      });
+      assert.equal(response.status, 201);
+      assert.equal(state.versions.size, 20);
+      assert.equal(state.versions.has(hex(oldest._id)), false);
+      assert.equal(state.versionDeletes.length, 1);
+      assert.equal(hex(state.versionDeletes[0].diagram), hex(diagram._id));
+      assert.equal(state.versionDeletes[0]._id.$in.length, 1);
+      assert.equal(hex(state.versionDeletes[0]._id.$in[0]), hex(oldest._id));
+    });
+
+    it("counts diagrams, versions, and shares toward the owner quota", async () => {
+      const content = JSON.stringify({ tables: [], quota: "record" });
+      const parsed = parseSnapshotContent(content);
+      const bytes = parsed.value.sizeBytes;
+      const versionBytes = 80;
+      const shareBytes = 80;
+      const diagramBytes = MAX_STORAGE_BYTES + 1 - versionBytes - shareBytes - bytes;
+      assert.equal(fitsStorage(diagramBytes + versionBytes + shareBytes + bytes), false);
+      assert.equal(fitsStorage(diagramBytes + shareBytes + bytes), true);
+      assert.equal(fitsStorage(diagramBytes + versionBytes + bytes), true);
+      assert.equal(fitsStorage(diagramBytes + bytes), true);
+
+      const diagram = addDiagram(users.owner, {
+        sizeBytes: diagramBytes,
+        members: [member(users.editor, "editor")],
+      });
+      addVersion(diagram, {
+        sizeBytes: versionBytes,
+        content: JSON.stringify({ tables: [], seed: "version" }),
+      });
+      addShare(diagram, {
+        sizeBytes: shareBytes,
+        content: JSON.stringify({ tables: [], seed: "share" }),
+      });
+
+      const blocked = await call(users.editor, "POST", `/${ID_A}/versions`, { content });
+      assert.equal(blocked.status, 413);
+      assert.deepEqual(blocked.body, { message: "Storage limit reached" });
+      assert.equal(state.versionCreates.length, 0);
+
+      stored(diagram).sizeBytes = diagramBytes - 1;
+      const allowed = await call(users.editor, "POST", `/${ID_A}/versions`, { content });
+      assert.equal(allowed.status, 201);
+      assert.equal(allowed.body.recorded, true);
+      const created = state.versionCreates[0];
+      assert.equal(hex(created.owner), hex(users.owner._id));
+      assert.equal(hex(created.recordedBy), hex(users.editor._id));
+      const charged = state.reads.filter((read) => read.select === "sizeBytes");
+      assert.ok(charged.length >= 1);
+      assert.ok(charged.every((read) => hex(read.filter.owner) === hex(users.owner._id)));
+    });
+
+    it("lists versions newest first for every role", async () => {
+      const diagram = withMembers();
+      const seeded = [];
+      for (let n = 0; n < 25; n += 1) {
+        seeded.push(addVersion(diagram, {
+          versionId: versionIdFor(n),
+          content: JSON.stringify({ tables: [], note: `SECRET_VERSION_${n}` }),
+        }));
+      }
+      const other = addDiagram(users.owner, { diagramId: ID_B });
+      const foreign = addVersion(other, {
+        versionId: versionIdFor(100),
+        content: JSON.stringify({ tables: [], note: "SECRET_VERSION_FOREIGN" }),
+      });
+      const newestFirst = [...seeded].reverse();
+
+      const viewer = await call(users.viewer, "GET", `/${ID_A}/versions`);
+      assert.equal(viewer.status, 200);
+      const first = await call(users.owner, "GET", `/${ID_A}/versions`);
+      assert.equal(first.status, 200);
+      assert.deepEqual(first.body.data.map((item) => item.version), newestFirst.slice(0, 10).map((row) => row.versionId));
+      assert.equal(first.body.data[0].committed_at, newestFirst[0].createdAt.toISOString());
+      assert.deepEqual(Object.keys(first.body.data[0]).sort(), ["committed_at", "sizeBytes", "version"]);
+      assert.equal(first.body.pagination.limit, 10);
+      assert.equal(first.body.pagination.count, 10);
+      assert.equal(first.body.pagination.hasMore, true);
+      assert.equal(first.body.pagination.cursor, newestFirst[9].versionId);
+      assert.equal(JSON.stringify(first.body).includes("SECRET_VERSION"), false);
+      assert.equal(viewer.body.data[0].version, first.body.data[0].version);
+
+      const second = await call(users.owner, "GET", `/${ID_A}/versions?cursor=${first.body.pagination.cursor}`);
+      assert.deepEqual(second.body.data.map((item) => item.version), newestFirst.slice(10, 20).map((row) => row.versionId));
+      const third = await call(users.owner, "GET", `/${ID_A}/versions?cursor=${second.body.pagination.cursor}`);
+      assert.deepEqual(third.body.data.map((item) => item.version), newestFirst.slice(20).map((row) => row.versionId));
+      assert.equal(third.body.pagination.hasMore, false);
+      assert.equal(third.body.pagination.cursor, null);
+      const seen = [...first.body.data, ...second.body.data, ...third.body.data].map((item) => item.version);
+      assert.equal(seen.includes(foreign.versionId), false);
+      assert.equal(seen.length, 25);
+
+      for (const [query, message] of [
+        ["?limit=21", "Invalid limit"],
+        ["?limit=0", "Invalid limit"],
+        ["?cursor=zzz", "Invalid cursor"],
+      ]) {
+        const response = await call(users.owner, "GET", `/${ID_A}/versions${query}`);
+        assert.equal(response.status, 400, query);
+        assert.deepEqual(response.body, { message });
+      }
+      const meta = state.versionReads.filter((read) => read.op === "find" && read.select === "-content");
+      assert.ok(meta.length >= 1);
+      assert.equal(hex(meta[0].filter.diagram), hex(diagram._id));
+      assert.deepEqual(meta[0].sort, { createdAt: -1, _id: -1 });
+    });
+
+    it("reads one version and hides another diagram's version", async () => {
+      const diagram = withMembers();
+      const version = addVersion(diagram, {
+        versionId: versionIdFor(3),
+        content: JSON.stringify({ tables: [], visible: true }),
+      });
+      const other = addDiagram(users.owner, { diagramId: ID_B });
+      const foreign = addVersion(other, { versionId: versionIdFor(4) });
+      const expected = {
+        data: {
+          id: version.versionId,
+          committed_at: version.createdAt.toISOString(),
+          files: {
+            "versionned.json": {
+              filename: "versionned.json",
+              size: version.sizeBytes,
+              content: version.content,
+            },
+          },
+        },
+      };
+      for (const user of [users.owner, users.editor, users.viewer]) {
+        const response = await call(user, "GET", `/${ID_A}/versions/${version.versionId}`);
+        assert.equal(response.status, 200, user.fullName);
+        assert.deepEqual(response.body, expected);
+      }
+      const hidden = await call(users.owner, "GET", `/${ID_A}/versions/${foreign.versionId}`);
+      const unknown = await call(users.owner, "GET", `/${ID_A}/versions/${"d".repeat(40)}`);
+      const readsBefore = state.versionReads.filter((read) => read.op === "findOne").length;
+      const malformed = await call(users.owner, "GET", `/${ID_A}/versions/${"AB".repeat(20)}`);
+      assert.equal(hidden.status, 404);
+      assert.equal(unknown.status, 404);
+      assert.equal(malformed.status, 404);
+      assert.deepEqual(hidden.body, { message: "Version not found" });
+      assert.deepEqual(unknown.body, hidden.body);
+      assert.deepEqual(malformed.body, hidden.body);
+      assert.equal(state.versionReads.filter((read) => read.op === "findOne").length, readsBefore);
+    });
+
+    it("compares two versions, including the null sentinel, for a viewer", async () => {
+      const diagram = withMembers();
+      const older = addVersion(diagram, {
+        versionId: versionIdFor(5),
+        content: JSON.stringify({ tables: [], side: "a" }),
+      });
+      const newer = addVersion(diagram, {
+        versionId: versionIdFor(6),
+        content: JSON.stringify({ tables: [], side: "b" }),
+      });
+      const both = await call(
+        users.viewer,
+        "GET",
+        `/${ID_A}/versions/${older.versionId}/compare/${newer.versionId}`,
+      );
+      assert.equal(both.status, 200);
+      assert.deepEqual(both.body, { data: { contentA: older.content, contentB: newer.content } });
+
+      const same = await call(
+        users.owner,
+        "GET",
+        `/${ID_A}/versions/${older.versionId}/compare/${older.versionId}`,
+      );
+      assert.equal(same.status, 200);
+      assert.equal(same.body.data.contentA, older.content);
+      assert.equal(same.body.data.contentB, older.content);
+
+      const open = await call(users.owner, "GET", `/${ID_A}/versions/${older.versionId}/compare/null`);
+      assert.equal(open.status, 200);
+      assert.deepEqual(open.body, { data: { contentA: older.content, contentB: "" } });
+
+      for (const path of [
+        `/${ID_A}/versions/${"e".repeat(40)}/compare/null`,
+        `/${ID_A}/versions/not-an-id/compare/null`,
+        `/${ID_A}/versions/${older.versionId}/compare/${"f".repeat(40)}`,
+        `/${ID_A}/versions/${older.versionId}/compare/not-an-id`,
+      ]) {
+        const response = await call(users.owner, "GET", path);
+        assert.equal(response.status, 404, path);
+        assert.deepEqual(response.body, { message: "Version not found" });
+      }
+    });
+  });
+
+  describe("shares", () => {
+    it("creates a share, refreshes it, and rejects a viewer or bad content", async () => {
+      addDiagram(users.owner, {
+        members: [member(users.editor, "editor"), member(users.viewer, "viewer")],
+      });
+      const firstBody = JSON.stringify({ tables: [], n: 1 });
+      const first = await call(users.owner, "PUT", `/${ID_A}/share`, { content: firstBody, ignored: true });
+      assert.equal(first.status, 201);
+      assert.equal(first.body.created, true);
+      assert.equal(first.body.shareId.length, 22);
+      assert.equal(parseShareId(first.body.shareId), first.body.shareId);
+      assert.equal(first.body.updatedAt, "2026-11-26T12:00:00.000Z");
+      assert.equal(first.body.sizeBytes, parseSnapshotContent(firstBody).value.sizeBytes);
+
+      const secondBody = '{ "tables" : [ ] , "n" : 2 }';
+      const second = await call(users.editor, "PUT", `/${ID_A}/share`, { content: secondBody });
+      assert.equal(second.status, 200);
+      assert.equal(second.body.created, false);
+      assert.equal(second.body.shareId, first.body.shareId);
+      assert.equal(second.body.updatedAt, new Date(second.body.updatedAt).toISOString());
+      const saved = [...state.shares.values()][0];
+      assert.equal(saved.content, JSON.stringify({ tables: [], n: 2 }));
+      assert.equal(saved.shareId, first.body.shareId);
+      assert.equal(hex(saved.updatedBy), hex(users.editor._id));
+      assert.equal(hex(saved.owner), hex(users.owner._id));
+
+      const before = saved.content;
+      const viewer = await call(users.viewer, "PUT", `/${ID_A}/share`, { content: "{\"tables\":[]}" });
+      assert.equal(viewer.status, 403);
+      assert.deepEqual(viewer.body, { message: "You can only view this diagram" });
+      assert.equal([...state.shares.values()][0].content, before);
+
+      const missingTables = await call(users.owner, "PUT", `/${ID_A}/share`, { content: "{}" });
+      assert.equal(missingTables.status, 400);
+      assert.deepEqual(missingTables.body, { message: "Snapshot content must have a tables list" });
+      const overhead = Buffer.byteLength('{"tables":[],"pad":""}', "utf8");
+      const over = `{"tables":[],"pad":"${"x".repeat(MAX_DIAGRAM_BYTES - overhead + 1)}"}`;
+      const tooBig = await call(users.owner, "PUT", `/${ID_A}/share`, { content: over });
+      assert.equal(tooBig.status, 413);
+      assert.deepEqual(tooBig.body, { message: "Diagram is too large" });
+    });
+
+    it("counts a replaced share toward the quota and rejects a create of that size", async () => {
+      const content = JSON.stringify({ tables: [], quota: true });
+      const bytes = parseSnapshotContent(content).value.sizeBytes;
+      addDiagram(users.owner, {
+        sizeBytes: MAX_STORAGE_BYTES - bytes + 1,
+        members: [member(users.editor, "editor")],
+      });
+      const blocked = await call(users.editor, "PUT", `/${ID_A}/share`, { content });
+      assert.equal(blocked.status, 413);
+      assert.deepEqual(blocked.body, { message: "Storage limit reached" });
+      assert.equal(state.shares.size, 0);
+      assert.equal(state.shareCreates.length, 0);
+
+      state.diagrams.clear();
+      const diagram = addDiagram(users.owner, {
+        sizeBytes: MAX_STORAGE_BYTES - bytes,
+        members: [member(users.editor, "editor")],
+      });
+      const existing = addShare(diagram, { sizeBytes: bytes, content });
+      const refreshed = await call(users.editor, "PUT", `/${ID_A}/share`, { content });
+      assert.equal(refreshed.status, 200);
+      assert.equal(refreshed.body.created, false);
+      assert.equal(refreshed.body.shareId, existing.shareId);
+      const charged = state.reads.filter((read) => read.select === "sizeBytes").at(-1);
+      assert.equal(hex(charged.filter.owner), hex(users.owner._id));
+    });
+
+    it("refreshes a share created by a parallel request", async () => {
+      const diagram = addDiagram(users.owner, {
+        members: [member(users.editor, "editor")],
+      });
+      const planted = {
+        _id: newId(),
+        shareId: "Bc".repeat(11),
+        diagram: diagram._id,
+        owner: diagram.owner,
+        updatedBy: users.outsider._id,
+        content: "{\"tables\":[]}",
+        sizeBytes: 12,
+        createdAt: new Date("2026-11-26T01:00:00.000Z"),
+        updatedAt: new Date("2026-11-26T01:00:00.000Z"),
+      };
+      state.shareCreateConflict = planted;
+      const response = await call(users.editor, "PUT", `/${ID_A}/share`, {
+        content: JSON.stringify({ tables: [], raced: true }),
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.created, false);
+      assert.equal(response.body.shareId, planted.shareId);
+      const saved = state.shares.get(hex(planted._id));
+      assert.equal(saved.content, JSON.stringify({ tables: [], raced: true }));
+      assert.equal(hex(saved.updatedBy), hex(users.editor._id));
+      assert.equal(state.shares.size, 1);
+    });
+
+    it("deletes a share for the owner and an editor, and repeats", async () => {
+      const diagram = addDiagram(users.owner, {
+        members: [member(users.editor, "editor"), member(users.viewer, "viewer")],
+      });
+      const first = addShare(diagram);
+      const ownerDelete = await call(users.owner, "DELETE", `/${ID_A}/share`);
+      assert.equal(ownerDelete.status, 204);
+      assert.equal(ownerDelete.body, null);
+      assert.equal(state.shares.has(hex(first._id)), false);
+      const again = await call(users.owner, "DELETE", `/${ID_A}/share`);
+      assert.equal(again.status, 204);
+
+      const second = addShare(diagram, { shareId: "e".repeat(22) });
+      const editorDelete = await call(users.editor, "DELETE", `/${ID_A}/share`);
+      assert.equal(editorDelete.status, 204);
+      assert.equal(state.shares.has(hex(second._id)), false);
+
+      const kept = addShare(diagram, { shareId: "f".repeat(22) });
+      const viewerDelete = await call(users.viewer, "DELETE", `/${ID_A}/share`);
+      assert.equal(viewerDelete.status, 403);
+      assert.deepEqual(viewerDelete.body, { message: "You can only view this diagram" });
+      assert.equal(state.shares.has(hex(kept._id)), true);
+    });
+
+    it("reads a share with no session and does not cache it", async () => {
+      const diagram = addDiagram(users.owner);
+      const share = addShare(diagram, {
+        content: JSON.stringify({ tables: [], shared: true }),
+      });
+      const beforeUsers = state.userFindOnes.length;
+      const response = await callShare(`/${share.shareId}`);
+      assert.equal(response.status, 200);
+      assert.equal(response.cacheControl, "no-store");
+      assert.equal(state.userFindOnes.length, beforeUsers);
+      assert.deepEqual(response.body, {
+        data: {
+          id: share.shareId,
+          updated_at: share.updatedAt.toISOString(),
+          files: {
+            "share.json": {
+              filename: "share.json",
+              size: share.sizeBytes,
+              content: share.content,
+            },
+          },
+        },
+      });
+
+      const unknown = await callShare(`/${"u".repeat(22)}`);
+      assert.equal(unknown.status, 404);
+      assert.deepEqual(unknown.body, { message: "Share not found" });
+      const readsBefore = state.shareReads.filter((read) => read.op === "findOne").length;
+      const malformed = await callShare(`/${encodeURIComponent(`${"u".repeat(21)}+`)}`);
+      assert.equal(malformed.status, 404);
+      assert.deepEqual(malformed.body, { message: "Share not found" });
+      assert.equal(state.shareReads.filter((read) => read.op === "findOne").length, readsBefore);
+
+      await call(users.owner, "DELETE", `/${ID_A}/share`);
+      const removed = await callShare(`/${share.shareId}`);
+      assert.equal(removed.status, 404);
+      assert.deepEqual(removed.body, { message: "Share not found" });
+    });
+  });
+
+  describe("snapshot cleanup", () => {
+    it("deletes that diagram's versions and share before the diagram row", async () => {
+      const diagram = addDiagram(users.owner, { members: [member(users.editor, "editor")] });
+      const version = addVersion(diagram);
+      const share = addShare(diagram);
+      const other = addDiagram(users.editor, { diagramId: ID_B });
+      const otherVersion = addVersion(other);
+      const otherShare = addShare(other);
+
+      const response = await call(users.owner, "DELETE", `/${ID_A}`);
+      assert.equal(response.status, 204);
+      assert.equal(state.versions.has(hex(version._id)), false);
+      assert.equal(state.shares.has(hex(share._id)), false);
+      assert.equal(state.versions.has(hex(otherVersion._id)), true);
+      assert.equal(state.shares.has(hex(otherShare._id)), true);
+      assert.equal(state.diagrams.has(hex(other._id)), true);
+      assert.deepEqual(state.events, ["version.deleteMany", "share.deleteMany", "diagram.deleteOne"]);
+      assert.equal(hex(state.versionDeletes[0].diagram), hex(diagram._id));
+      assert.equal(filterKeys(state.versionDeletes[0]).join(","), "diagram");
+      assert.equal(hex(state.shareDeletes[0].diagram), hex(diagram._id));
+    });
+
+    it("deletes versions and shares owned by a removed user, including orphans", async () => {
+      const owned = addDiagram(users.owner, { diagramId: ID_A, members: [member(users.editor, "editor")] });
+      const ownedVersion = addVersion(owned);
+      const ownedShare = addShare(owned);
+      const orphanVersion = addVersion(owned, { diagram: newId(), versionId: versionIdFor(70) });
+      const orphanShare = addShare(owned, { diagram: newId(), shareId: "q".repeat(22) });
+      const other = addDiagram(users.editor, { diagramId: ID_B });
+      const otherVersion = addVersion(other);
+      const otherShare = addShare(other);
+
+      await deleteUserDiagramData(users.owner);
+
+      assert.equal(state.versions.has(hex(ownedVersion._id)), false);
+      assert.equal(state.shares.has(hex(ownedShare._id)), false);
+      assert.equal(state.versions.has(hex(orphanVersion._id)), false);
+      assert.equal(state.shares.has(hex(orphanShare._id)), false);
+      assert.equal(state.versions.has(hex(otherVersion._id)), true);
+      assert.equal(state.shares.has(hex(otherShare._id)), true);
+      assert.equal(state.diagrams.has(hex(other._id)), true);
+      assert.ok(state.versionDeletes.some((filter) => (
+        filterKeys(filter).join(",") === "owner" && hex(filter.owner) === hex(users.owner._id)
+      )));
+      assert.ok(state.shareDeletes.some((filter) => (
+        filterKeys(filter).join(",") === "owner" && hex(filter.owner) === hex(users.owner._id)
+      )));
     });
   });
 });

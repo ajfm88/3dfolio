@@ -14,6 +14,7 @@ import commentRoutes from "./routes/comment.route.js";
 import messageRoutes from "./routes/message.route.js";
 import projectRoutes from "./routes/project.route.js";
 import diagramRoutes from "./routes/diagram.route.js";
+import shareRoutes from "./routes/share.route.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -50,6 +51,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/diagrams", diagramRoutes);
+app.use("/api/shares", shareRoutes);
 
 // central error handler
 app.use((err, req, res, next) => {

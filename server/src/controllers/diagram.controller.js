@@ -1,6 +1,7 @@
 import Diagram from "../models/diagram.model.js";
 import User from "../models/user.model.js";
 import { deleteDiagramAndContent } from "../lib/diagramCleanup.js";
+import { DIAGRAM_NOT_FOUND, loadDiagram, ownedBytes } from "../lib/diagramStore.js";
 import {
   MAX_OWNED_DIAGRAMS,
   can,
@@ -15,7 +16,7 @@ import {
 } from "../lib/diagramAccess.js";
 
 const OWNER_FIELDS = "_id fullName username email";
-const NOT_FOUND = "Diagram not found";
+const NOT_FOUND = DIAGRAM_NOT_FOUND;
 
 function hexId(value) {
   if (value && typeof value.toHexString === "function") return value.toHexString();
@@ -28,33 +29,10 @@ function notFound(res) {
   return res.status(404).json({ message: NOT_FOUND });
 }
 
-async function loadDiagram(req) {
-  const diagramId = parseDiagramId(req.params.diagramId);
-  if (!diagramId) return { error: { status: 404, message: NOT_FOUND } };
-
-  const me = req.user._id;
-  const diagram = await Diagram.findOne({
-    diagramId,
-    $or: [{ owner: me }, { "members.user": me }],
-  }).lean();
-  if (!diagram) return { error: { status: 404, message: NOT_FOUND } };
-
-  const role = roleOf(diagram, me);
-  if (!role) return { error: { status: 404, message: NOT_FOUND } };
-  return { diagram, role };
-}
-
 async function readOwners(ownerIds) {
   if (ownerIds.length === 0) return new Map();
   const rows = await User.find({ _id: { $in: ownerIds } }).select(OWNER_FIELDS).lean();
   return new Map(rows.map((user) => [hexId(user._id), user]));
-}
-
-async function ownedBytes(ownerId) {
-  const rows = await Diagram.find({ owner: ownerId }).select("sizeBytes").lean();
-  let usedBytes = 0;
-  for (const row of rows) usedBytes += row.sizeBytes;
-  return usedBytes;
 }
 
 export async function listDiagrams(req, res) {

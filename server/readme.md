@@ -108,6 +108,8 @@ server/
 │   │   ├── projectMessages.js        # Project chat query, text, paging, and response whitelist
 │   │   ├── diagramAccess.js          # Diagram roles, save parsing, and size limits
 │   │   ├── diagramCleanup.js         # Owned diagram delete and Clerk user diagram cleanup
+│   │   ├── diagramSnapshots.js       # Version and share snapshot parsing and response shapes
+│   │   ├── diagramStore.js           # Diagram load and the owner's storage sum
 │   │   ├── safeHandler.js            # Contains thrown errors and rejected promises in socket handlers
 │   │   ├── workspaceRooms.js         # In-memory project rooms, join leases, and per-room serial queues
 │   │   ├── turns.js                  # Pure turn state: holder, queue, grace, and idle
@@ -126,6 +128,8 @@ server/
 │   │   ├── message.controller.js     # Message history, conversations, and send + emit
 │   │   ├── project.controller.js     # Project list, create, read, rename, and delete, scoped to membership
 │   │   ├── diagram.controller.js     # Cloud diagram list, create, read, update, and delete
+│   │   ├── diagramShare.controller.js # Create, refresh, delete, and publicly read a share
+│   │   ├── diagramVersion.controller.js # Record, list, read, and compare diagram versions
 │   │   ├── projectMember.controller.js # Invitations and members: create, revoke, list, accept, decline, role, remove
 │   │   └── projectMessage.controller.js # Project chat history and send, then room broadcast
 │   ├── models/
@@ -135,6 +139,8 @@ server/
 │   │   ├── message.model.js          # Mongoose Message model
 │   │   ├── project.model.js          # Project ownership, members, and pending invites
 │   │   ├── diagram.model.js          # Cloud diagram: content string, revision, and members
+│   │   ├── diagramShare.model.js     # One public share snapshot per diagram
+│   │   ├── diagramVersion.model.js   # Recorded diagram snapshots, collection diagramversions
 │   │   ├── canvas.model.js           # One versioned canvas snapshot per project
 │   │   └── projectMessage.model.js   # One project chat message; collection projectmessages
 │   ├── routes/
@@ -143,7 +149,8 @@ server/
 │   │   ├── comment.route.js          # /api/comments routes
 │   │   ├── message.route.js          # /api/messages routes
 │   │   ├── project.route.js          # /api/projects routes
-│   │   └── diagram.route.js          # /api/diagrams routes
+│   │   ├── diagram.route.js          # /api/diagrams routes
+│   │   └── share.route.js            # Public GET /api/shares/:shareId
 │   ├── sockets/
 │   │   ├── chat.socket.js            # Chat presence, typing, and disconnect handlers
 │   │   └── workspace.socket.js       # Workspace join, leave, canvas, turns, cursors, and project typing
@@ -154,6 +161,7 @@ server/
 │   ├── projectAccess.test.js         # Permission table, role resolution, invalid ids, limits
 │   ├── diagramAccess.test.js         # Diagram permission table, parsing, limits, and schema
 │   ├── diagram.api.test.js           # Diagram REST authority, revision check, and quotas
+│   ├── diagramSnapshots.test.js      # Snapshot parsing, paging, shapes, and schema
 │   ├── models.test.js                # Project and Canvas schema validation without a database
 │   ├── canvas.socket.test.js         # Canvas commit validation, persistence, and sync
 │   ├── cursor.socket.test.js         # Cursor authority and volatile relay
@@ -218,6 +226,9 @@ Starter templates need nothing from the server. The client turns a template into
 | GET    | `/`                   | Plain-text greeting                               |
 | GET    | `/health`             | Liveness and readiness probe, returns `{ok:true}` |
 | POST   | `/api/webhooks/clerk` | Clerk user sync, requires a valid signature       |
+| GET    | `/api/shares/:shareId` | Public diagram share snapshot, response is `no-store` |
+
+`GET /api/shares/:shareId` returns one share snapshot as `{ data: { id, updated_at, files: { "share.json": { filename, size, content } } } }` and sets `Cache-Control: no-store`.
 
 ### Auth Routes (Protected)
 
@@ -395,8 +406,44 @@ A missing name becomes `Untitled diagram`. A missing database becomes `generic`.
 | JSON body for `/api/diagrams` | 2 MB | 413 |
 | Cloud diagrams owned per user | 50 | 400 `You can keep up to 50 cloud diagrams` |
 | Storage per owner | 25 MiB (26,214,400 bytes) | 413 `Storage limit reached` |
+| Versions kept per diagram | 20 | oldest removed on record |
 
-Exactly 1,048,576 content bytes is allowed. Storage is the sum of `sizeBytes` on the diagrams that user owns.
+Exactly 1,048,576 content bytes is allowed. The same 1 MiB limit applies to each version and each share snapshot. Storage is the sum of `sizeBytes` on the diagrams, versions and share snapshots that user owns.
+
+### Diagram Versions and Sharing (Protected)
+
+Six more routes sit on `/api/diagrams`, behind the same `protectRoute`. A version or a share stores JSON text the client built. The server checks that text, stores `JSON.stringify` of the parsed object, and returns that text unchanged. It does not convert the snapshot into the diagram `content` shape. A caller with no role still gets `404` with `{ "message": "Diagram not found" }` before anything else. A viewer who records a version or writes the share gets `403` with `{ "message": "You can only view this diagram" }`. No route answers 402.
+
+| Route | Who | Success |
+| ----- | --- | ------- |
+| `GET /api/diagrams/:diagramId/versions?limit&cursor` | owner, editor, or viewer | `200 { data, pagination }`. `data` items are `{ version, committed_at, sizeBytes }`. `pagination` is `{ cursor, hasMore, limit, count }`. |
+| `POST /api/diagrams/:diagramId/versions` | owner or editor | `201 { recorded: true, version }` when a row is stored. `200 { recorded: false, version }` when the normalized content matches the newest version. |
+| `GET /api/diagrams/:diagramId/versions/:versionId` | owner, editor, or viewer | `200 { data: { id, committed_at, files: { "versionned.json": { filename, size, content } } } }` |
+| `GET /api/diagrams/:diagramId/versions/:versionA/compare/:versionB` | owner, editor, or viewer | `200 { data: { contentA, contentB } }`. `versionB` may be the text `null`, and then `contentB` is `""`. |
+| `PUT /api/diagrams/:diagramId/share` | owner or editor | `201 { shareId, created: true, sizeBytes, updatedAt }` on the first save. `200` with `created: false` and the same `shareId` when the snapshot is replaced. |
+| `DELETE /api/diagrams/:diagramId/share` | owner or editor | `204` with no body, also when the diagram has no share. |
+
+The body for record and for share is `{ content }`. `content` is JSON text of an object whose own `tables` field is an array. Other keys are ignored. List pages are newest first. `limit` defaults to 10 and must be from 1 to 20. `cursor` is a version id from the previous page. A cursor that does not match a version of this diagram returns an empty page. `hasMore` is true only when another version follows.
+
+Recording the same normalized content as the newest version stores nothing, skips the storage check, and answers `recorded: false` with that version. A diagram keeps its newest 20 versions. Recording one more deletes the oldest after the new row is stored. A version the prune is about to remove still counts toward the storage check. Versions and the share snapshot count toward the diagram owner's 25 MiB, including when an editor writes. The check reads storage before the write, so two writes at the same time can overshoot it slightly.
+
+The first share save creates the row. A later save keeps `shareId`, so a link already sent keeps working, and replaces `content`, `sizeBytes`, and `updatedBy`. The public read is `GET /api/shares/:shareId` (no sign-in). Its body uses `share.json` in the same file shape, and the response is `no-store`.
+
+A version or share written while its diagram is being deleted can remain as an orphan. It is not visible, because every diagram route loads the diagram first. It still counts toward that owner's storage, and deleting the owner's account removes it.
+
+| Status | When | Message |
+| ------ | ---- | ------- |
+| 400 | `content` is not text | `Snapshot content must be text` |
+| 400 | `content` is not JSON text of an object | `Snapshot content must be a JSON object` |
+| 400 | The object has no `tables` array | `Snapshot content must have a tables list` |
+| 400 | `limit` is not a whole number from 1 to 20 | `Invalid limit` |
+| 400 | `cursor` is not a version id | `Invalid cursor` |
+| 403 | A viewer records a version or writes the share | `You can only view this diagram` |
+| 404 | No role, missing diagram, or malformed diagram id | `Diagram not found` |
+| 404 | Missing, malformed, or another diagram's version id | `Version not found` |
+| 404 | Missing or malformed share id on the public read | `Share not found` |
+| 413 | Normalized content is over 1 MiB | `Diagram is too large` |
+| 413 | The owner's stored bytes would pass 25 MiB | `Storage limit reached` |
 
 ## Authorization
 
@@ -436,7 +483,7 @@ Clerk owns identity and MongoDB owns application data. Every Clerk user has a ma
 
 If a request arrives before the webhook has synced its user, the guard returns `404` and does not crash.
 
-Deleting a Clerk user cascades. The workspace cleanup runs first: it deletes the projects that user owns along with their canvases and chat, removes the user from other projects and from any live project room, removes invitations sent to their email, and deletes the project messages they wrote. Deleting a user also deletes their cloud diagrams and removes their diagram memberships, after the workspace cleanup and before the User row is deleted. Then the `User` document is deleted, followed by that user's posts, comments and direct messages. If the workspace cleanup fails, the `User` row is left in place so that Clerk's webhook retry can run it again.
+Deleting a Clerk user cascades. The workspace cleanup runs first: it deletes the projects that user owns along with their canvases and chat, removes the user from other projects and from any live project room, removes invitations sent to their email, and deletes the project messages they wrote. Deleting a user also deletes their cloud diagrams, their versions and their share snapshots, and removes their diagram memberships, after the workspace cleanup and before the User row is deleted. Then the `User` document is deleted, followed by that user's posts, comments and direct messages. If the workspace cleanup fails, the `User` row is left in place so that Clerk's webhook retry can run it again.
 
 ## Socket.io Events
 
@@ -944,6 +991,46 @@ Indexes: { diagramId: 1 } unique, { owner: 1 }, { "members.user": 1 }
 ```
 
 `content` holds `{ tables, references, notes, areas, views, enums, types, sqlHeader, pan, zoom }` in that key order. `sizeBytes` is the UTF-8 length of that string. `updatedAt` is the `lastModified` the client shows. An update is stored only when `revision` still equals the caller's `baseRevision`, and the stored revision then increases by 1.
+
+### Diagram Versions Collection
+
+Collection name: `diagramversions`. `content` is opaque JSON text supplied by the client. It is not the diagram `content` shape. `owner` is the diagram's owner when the version is recorded.
+
+```
+{
+  _id:         ObjectId,
+  versionId:   String (required, unique, 40 lowercase hex characters),
+  diagram:     ObjectId (ref: Diagram, required),
+  owner:       ObjectId (ref: User, required, indexed),
+  recordedBy:  ObjectId (ref: User, required),
+  content:     String (required, normalized JSON text),
+  contentHash: String (required, SHA-256 hex of content),
+  sizeBytes:   Number (required, min 0, UTF-8 byte length of content),
+  createdAt:   Date
+}
+Indexes: { versionId: 1 } unique, { owner: 1 }, { diagram: 1, createdAt: -1, _id: -1 }
+```
+
+There is no `updatedAt`. A diagram keeps its newest 20 versions.
+
+### Diagram Shares Collection
+
+Collection name: `diagramshares`. One share per diagram. Refreshing a share keeps its `shareId`.
+
+```
+{
+  _id:       ObjectId,
+  shareId:   String (required, unique, 22 URL-safe characters),
+  diagram:   ObjectId (ref: Diagram, required, unique),
+  owner:     ObjectId (ref: User, required, indexed),
+  updatedBy: ObjectId (ref: User, required),
+  content:   String (required, normalized JSON text),
+  sizeBytes: Number (required, min 0, UTF-8 byte length of content),
+  createdAt: Date,
+  updatedAt: Date
+}
+Indexes: { shareId: 1 } unique, { diagram: 1 } unique, { owner: 1 }
+```
 
 ## Validation Rules
 

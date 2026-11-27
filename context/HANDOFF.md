@@ -2,7 +2,7 @@
 
 ## Current point (2026-11-26)
 
-HEAD is `952d335` (commit 81, 2026-11-25), and the batch below is committed. Commit 80 (`65a692b`) finished D1 to D9, and the user reported on 2026-11-24 that the D9 Vercel preview checklist passed, so the drawDB port is done. On that check the user also saw the upstream duplicate: each visit to the editor root saved another copy of the latest diagram.
+HEAD is `805f39b` (commit 82, 2026-11-26), which holds C1, C2 and the 2026-11-25 fixes. Commit 81 (`952d335`, 2026-11-25) is the route batch below, and it is committed. Commit 80 (`65a692b`) finished D1 to D9, and the user reported on 2026-11-24 that the D9 Vercel preview checklist passed, so the drawDB port is done. On that check the user also saw the upstream duplicate: each visit to the editor root saved another copy of the latest diagram.
 
 The same day the user asked for a follow-up batch. Claude (Opus 5.5) planned it and wrote the specs, Claude Sonnet implemented each slice, and Claude Haiku checked each one against its spec. It was planned as four commits, 81 to 84, but the user committed all of it as one commit, 81 (`952d335`), on 2026-11-25. Its parts, in the planned order:
 
@@ -15,17 +15,19 @@ Specs, reports and reviews are in `../3dfolio_drawdb_specs/` (D10 to D13) and `c
 
 Known and left alone: `test/projectChatUi.test.mjs` has one failing test that still expects the placeholder `Message the project`, which became `Message` on 2026-11-16. A local portfolio build has no root `.env`, so the workspace cannot render locally.
 
-The dbdesign cloud track (`../3dfolio_dbcloud_plan.md`) has two slices in commit 82, together with the 2026-11-25 fixes:
+The dbdesign cloud track (`../3dfolio_dbcloud_plan.md`) is committed through commit 82 (`805f39b`, 2026-11-26), together with the 2026-11-25 fixes:
 
-- C1, the diagrams API (server only). Grok implemented it and Sonnet reviewed it on 2026-11-25; the server suite has 407 tests.
-- C2, drawDB sign-in and cloud storage (client, 2026-11-26). Claude Sonnet implemented it and Claude Haiku reviewed it, both as subagents of the planning session. The code is in `drawdb/src/cloud/`, and only `drawdb/src/main.jsx` changed among the existing files. Signed out, or built without `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL`, drawDB stays local only. `npm --prefix drawdb test` runs its unit tests.
+- C1, the diagrams API (server only). Grok implemented it and Sonnet reviewed it on 2026-11-25. Committed in 82.
+- C2, drawDB sign-in and cloud storage (client). Claude Sonnet implemented it and Claude Haiku reviewed it. The code is in `drawdb/src/cloud/`, and only `drawdb/src/main.jsx` changed among the existing files. Signed out, or built without `VITE_CLERK_PUBLISHABLE_KEY` and `VITE_API_URL`, drawDB stays local only. `npm --prefix drawdb test` runs its unit tests. Committed in 82.
 
-Signed-in behaviour has not been checked yet: Clerk cannot be automated here. The user's checklist is section 12 of `../3dfolio_dbcloud_specs/C2-drawdb-cloud-storage.md`. Next in the track: C3 server (commit 83).
+The user ran the C2 signed-in checklist (C2 spec section 12) on the live site on 2026-11-26 and every item passed.
+
+C3 server (version history and public sharing API) is Approved (Grok implemented, Nemotron reviewed, 2026-11-26; 432 server tests) and uncommitted, planned as commit 83. C3 client is next (commit 84).
 
 ### Next session
 
 1. On a Vercel preview, the user checks: `/dbdesign` opens the editor with the diagrams saved before; `/drawdb` and `/drawdb/editor/diagrams/<id>` redirect to the same paths under `/dbdesign`; visiting `/dbdesign/` several times adds no copies in File > Open; File > New, Save as and a template fork open `/dbdesign/...` tabs; the navbar's Collaborate link opens `/sysdesign`; `/collaborate` and `/collaborate/<id>` redirect to `/sysdesign`; `/`, `/blog` and `/chat` look as before.
-2. Then the Clerk Production move in Suggested order item 4. If the Clerk dashboard lists a `/collaborate` URL, change it to `/sysdesign`.
+2. Cancelled (user, 2026-11-26): Clerk stays on the Development instance, so the Clerk Production move in Suggested order item 4 will not happen. If the Clerk dashboard lists a `/collaborate` URL, change it to `/sysdesign`.
 
 The older stopping points below are historical. The Start here list that follows dates from 2026-11-15; use the Next session list above instead.
 
@@ -70,7 +72,7 @@ Local configuration targets the live `3dfolio` database. Do not write live data 
 1. Deploy commit 71 to Vercel and Render. Render was redeployed on 2026-11-15 as a new service, `ajfm88-3dfolio-api` (https://ajfm88-3dfolio-api.onrender.com, Oregon, root `server`, build `npm install` because lock files are gitignored, start `npm start`, health `/health`). Vercel `VITE_API_URL` and the Clerk webhook point at it. The old `3dfolio-ajfm88-server` and `threedfolio-ajfm88-api` services can be deleted. This deploy makes the Collaborate navbar link public before the launch QA has run.
 2. Run the launch QA and fill in the tracker. After it passes, update the portfolio About text and project snippet in the admin panel.
 3. D1 is committed as 72 (`c30df64`, 2026-11-16). Continue drawDB at one slice per day (the user, 2026-11-15): D2 on 2026-11-16, which proves the Vercel routing before any real drawDB code lands.
-4. After D9 is committed and its Vercel preview checklist passes: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
+4. Cancelled (user, 2026-11-26): Clerk stays on the Development instance. After D9 is committed and its Vercel preview checklist passes: move Clerk from the Development instance to a Production instance (the user, 2026-11-15). The site currently runs on Development keys (`pk_test_`, `sk_test_`), which show a Development mode badge and have user limits. Steps: create the Production instance in Clerk and add its DNS records for `ajfm88.com`; set up sign-in methods again; put the new `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in Render and `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (as Config, then redeploy); add the webhook `https://ajfm88-3dfolio-api.onrender.com/api/webhooks/clerk` with `user.created`, `user.updated` and `user.deleted`, and put its new signing secret in `CLERK_WEBHOOK_SIGNING_SECRET`; add the session token claim `{ "metadata": "{{user.public_metadata}}" }`; set `public_metadata.role` to `admin` on your own user again. Production has new user ids, so existing users sign up again and get new MongoDB user documents; decide beforehand what happens to the Development users and the posts, chats and projects they own.
 
 ## Open items
 
